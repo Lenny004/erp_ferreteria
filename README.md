@@ -71,10 +71,10 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
                │    POSTGRESQL 14+   │
                │                     │
                │  public/   → Catálogo e inventario
-               │  ventas/   → Órdenes y facturas
+               │  sales/    → Órdenes y facturas
                │  dte/      → Facturación electrónica
-               │  rrhh/     → Empleados y planilla
-               │  sistema/  → Config y auditoría
+               │  hr/       → Empleados y planilla
+               │  system/   → Config y auditoría
                └──────────┬──────────┘
                           │
                ┌──────────▼──────────┐
@@ -169,7 +169,7 @@ El módulo de ventas es accesible directamente. El PIN se solicita en el momento
                               PIN correcto → Formulario de ajuste
 ```
 
-> **Nota de implementación:** `PinWindow.xaml` es un modal reutilizable que recibe el `tecnico_id` como parámetro, consulta el `pin_hash` de ese técnico en BD y valida con bcrypt. Se usa tanto en Ventas como en Inventario.
+> **Nota de implementación:** `PinWindow.xaml` es un modal reutilizable que recibe el `employee_id` como parámetro, consulta `hr.employees.pin_hash` y valida con bcrypt. Se usa tanto en Ventas como en Inventario.
 
 ---
 
@@ -242,7 +242,7 @@ Impresión de Ticket
 | Tabla diaria | `VentasWindow.xaml` | Lista ventas del día, resumen superior |
 | Nueva orden | `NuevaOrdenWindow.xaml` | Formulario fecha/técnico/aplicación/cliente |
 | Selección código | `SeleccionCodigoWindow.xaml` | Búsqueda y cantidad por tipo de medida |
-| PIN técnico | `PinWindow.xaml` | Modal reutilizable, recibe tecnico_id |
+| PIN técnico | `PinWindow.xaml` | Modal reutilizable, recibe `employee_id` |
 | Facturación | `FacturarWindow.xaml` | DTE, envío MH, sello, impresión |
 
 ---
@@ -350,13 +350,15 @@ Aplicación web separada, accesible desde cualquier dispositivo con navegador. C
 
 ### Esquemas
 
+Los identificadores en PostgreSQL y en los modelos C# están en **inglés** (`sales`, `hr`, `system`, etc.). La UI y los datos de negocio siguen en español.
+
 | Esquema | Tablas principales | Propósito |
 |---|---|---|
-| `public` | `familias`, `subfamilias`, `productos`, `tipos_medida`, `movimientos_inventario`, `alertas_stock` | Catálogo e inventario |
-| `ventas` | `aplicaciones`, `tecnicos`, `ordenes_confeccion`, `orden_detalle` | Operaciones diarias |
-| `dte` | `configuracion_dte`, `dte_emitidos`, `dte_contingencia` | Facturación electrónica |
-| `rrhh` | `empleados`, `puestos`, `departamentos`, `planilla`, `planilla_detalle` | Recursos humanos |
-| `sistema` | `impresoras`, `configuracion_sistema`, `auditoria` | Config, seguridad y logs |
+| `public` | `families`, `subfamilies`, `products`, `measurement_types`, `inventory_movements`, `stock_alerts` | Catálogo e inventario |
+| `sales` | `applications`, `orders`, `order_details` | Operaciones diarias |
+| `dte` | `dte_config`, `dte_issued`, `dte_contingency` | Facturación electrónica |
+| `hr` | `employees`, `positions`, `departments`, `payroll`, `payroll_details` | Recursos humanos |
+| `system` | `printers`, `settings`, `web_users`, `audit_log` | Config, seguridad y logs |
 
 ### Catálogo de Productos
 
@@ -385,7 +387,7 @@ Ejemplos:
 
 ### Seguridad de PINs
 
-Los PINs de los técnicos se almacenan como hash **bcrypt (12 rounds)** en `ventas.tecnicos.pin_hash`. Nunca se guarda el PIN en texto plano. La validación ocurre en la app de escritorio mediante `BCrypt.Net-Next`.
+Los PINs del personal que opera caja se almacenan como hash **bcrypt (12 rounds)** en `hr.employees.pin_hash`. No existe la tabla `tecnicos`: el mismo registro de empleado define permisos con `can_sell` (ventas/confección) y `can_cashier` (caja). Nunca se guarda el PIN en texto plano. La validación ocurre en la app de escritorio mediante `BCrypt.Net-Next`.
 
 Los PINs se asignan y cambian desde la **WebApp** por el administrador. La app de escritorio solo valida — nunca crea ni modifica PINs.
 
@@ -417,7 +419,7 @@ Los PINs se asignan y cambian desde la **WebApp** por el administrador. La app d
 3. Firma con certificado `.p12`
 4. POST a API MH → recibe sello de recepción
 5. Venta marcada "CERRADA" → imprime ticket con QR
-6. Si falla: guarda en `dte.dte_contingencia`, reintenta automáticamente
+6. Si falla: guarda en `dte.dte_contingency`, reintenta automáticamente
 
 ---
 
@@ -516,11 +518,8 @@ flexocable-sv/
 ├── LICENSE
 ├── .gitignore
 │
-├── database/
-│   ├── esquema_flexocable_postgresql.sql   ← Esquema completo + seed data
-│   └── migraciones/                        ← Scripts de migración por versión
-│
 ├── FlexoCableSV.PuntoVenta/                ← APP ESCRITORIO C# WPF
+│   ├── Squema.sql                          ← Esquema PostgreSQL completo + seed data
 │   ├── FlexoCableSV.PuntoVenta.csproj
 │   ├── App.xaml                            ← Recursos globales, colores, estilos
 │   ├── App.xaml.cs                         ← Inicialización, contexto de BD
@@ -529,7 +528,7 @@ flexocable-sv/
 │   │   ├── Inicio/
 │   │   │   └── InicioWindow.xaml           ← 2 botones: VENTAS / INVENTARIO
 │   │   ├── Compartidos/
-│   │   │   └── PinWindow.xaml              ← Modal PIN reutilizable (recibe tecnico_id)
+│   │   │   └── PinWindow.xaml              ← Modal PIN reutilizable (recibe employee_id)
 │   │   ├── Ventas/
 │   │   │   └── VentasWindow.xaml           ← Tabla diaria de ventas
 │   │   ├── Ordenes/
@@ -543,13 +542,12 @@ flexocable-sv/
 │   │   └── Configuracion/
 │   │       └── ImpresorasWindow.xaml       ← Gestión de impresoras
 │   │
-│   ├── Models/
-│   │   ├── Producto.cs
-│   │   ├── Tecnico.cs                      ← Incluye pin_hash
-│   │   ├── OrdenConfeccion.cs
-│   │   ├── OrdenDetalle.cs
-│   │   ├── Venta.cs
-│   │   └── DTEConfiguracion.cs
+│   ├── Models/                             ← EF Core (namespace Models; carpetas = schema PostgreSQL)
+│   │   ├── Public/                         ← Product, Family, InventoryMovement, StockAlert, …
+│   │   ├── Sales/                          ← Order, OrderDetail, Application
+│   │   ├── Dte/                            ← DteConfig, DteIssued, DteContingency
+│   │   ├── Hr/                             ← Employee (pin_hash, can_sell, can_cashier), Payroll, …
+│   │   └── System/                         ← Setting, Printer, WebUser, AuditLog
 │   │
 │   ├── Data/
 │   │   └── FlexoDbContext.cs               ← DbContext EF Core + Npgsql
@@ -558,7 +556,7 @@ flexocable-sv/
 │   │   ├── DTEService.cs                   ← Genera JSON, firma, envía a MH
 │   │   ├── ImpresionService.cs             ← ESC/POS tickets térmicos
 │   │   ├── InventarioService.cs            ← Descuenta stock, valida, alertas
-│   │   ├── PinService.cs                   ← Valida PIN con BCrypt por tecnico_id
+│   │   ├── PinService.cs                   ← Valida PIN con BCrypt por employee_id
 │   │   └── ConfigService.cs                ← Lee appsettings.json
 │   │
 │   ├── Helpers/
@@ -642,7 +640,7 @@ flexocable-sv/
 psql -U postgres -c "CREATE DATABASE flexocable;"
 psql -U postgres -c "CREATE USER flexo_user WITH PASSWORD 'tu_password_seguro';"
 psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE flexocable TO flexo_user;"
-psql -U flexo_user -d flexocable -f database/esquema_flexocable_postgresql.sql
+psql -U flexo_user -d flexocable -f FlexoCableSV.PuntoVenta/Squema.sql
 ```
 
 ### 2. App de Escritorio (WPF)
@@ -691,16 +689,17 @@ NEXTAUTH_URL="http://localhost:3000"
 ### 4. Configuración DTE
 
 1. Obtener NIT emisor y certificado `.p12` del Ministerio de Hacienda
-2. Actualizar tabla `dte.configuracion_dte` con datos reales del emisor
+2. Actualizar tabla `dte.dte_config` con datos reales del emisor
 3. Subir certificado `.p12` al servidor en ruta segura
 4. Probar con ambiente `00` (pruebas) antes de cambiar a `01` (producción)
 
-### 5. Crear técnicos y asignar PINs
+### 5. Crear empleados con acceso a caja y asignar PINs
 
 Desde la WebApp (módulo Empleados):
-1. Crear empleado con datos personales y puesto
-2. Asignar PIN de 4 dígitos — se guarda como hash bcrypt
-3. El técnico queda disponible en el `Select` de la app de escritorio
+1. Crear empleado en `hr.employees` con datos personales y puesto
+2. Activar `can_sell` y/o `can_cashier` según el rol en caja
+3. Asignar PIN de 4 dígitos — se guarda en `pin_hash` (bcrypt)
+4. El empleado queda disponible en el `Select` de la app de escritorio
 
 ---
 

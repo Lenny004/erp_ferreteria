@@ -129,18 +129,25 @@ CREATE TABLE public.stock_alerts (
     created_at    TIMESTAMPTZ    NOT NULL DEFAULT NOW()
 );
 
--- Trigger: alert when stock ≤ minimum
+-- Trigger: alert when stock ≤ minimum (skip if unresolved alert already exists)
 CREATE OR REPLACE FUNCTION public.fn_stock_alert()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.current_stock <= NEW.min_stock
-       AND NEW.current_stock != OLD.current_stock THEN
+       AND NEW.current_stock != OLD.current_stock
+       AND NOT EXISTS (
+           SELECT 1 FROM public.stock_alerts
+           WHERE product_id = NEW.id AND is_resolved = FALSE
+       ) THEN
         INSERT INTO public.stock_alerts (product_id, current_stock, min_stock)
         VALUES (NEW.id, NEW.current_stock, NEW.min_stock);
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_unresolved
+    ON public.stock_alerts(product_id) WHERE is_resolved = FALSE;
 
 CREATE TRIGGER trg_stock_alert
 AFTER UPDATE OF current_stock ON public.products
