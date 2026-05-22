@@ -14,7 +14,7 @@ public class Order
     public DateTime OrderDate { get; set; } = DateTime.UtcNow.Date;
     public TimeSpan OrderTime { get; set; } = DateTime.UtcNow.TimeOfDay;
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(11)]
     public string Status { get; set; } = "PENDIENTE";
 
     [Column(TypeName = "numeric(12,2)")]

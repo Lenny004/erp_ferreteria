@@ -8,7 +8,7 @@ public class InventoryMovement
     public long Id { get; set; }
     public int ProductId { get; set; }
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(18)]
     public string MovementType { get; set; } = string.Empty;
 
     [Column(TypeName = "numeric(12,3)")]

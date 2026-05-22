@@ -13,13 +13,13 @@ public class DteConfig
     [Required, MaxLength(200)]
     public string ApiUrl { get; set; } = string.Empty;
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(17)]
     public string IssuerNit { get; set; } = string.Empty;
 
     [Required, MaxLength(200)]
     public string IssuerName { get; set; } = string.Empty;
 
-    [MaxLength(20)]
+    [MaxLength(8)]
     public string? IssuerNrc { get; set; }
 
     [MaxLength(10)]

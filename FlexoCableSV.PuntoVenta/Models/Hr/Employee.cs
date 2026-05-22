@@ -14,16 +14,16 @@ public class Employee
     [Required, MaxLength(100)]
     public string LastName { get; set; } = string.Empty;
 
-    [MaxLength(15)]
+    [MaxLength(10)]
     public string? Dui { get; set; }
 
-    [MaxLength(20)]
+    [MaxLength(17)]
     public string? Nit { get; set; }
 
-    [MaxLength(20)]
+    [MaxLength(12)]
     public string? IsssNumber { get; set; }
 
-    [MaxLength(20)]
+    [MaxLength(15)]
     public string? Nup { get; set; }
 
     // Job
@@ -34,7 +34,7 @@ public class Employee
     [Column(TypeName = "numeric(10,2)")]
     public decimal BaseSalary { get; set; }
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(10)]
     public string ContractType { get; set; } = "PLANILLA";
 
     [MaxLength(50)]

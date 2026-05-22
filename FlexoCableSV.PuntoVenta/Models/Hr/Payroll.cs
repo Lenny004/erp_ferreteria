@@ -9,7 +9,7 @@ public class Payroll
     public short PeriodMonth { get; set; }
     public short PeriodYear { get; set; }
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(8)]
     public string Status { get; set; } = "BORRADOR";
 
     [Column(TypeName = "numeric(12,2)")]

@@ -16,7 +16,7 @@ public class WebUser
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
-    [Required, MaxLength(20)]
+    [Required, MaxLength(10)]
     public string Role { get; set; } = "ADMIN";
     public int? EmployeeId { get; set; }
     public bool IsActive { get; set; } = true;

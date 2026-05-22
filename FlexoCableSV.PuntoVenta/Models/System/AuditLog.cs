@@ -13,7 +13,7 @@ public class AuditLog
     [MaxLength(50)]
     public string? RecordId { get; set; }
 
-    [Required, MaxLength(10)]
+    [Required, MaxLength(6)]
     public string Action { get; set; } = string.Empty;
 
     [Column(TypeName = "jsonb")]
