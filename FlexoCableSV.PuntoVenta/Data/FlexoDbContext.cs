@@ -39,14 +39,25 @@ namespace FlexoCableSV.PuntoVenta.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Order>()
-                .HasMany(o => o.Details)
-                .WithOne(d => d.Order)
-                .HasForeignKey(d => d.OrderId);
+                .Property(o => o.OrderDate)
+                .HasColumnType("date");
 
-            modelBuilder.Entity<Payroll>()
-                .HasMany(p => p.Details)
-                .WithOne(d => d.Payroll)
-                .HasForeignKey(d => d.PayrollId);
+            modelBuilder.Entity<Order>()
+                .Property(o => o.OrderTime)
+                .HasColumnType("time");
+
+            modelBuilder.Entity<Employee>()
+                .Property(e => e.HireDate)
+                .HasColumnType("date");
+
+            modelBuilder.Entity<Employee>()
+                .Property(e => e.TerminationDate)
+                .HasColumnType("date");
+
+            modelBuilder.Entity<DteIssued>()
+                .HasOne(d => d.Contingency)
+                .WithOne(c => c.DteIssued)
+                .HasForeignKey<DteContingency>(c => c.DteId);
 
             modelBuilder.Entity<Employee>()
                 .HasIndex(e => e.Dui)
