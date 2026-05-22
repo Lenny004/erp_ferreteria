@@ -1,16 +1,12 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("payroll", Schema = "hr")]
 public class Payroll
 {
     [Key]
     public int Id { get; set; }
-
     public short PeriodMonth { get; set; }
-
     public short PeriodYear { get; set; }
 
     [Required, MaxLength(20)]
@@ -39,13 +35,9 @@ public class Payroll
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalAfpEmployer { get; set; } = 0;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime? ApprovedAt { get; set; }
-
     public DateTime? PaidAt { get; set; }
 
     // Navigation

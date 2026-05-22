@@ -1,14 +1,11 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("dte_issued", Schema = "dte")]
 public class DteIssued
 {
     [Key]
     public long Id { get; set; }
-
     public long OrderId { get; set; }
 
     [Required, MaxLength(2)]
@@ -16,7 +13,6 @@ public class DteIssued
 
     [Required, MaxLength(50)]
     public string ControlNumber { get; set; } = string.Empty;
-
     public Guid GenerationCode { get; set; } = Guid.NewGuid();
 
     [MaxLength(100)]
@@ -25,7 +21,8 @@ public class DteIssued
     [Required, MaxLength(20)]
     public string MhStatus { get; set; } = "PENDIENTE";
 
-    [Required, Column(TypeName = "jsonb")]
+    [Required]
+    [Column(TypeName = "jsonb")]
     public string JsonSent { get; set; } = "{}";
 
     [Column(TypeName = "jsonb")]
@@ -42,11 +39,8 @@ public class DteIssued
 
     [Required, MaxLength(2)]
     public string Environment { get; set; } = "01";
-
     public DateTime? SentAt { get; set; }
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public short Reprints { get; set; } = 0;
 
     // Navigation

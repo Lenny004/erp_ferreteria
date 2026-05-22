@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("measurement_types", Schema = "public")]
 public class MeasurementType
 {
     [Key]
@@ -17,6 +15,5 @@ public class MeasurementType
 
     [Required, MaxLength(20)]
     public string UnitLabel { get; set; } = string.Empty;
-
     public short Decimals { get; set; } = 0;
 }

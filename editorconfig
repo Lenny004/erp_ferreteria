@@ -1,0 +1,319 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# ============================================================================
+# FlexoCable SV — EditorConfig Rules
+# Version: 1.0.0
+# Date: May 2026
+# Purpose: Enforce consistent code style across the project
+# Tools: StyleCop, Roslynator, Visual Studio, Visual Studio Code
+# ============================================================================
+
+# All files
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ============================================================================
+# C# FILES
+# ============================================================================
+
+[*.cs]
+
+# Indentation and spacing
+indent_style = space
+indent_size = 4
+tab_size = 4
+
+# New line preferences
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# Indentation preferences
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = flush_left
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+csharp_indent_case_contents_when_block = true
+
+# Space preferences
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+csharp_space_after_comma = true
+csharp_space_after_dot = false
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_around_declaration_statements = false
+csharp_space_before_open_square_brackets = false
+csharp_space_between_empty_square_brackets = false
+csharp_space_between_square_brackets = false
+
+# Wrapping preferences
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# Code block preferences
+csharp_prefer_braces = true:silent
+csharp_prefer_simple_using_statement = true:suggestion
+
+# Expression preferences
+csharp_prefer_simple_default_expression = true:suggestion
+csharp_prefer_tuple_swap = true:suggestion
+csharp_prefer_deconstructed_tuple_when_possible = true:suggestion
+csharp_prefer_inferred_tuple_names = true:suggestion
+csharp_prefer_inferred_anonymous_type_member_names = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+csharp_style_prefer_index_operator = true:suggestion
+csharp_style_prefer_range_operator = true:suggestion
+
+# Pattern matching preferences
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_pattern_matching = true:silent
+csharp_style_prefer_not_pattern = true:suggestion
+
+# Variable declaration preferences
+csharp_style_throw_expression = true:suggestion
+
+# var preferences
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = false:warning
+
+# Expression-bodied members
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+
+# Null-checking preferences
+csharp_style_conditional_delegate_call = true:suggestion
+
+# Modifier preferences
+csharp_prefer_static_local_function = true:suggestion
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
+
+# Organize usings
+dotnet_separate_import_directive_groups = false
+dotnet_sort_system_directives_first = true
+
+# this. preferences
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# Language keywords vs BCL types preferences
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# Parentheses preferences
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
+
+# Modifier preferences
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_style_readonly_field = true:warning
+
+# Expression-level preferences
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+dotnet_style_prefer_conditional_expression_over_return = true:silent
+dotnet_style_prefer_compound_assignment = true:suggestion
+dotnet_style_prefer_simplified_interpolation = true:suggestion
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
+
+# Null-checking preferences
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+
+# ============================================================================
+# NAMING CONVENTIONS
+# ============================================================================
+
+# Style Definitions
+dotnet_naming_style.pascal_case_style.required_prefix = 
+dotnet_naming_style.pascal_case_style.required_suffix = 
+dotnet_naming_style.pascal_case_style.word_separator = 
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+dotnet_naming_style.camel_case_style.required_prefix = 
+dotnet_naming_style.camel_case_style.required_suffix = 
+dotnet_naming_style.camel_case_style.word_separator = 
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+
+dotnet_naming_style.camel_case_with_underscore_style.required_prefix = _
+dotnet_naming_style.camel_case_with_underscore_style.required_suffix = 
+dotnet_naming_style.camel_case_with_underscore_style.word_separator = 
+dotnet_naming_style.camel_case_with_underscore_style.capitalization = camel_case
+
+dotnet_naming_style.i_prefix_style.required_prefix = I
+dotnet_naming_style.i_prefix_style.required_suffix = 
+dotnet_naming_style.i_prefix_style.word_separator = 
+dotnet_naming_style.i_prefix_style.capitalization = pascal_case
+
+dotnet_naming_style.t_prefix_style.required_prefix = T
+dotnet_naming_style.t_prefix_style.required_suffix = 
+dotnet_naming_style.t_prefix_style.word_separator = 
+dotnet_naming_style.t_prefix_style.capitalization = pascal_case
+
+# Symbol Definitions
+
+# Classes
+dotnet_naming_symbols.class_symbols.applicable_kinds = class
+dotnet_naming_symbols.class_symbols.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.class_symbols.required_modifiers = 
+
+dotnet_naming_rule.class_should_be_pascal_case.severity = warning
+dotnet_naming_rule.class_should_be_pascal_case.symbols = class_symbols
+dotnet_naming_rule.class_should_be_pascal_case.style = pascal_case_style
+
+# Structs
+dotnet_naming_symbols.struct_symbols.applicable_kinds = struct
+dotnet_naming_symbols.struct_symbols.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.struct_symbols.required_modifiers = 
+
+dotnet_naming_rule.struct_should_be_pascal_case.severity = warning
+dotnet_naming_rule.struct_should_be_pascal_case.symbols = struct_symbols
+dotnet_naming_rule.struct_should_be_pascal_case.style = pascal_case_style
+
+# Interfaces
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.interface_symbols.required_modifiers = 
+
+dotnet_naming_rule.interface_should_be_i_prefix.severity = warning
+dotnet_naming_rule.interface_should_be_i_prefix.symbols = interface_symbols
+dotnet_naming_rule.interface_should_be_i_prefix.style = i_prefix_style
+
+# Enums
+dotnet_naming_symbols.enum_symbols.applicable_kinds = enum
+dotnet_naming_symbols.enum_symbols.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.enum_symbols.required_modifiers = 
+
+dotnet_naming_rule.enum_should_be_pascal_case.severity = warning
+dotnet_naming_rule.enum_should_be_pascal_case.symbols = enum_symbols
+dotnet_naming_rule.enum_should_be_pascal_case.style = pascal_case_style
+
+# Type parameters
+dotnet_naming_symbols.type_parameter_symbols.applicable_kinds = type_parameter
+dotnet_naming_symbols.type_parameter_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.type_parameter_symbols.required_modifiers = 
+
+dotnet_naming_rule.type_parameter_should_be_t_prefix.severity = warning
+dotnet_naming_rule.type_parameter_should_be_t_prefix.symbols = type_parameter_symbols
+dotnet_naming_rule.type_parameter_should_be_t_prefix.style = t_prefix_style
+
+# Public properties
+dotnet_naming_symbols.public_property_symbols.applicable_kinds = property
+dotnet_naming_symbols.public_property_symbols.applicable_accessibilities = public
+dotnet_naming_symbols.public_property_symbols.required_modifiers = 
+
+dotnet_naming_rule.public_property_should_be_pascal_case.severity = warning
+dotnet_naming_rule.public_property_should_be_pascal_case.symbols = public_property_symbols
+dotnet_naming_rule.public_property_should_be_pascal_case.style = pascal_case_style
+
+# Public methods
+dotnet_naming_symbols.public_method_symbols.applicable_kinds = method
+dotnet_naming_symbols.public_method_symbols.applicable_accessibilities = public
+dotnet_naming_symbols.public_method_symbols.required_modifiers = 
+
+dotnet_naming_rule.public_method_should_be_pascal_case.severity = warning
+dotnet_naming_rule.public_method_should_be_pascal_case.symbols = public_method_symbols
+dotnet_naming_rule.public_method_should_be_pascal_case.style = pascal_case_style
+
+# Public constants
+dotnet_naming_symbols.public_constant_symbols.applicable_kinds = field
+dotnet_naming_symbols.public_constant_symbols.applicable_accessibilities = public
+dotnet_naming_symbols.public_constant_symbols.required_modifiers = const
+
+dotnet_naming_rule.public_constant_should_be_pascal_case.severity = warning
+dotnet_naming_rule.public_constant_should_be_pascal_case.symbols = public_constant_symbols
+dotnet_naming_rule.public_constant_should_be_pascal_case.style = pascal_case_style
+
+# Private fields
+dotnet_naming_symbols.private_field_symbols.applicable_kinds = field
+dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private
+dotnet_naming_symbols.private_field_symbols.required_modifiers = 
+
+dotnet_naming_rule.private_field_should_be_camel_case_with_underscore.severity = warning
+dotnet_naming_rule.private_field_should_be_camel_case_with_underscore.symbols = private_field_symbols
+dotnet_naming_rule.private_field_should_be_camel_case_with_underscore.style = camel_case_with_underscore_style
+
+# Local variables
+dotnet_naming_symbols.local_variable_symbols.applicable_kinds = local
+dotnet_naming_symbols.local_variable_symbols.applicable_accessibilities = local
+dotnet_naming_symbols.local_variable_symbols.required_modifiers = 
+
+dotnet_naming_rule.local_variable_should_be_camel_case.severity = silent
+dotnet_naming_rule.local_variable_should_be_camel_case.symbols = local_variable_symbols
+dotnet_naming_rule.local_variable_should_be_camel_case.style = camel_case_style
+
+# Local functions
+dotnet_naming_symbols.local_function_symbols.applicable_kinds = local_function
+dotnet_naming_symbols.local_function_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.local_function_symbols.required_modifiers = 
+
+dotnet_naming_rule.local_function_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.local_function_should_be_pascal_case.symbols = local_function_symbols
+dotnet_naming_rule.local_function_should_be_pascal_case.style = pascal_case_style
+
+# ============================================================================
+# MARKDOWN
+# ============================================================================
+
+[*.md]
+trim_trailing_whitespace = false
+
+# ============================================================================
+# XML
+# ============================================================================
+
+[*.xml]
+indent_size = 2
+indent_style = space
+
+# ============================================================================
+# JSON
+# ============================================================================
+
+[*.json]
+indent_size = 2
+indent_style = space
+
+# ============================================================================
+# YAML
+# ============================================================================
+
+[*.{yml,yaml}]
+indent_size = 2
+indent_style = space

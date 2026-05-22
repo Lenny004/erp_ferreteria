@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("settings", Schema = "system")]
 public class Setting
 {
     [Key]
@@ -15,6 +13,5 @@ public class Setting
 
     [MaxLength(200)]
     public string? Description { get; set; }
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

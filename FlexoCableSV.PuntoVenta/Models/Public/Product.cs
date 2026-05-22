@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("products", Schema = "public")]
 public class Product
 {
     [Key]
@@ -14,11 +12,8 @@ public class Product
 
     [Required, MaxLength(200)]
     public string Description { get; set; } = string.Empty;
-
     public int FamilyId { get; set; }
-
     public int? SubfamilyId { get; set; }
-
     public int MeasurementTypeId { get; set; }
 
     [Column(TypeName = "numeric(12,2)")]
@@ -32,13 +27,9 @@ public class Product
 
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; } = 0;
-
     public int? SupplierId { get; set; }
-
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

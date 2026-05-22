@@ -1,16 +1,12 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("payroll_details", Schema = "hr")]
 public class PayrollDetail
 {
     [Key]
     public long Id { get; set; }
-
     public int PayrollId { get; set; }
-
     public int EmployeeId { get; set; }
 
     // Income
@@ -55,7 +51,6 @@ public class PayrollDetail
 
     [Column(TypeName = "numeric(10,2)")]
     public decimal AfpEmployer { get; set; }
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

@@ -15,8 +15,7 @@ namespace FlexoCableSV.PuntoVenta.Data
                     "No se encontró la cadena de conexión 'FlexoDatabase' en appsettings.json.");
 
             services.AddDbContext<FlexoDbContext>(options =>
-                options.UseNpgsql(connectionString)
-                       .UseSnakeCaseNamingConvention());
+                options.UseNpgsql(connectionString));
 
             return services;
         }

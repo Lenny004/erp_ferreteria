@@ -603,10 +603,17 @@ flexocable-sv/
 │   │
 │   └── .env.example
 │
-└── docs/
-    ├── manual_usuario.md
-    ├── manual_admin.md
-    └── dte_especificacion.md
+├── docs/
+│   ├── README.md                              # Índice de documentación
+│   ├── FLEXOCABLE_C_CODING_STANDARDS_2026.md  # STD-001 — C#, EF, calidad
+│   ├── FLEXOCABLE_GIT_PR_2026.md              # STD-002 — Git, PR, revisión
+│   ├── manual_usuario.md
+│   ├── manual_admin.md
+│   └── dte_especificacion.md
+│
+└── .cursor/
+    └── skills/
+        └── flexocable-dev/                    # Skill Cursor → apunta a docs/
 ```
 
 ---

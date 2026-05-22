@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("suppliers", Schema = "public")]
 public class Supplier
 {
     [Key]
@@ -20,11 +18,8 @@ public class Supplier
 
     [MaxLength(100)]
     public string? Email { get; set; }
-
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

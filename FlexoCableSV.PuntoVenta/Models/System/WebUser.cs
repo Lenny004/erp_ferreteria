@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("web_users", Schema = "system")]
 public class WebUser
 {
     [Key]
@@ -20,15 +18,10 @@ public class WebUser
 
     [Required, MaxLength(20)]
     public string Role { get; set; } = "ADMIN";
-
     public int? EmployeeId { get; set; }
-
     public bool IsActive { get; set; } = true;
-
     public DateTime? LastLoginAt { get; set; }
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

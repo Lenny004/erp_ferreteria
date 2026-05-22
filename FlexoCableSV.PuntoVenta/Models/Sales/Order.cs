@@ -1,23 +1,17 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("orders", Schema = "sales")]
 public class Order
 {
     [Key]
     public long Id { get; set; }
-
     public int EmployeeId { get; set; }
-
     public int ApplicationId { get; set; }
 
     [MaxLength(150)]
     public string? CustomerName { get; set; }
-
     public DateTime OrderDate { get; set; } = DateTime.UtcNow.Date;
-
     public TimeSpan OrderTime { get; set; } = DateTime.UtcNow.TimeOfDay;
 
     [Required, MaxLength(20)]
@@ -31,11 +25,8 @@ public class Order
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
-
     public string? Notes { get; set; }
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

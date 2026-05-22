@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("employees", Schema = "hr")]
 public class Employee
 {
     [Key]
@@ -30,9 +28,7 @@ public class Employee
 
     // Job
     public int? PositionId { get; set; }
-
     public DateTime HireDate { get; set; }
-
     public DateTime? TerminationDate { get; set; }
 
     [Column(TypeName = "numeric(10,2)")]
@@ -53,7 +49,6 @@ public class Employee
 
     [MaxLength(100)]
     public string? Email { get; set; }
-
     public string? Address { get; set; }
 
     [MaxLength(100)]
@@ -78,16 +73,12 @@ public class Employee
 
     // POS access (replaces technicians table)
     public string? PinHash { get; set; }
-
     public bool CanSell { get; set; } = false;
-
     public bool CanCashier { get; set; } = false;
 
     // Status
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

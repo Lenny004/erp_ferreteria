@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("dte_config", Schema = "dte")]
 public class DteConfig
 {
     [Key]
@@ -29,7 +27,6 @@ public class DteConfig
 
     [MaxLength(200)]
     public string? ActivityDescription { get; set; }
-
     public string? Address { get; set; }
 
     [MaxLength(20)]
@@ -40,12 +37,8 @@ public class DteConfig
 
     [MaxLength(500)]
     public string? CertificatePath { get; set; }
-
     public string? CertificateKey { get; set; }
-
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

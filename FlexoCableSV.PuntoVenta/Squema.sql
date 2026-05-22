@@ -22,91 +22,91 @@ CREATE SCHEMA IF NOT EXISTS system;
 -- =============================================================================
 
 -- Measurement types
-CREATE TABLE public.measurement_types (
-    id            SERIAL      PRIMARY KEY,
-    code          VARCHAR(10) NOT NULL UNIQUE,  -- METRO, PIEZA, KIT, PESO
-    name          VARCHAR(50) NOT NULL,
-    unit_label    VARCHAR(20) NOT NULL,          -- "metros", "piezas", "kits", "kg"
-    decimals      SMALLINT    NOT NULL DEFAULT 0  -- 2=METRO, 3=PESO, 0=PIEZA/KIT
+CREATE TABLE public."MeasurementTypes" (
+    "Id"            SERIAL      PRIMARY KEY,
+    "Code"          VARCHAR(10) NOT NULL UNIQUE,  -- METRO, PIEZA, KIT, PESO
+    "Name"          VARCHAR(50) NOT NULL,
+    "UnitLabel"    VARCHAR(20) NOT NULL,          -- "metros", "piezas", "kits", "kg"
+    "Decimals"      SMALLINT    NOT NULL DEFAULT 0  -- 2=METRO, 3=PESO, 0=PIEZA/KIT
 );
 
 -- Product families
-CREATE TABLE public.families (
-    id          SERIAL       PRIMARY KEY,
-    code        VARCHAR(5)   NOT NULL UNIQUE,  -- "01", "02", "FLV"
-    name        VARCHAR(100) NOT NULL,
-    description TEXT,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE public."Families" (
+    "Id"          SERIAL       PRIMARY KEY,
+    "Code"        VARCHAR(5)   NOT NULL UNIQUE,  -- "01", "02", "FLV"
+    "Name"        VARCHAR(100) NOT NULL,
+    "Description" TEXT,
+    "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- Subfamilies
-CREATE TABLE public.subfamilies (
-    id          SERIAL       PRIMARY KEY,
-    family_id   INTEGER      NOT NULL REFERENCES public.families(id),
-    code        VARCHAR(10)  NOT NULL,
-    name        VARCHAR(100) NOT NULL,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    UNIQUE (family_id, code)
+CREATE TABLE public."Subfamilies" (
+    "Id"          SERIAL       PRIMARY KEY,
+    "FamilyId"   INTEGER      NOT NULL REFERENCES public."Families"("Id"),
+    "Code"        VARCHAR(10)  NOT NULL,
+    "Name"        VARCHAR(100) NOT NULL,
+    "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE ("FamilyId", "Code")
 );
 
 -- Suppliers
-CREATE TABLE public.suppliers (
-    id          SERIAL       PRIMARY KEY,
-    name        VARCHAR(150) NOT NULL,
-    contact     VARCHAR(100),
-    phone       VARCHAR(20),
-    email       VARCHAR(100),
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE public."Suppliers" (
+    "Id"          SERIAL       PRIMARY KEY,
+    "Name"        VARCHAR(150) NOT NULL,
+    "Contact"     VARCHAR(100),
+    "Phone"       VARCHAR(20),
+    "Email"       VARCHAR(100),
+    "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- Product catalog
-CREATE TABLE public.products (
-    id              SERIAL         PRIMARY KEY,
-    code            VARCHAR(30)    NOT NULL UNIQUE,
-    description     VARCHAR(200)   NOT NULL,
-    family_id       INTEGER        NOT NULL REFERENCES public.families(id),
-    subfamily_id    INTEGER        REFERENCES public.subfamilies(id),
-    measurement_type_id INTEGER    NOT NULL REFERENCES public.measurement_types(id),
-    sale_price      NUMERIC(12,2)  NOT NULL DEFAULT 0,
-    cost_price      NUMERIC(12,2)  NOT NULL DEFAULT 0,
-    current_stock   NUMERIC(12,3)  NOT NULL DEFAULT 0,
-    min_stock       NUMERIC(12,3)  NOT NULL DEFAULT 0,
-    supplier_id     INTEGER        REFERENCES public.suppliers(id),
-    is_active       BOOLEAN        NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    CONSTRAINT stock_not_negative CHECK (current_stock >= 0)
+CREATE TABLE public."Products" (
+    "Id"              SERIAL         PRIMARY KEY,
+    "Code"            VARCHAR(30)    NOT NULL UNIQUE,
+    "Description"     VARCHAR(200)   NOT NULL,
+    "FamilyId"       INTEGER        NOT NULL REFERENCES public."Families"("Id"),
+    "SubfamilyId"    INTEGER        REFERENCES public."Subfamilies"("Id"),
+    "MeasurementTypeId" INTEGER    NOT NULL REFERENCES public."MeasurementTypes"("Id"),
+    "SalePrice"      NUMERIC(12,2)  NOT NULL DEFAULT 0,
+    "CostPrice"      NUMERIC(12,2)  NOT NULL DEFAULT 0,
+    "CurrentStock"   NUMERIC(12,3)  NOT NULL DEFAULT 0,
+    "MinStock"       NUMERIC(12,3)  NOT NULL DEFAULT 0,
+    "SupplierId"     INTEGER        REFERENCES public."Suppliers"("Id"),
+    "IsActive"       BOOLEAN        NOT NULL DEFAULT TRUE,
+    "CreatedAt"      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    "UpdatedAt"      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    CONSTRAINT "StockNotNegative" CHECK ("CurrentStock" >= 0)
 );
 
-CREATE INDEX idx_products_code    ON public.products(code);
-CREATE INDEX idx_products_family  ON public.products(family_id);
-CREATE INDEX idx_products_active  ON public.products(is_active);
+CREATE INDEX "IdxProductsCode"    ON public."Products"("Code");
+CREATE INDEX "IdxProductsFamily"  ON public."Products"("FamilyId");
+CREATE INDEX "IdxProductsActive"  ON public."Products"("IsActive");
 
 -- Inventory movements (immutable)
-CREATE TABLE public.inventory_movements (
-    id               BIGSERIAL      PRIMARY KEY,
-    product_id       INTEGER        NOT NULL REFERENCES public.products(id),
-    movement_type    VARCHAR(20)    NOT NULL,
+CREATE TABLE public."InventoryMovements" (
+    "Id"               BIGSERIAL      PRIMARY KEY,
+    "ProductId"       INTEGER        NOT NULL REFERENCES public."Products"("Id"),
+    "MovementType"    VARCHAR(20)    NOT NULL,
     -- ENTRADA_COMPRA, ENTRADA_DEVOLUCION, SALIDA_VENTA,
     -- AJUSTE_SUMA, AJUSTE_RESTA
-    quantity         NUMERIC(12,3)  NOT NULL,
-    stock_before     NUMERIC(12,3)  NOT NULL,
-    stock_after      NUMERIC(12,3)  NOT NULL,
-    reason           VARCHAR(100),
+    "Quantity"         NUMERIC(12,3)  NOT NULL,
+    "StockBefore"     NUMERIC(12,3)  NOT NULL,
+    "StockAfter"      NUMERIC(12,3)  NOT NULL,
+    "Reason"           VARCHAR(100),
     -- For AJUSTE: DAÑO, PÉRDIDA, INVENTARIO_FISICO, CORRECCIÓN
     -- For ENTRADA: COMPRA, DEVOLUCIÓN
-    document_ref     VARCHAR(50),   -- Invoice number, order ID, etc.
-    supplier_id      INTEGER        REFERENCES public.suppliers(id),
-    employee_id      INTEGER        REFERENCES hr.employees(id), -- Who authorized adjustment
-    created_at       TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-    CONSTRAINT movement_type_valid CHECK (
-        movement_type IN (
+    "DocumentRef"     VARCHAR(50),   -- Invoice number, order ID, etc.
+    "SupplierId"      INTEGER        REFERENCES public."Suppliers"("Id"),
+    "EmployeeId"      INTEGER        REFERENCES hr."Employees"("Id"), -- Who authorized adjustment
+    "CreatedAt"       TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    CONSTRAINT "MovementTypeValid" CHECK (
+        "MovementType" IN (
             'ENTRADA_COMPRA','ENTRADA_DEVOLUCION',
             'SALIDA_VENTA',
             'AJUSTE_SUMA','AJUSTE_RESTA'
@@ -114,69 +114,69 @@ CREATE TABLE public.inventory_movements (
     )
 );
 
-CREATE INDEX idx_inv_product   ON public.inventory_movements(product_id);
-CREATE INDEX idx_inv_type      ON public.inventory_movements(movement_type);
-CREATE INDEX idx_inv_date      ON public.inventory_movements(created_at);
+CREATE INDEX "IdxInvProduct"   ON public."InventoryMovements"("ProductId");
+CREATE INDEX "IdxInvType"      ON public."InventoryMovements"("MovementType");
+CREATE INDEX "IdxInvDate"      ON public."InventoryMovements"("CreatedAt");
 
 -- Low stock alerts (generated by trigger)
-CREATE TABLE public.stock_alerts (
-    id            BIGSERIAL      PRIMARY KEY,
-    product_id    INTEGER        NOT NULL REFERENCES public.products(id),
-    current_stock NUMERIC(12,3)  NOT NULL,
-    min_stock     NUMERIC(12,3)  NOT NULL,
-    is_resolved   BOOLEAN        NOT NULL DEFAULT FALSE,
-    resolved_at   TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+CREATE TABLE public."StockAlerts" (
+    "Id"            BIGSERIAL      PRIMARY KEY,
+    "ProductId"    INTEGER        NOT NULL REFERENCES public."Products"("Id"),
+    "CurrentStock" NUMERIC(12,3)  NOT NULL,
+    "MinStock"     NUMERIC(12,3)  NOT NULL,
+    "IsResolved"   BOOLEAN        NOT NULL DEFAULT FALSE,
+    "ResolvedAt"   TIMESTAMPTZ,
+    "CreatedAt"    TIMESTAMPTZ    NOT NULL DEFAULT NOW()
 );
 
 -- Trigger: alert when stock ≤ minimum (skip if unresolved alert already exists)
 CREATE OR REPLACE FUNCTION public.fn_stock_alert()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.current_stock <= NEW.min_stock
-       AND NEW.current_stock != OLD.current_stock
+    IF NEW."CurrentStock" <= NEW."MinStock"
+       AND NEW."CurrentStock" != OLD."CurrentStock"
        AND NOT EXISTS (
-           SELECT 1 FROM public.stock_alerts
-           WHERE product_id = NEW.id AND is_resolved = FALSE
+           SELECT 1 FROM public."StockAlerts"
+           WHERE "ProductId" = NEW."Id" AND "IsResolved" = FALSE
        ) THEN
-        INSERT INTO public.stock_alerts (product_id, current_stock, min_stock)
-        VALUES (NEW.id, NEW.current_stock, NEW.min_stock);
+        INSERT INTO public."StockAlerts" ("ProductId", "CurrentStock", "MinStock")
+        VALUES (NEW."Id", NEW."CurrentStock", NEW."MinStock");
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE INDEX IF NOT EXISTS idx_stock_alerts_unresolved
-    ON public.stock_alerts(product_id) WHERE is_resolved = FALSE;
+CREATE INDEX IF NOT EXISTS "IdxStockAlertsUnresolved"
+    ON public."StockAlerts"("ProductId") WHERE "IsResolved" = FALSE;
 
-CREATE TRIGGER trg_stock_alert
-AFTER UPDATE OF current_stock ON public.products
+CREATE TRIGGER "TrgStockAlert"
+AFTER UPDATE OF "CurrentStock" ON public."Products"
 FOR EACH ROW EXECUTE FUNCTION public.fn_stock_alert();
 
 -- Trigger: update timestamp on product modification
 CREATE OR REPLACE FUNCTION public.fn_update_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    NEW."UpdatedAt" = NOW();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_product_timestamp
-BEFORE UPDATE ON public.products
+CREATE TRIGGER "TrgProductTimestamp"
+BEFORE UPDATE ON public."Products"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
--- Apply timestamp trigger to all tables with updated_at
-CREATE TRIGGER trg_family_timestamp
-BEFORE UPDATE ON public.families
+-- Apply timestamp trigger to all tables with "UpdatedAt"
+CREATE TRIGGER "TrgFamilyTimestamp"
+BEFORE UPDATE ON public."Families"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
-CREATE TRIGGER trg_subfamily_timestamp
-BEFORE UPDATE ON public.subfamilies
+CREATE TRIGGER "TrgSubfamilyTimestamp"
+BEFORE UPDATE ON public."Subfamilies"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
-CREATE TRIGGER trg_supplier_timestamp
-BEFORE UPDATE ON public.suppliers
+CREATE TRIGGER "TrgSupplierTimestamp"
+BEFORE UPDATE ON public."Suppliers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 
@@ -185,61 +185,61 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 -- =============================================================================
 
 -- Applications (transaction types)
-CREATE TABLE sales.applications (
-    id          SERIAL       PRIMARY KEY,
-    code        VARCHAR(10)  NOT NULL UNIQUE,  -- VT-01, VT-02, VT-03, RP-01
-    name        VARCHAR(100) NOT NULL,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE sales."Applications" (
+    "Id"          SERIAL       PRIMARY KEY,
+    "Code"        VARCHAR(10)  NOT NULL UNIQUE,  -- VT-01, VT-02, VT-03, RP-01
+    "Name"        VARCHAR(100) NOT NULL,
+    "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER trg_application_timestamp
-BEFORE UPDATE ON sales.applications
+CREATE TRIGGER "TrgApplicationTimestamp"
+BEFORE UPDATE ON sales."Applications"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Confection orders (header) — Simplified statuses
-CREATE TABLE sales.orders (
-    id              BIGSERIAL     PRIMARY KEY,
-    employee_id     INTEGER       NOT NULL REFERENCES hr.employees(id),
-    application_id  INTEGER       NOT NULL REFERENCES sales.applications(id),
-    customer_name   VARCHAR(150),
-    order_date      DATE          NOT NULL DEFAULT CURRENT_DATE,
-    order_time      TIME          NOT NULL DEFAULT CURRENT_TIME,
-    status          VARCHAR(20)   NOT NULL DEFAULT 'PENDIENTE',
+CREATE TABLE sales."Orders" (
+    "Id"              BIGSERIAL     PRIMARY KEY,
+    "EmployeeId"     INTEGER       NOT NULL REFERENCES hr."Employees"("Id"),
+    "ApplicationId"  INTEGER       NOT NULL REFERENCES sales."Applications"("Id"),
+    "CustomerName"   VARCHAR(150),
+    "OrderDate"      DATE          NOT NULL DEFAULT CURRENT_DATE,
+    "OrderTime"      TIME          NOT NULL DEFAULT CURRENT_TIME,
+    "Status"          VARCHAR(20)   NOT NULL DEFAULT 'PENDIENTE',
     -- PENDIENTE → COMPLETADA | CANCELADA
     subtotal        NUMERIC(12,2) NOT NULL DEFAULT 0,
-    iva             NUMERIC(12,2) NOT NULL DEFAULT 0,   -- 13% calculated
-    total           NUMERIC(12,2) NOT NULL DEFAULT 0,
-    notes           TEXT,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT order_status_valid CHECK (
-        status IN ('PENDIENTE','COMPLETADA','CANCELADA')
+    "Iva"             NUMERIC(12,2) NOT NULL DEFAULT 0,   -- 13% calculated
+    "Total"           NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "Notes"           TEXT,
+    "CreatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "UpdatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT "OrderStatusValid" CHECK (
+        "Status" IN ('PENDIENTE','COMPLETADA','CANCELADA')
     )
 );
 
-CREATE INDEX idx_orders_date      ON sales.orders(order_date);
-CREATE INDEX idx_orders_status    ON sales.orders(status);
-CREATE INDEX idx_orders_employee  ON sales.orders(employee_id);
+CREATE INDEX "IdxOrdersDate"      ON sales."Orders"("OrderDate");
+CREATE INDEX "IdxOrdersStatus"    ON sales."Orders"("Status");
+CREATE INDEX "IdxOrdersEmployee"  ON sales."Orders"("EmployeeId");
 
-CREATE TRIGGER trg_order_timestamp
-BEFORE UPDATE ON sales.orders
+CREATE TRIGGER "TrgOrderTimestamp"
+BEFORE UPDATE ON sales."Orders"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Order details (items)
-CREATE TABLE sales.order_details (
-    id              BIGSERIAL     PRIMARY KEY,
-    order_id        BIGINT        NOT NULL REFERENCES sales.orders(id) ON DELETE CASCADE,
-    product_id      INTEGER       NOT NULL REFERENCES public.products(id),
-    quantity        NUMERIC(12,3) NOT NULL,
-    unit_price      NUMERIC(12,2) NOT NULL,
+CREATE TABLE sales."OrderDetails" (
+    "Id"              BIGSERIAL     PRIMARY KEY,
+    "OrderId"        BIGINT        NOT NULL REFERENCES sales."Orders"("Id") ON DELETE CASCADE,
+    "ProductId"      INTEGER       NOT NULL REFERENCES public."Products"("Id"),
+    "Quantity"        NUMERIC(12,3) NOT NULL,
+    "UnitPrice"      NUMERIC(12,2) NOT NULL,
     subtotal        NUMERIC(12,2) NOT NULL,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT quantity_positive CHECK (quantity > 0)
+    "CreatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT "QuantityPositive" CHECK ("Quantity" > 0)
 );
 
-CREATE INDEX idx_detail_order ON sales.order_details(order_id);
+CREATE INDEX "IdxDetailOrder" ON sales."OrderDetails"("OrderId");
 
 
 -- =============================================================================
@@ -247,67 +247,67 @@ CREATE INDEX idx_detail_order ON sales.order_details(order_id);
 -- =============================================================================
 
 -- DTE issuer configuration
-CREATE TABLE dte.dte_config (
-    id                    SERIAL       PRIMARY KEY,
+CREATE TABLE dte."DteConfig" (
+    "Id"                    SERIAL       PRIMARY KEY,
     environment           CHAR(2)      NOT NULL,  -- '00' test, '01' production
-    api_url               VARCHAR(200) NOT NULL,
-    issuer_nit            VARCHAR(20)  NOT NULL,
-    issuer_name           VARCHAR(200) NOT NULL,
-    issuer_nrc            VARCHAR(20),
-    activity_code         VARCHAR(10),
-    activity_description  VARCHAR(200),
-    address               TEXT,
-    phone                 VARCHAR(20),
-    email                 VARCHAR(100),
-    certificate_path      VARCHAR(500),
-    certificate_key       TEXT,         -- Encrypted at rest
-    is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    CONSTRAINT environment_valid CHECK (environment IN ('00','01'))
+    "ApiUrl"               VARCHAR(200) NOT NULL,
+    "IssuerNit"            VARCHAR(20)  NOT NULL,
+    "IssuerName"           VARCHAR(200) NOT NULL,
+    "IssuerNrc"            VARCHAR(20),
+    "ActivityCode"         VARCHAR(10),
+    "ActivityDescription"  VARCHAR(200),
+    "Address"               TEXT,
+    "Phone"                 VARCHAR(20),
+    "Email"                 VARCHAR(100),
+    "CertificatePath"      VARCHAR(500),
+    "CertificateKey"       TEXT,         -- Encrypted at rest
+    "IsActive"             BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT "EnvironmentValid" CHECK (environment IN ('00','01'))
 );
 
-CREATE TRIGGER trg_dte_config_timestamp
-BEFORE UPDATE ON dte.dte_config
+CREATE TRIGGER "TrgDteConfigTimestamp"
+BEFORE UPDATE ON dte."DteConfig"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Issued DTEs
-CREATE TABLE dte.dte_issued (
-    id                BIGSERIAL    PRIMARY KEY,
-    order_id          BIGINT       NOT NULL REFERENCES sales.orders(id),
-    dte_type          CHAR(2)      NOT NULL,  -- '01','03','05','06'
-    control_number    VARCHAR(50)  NOT NULL UNIQUE,
-    generation_code   UUID         NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
-    reception_stamp   VARCHAR(100),
-    mh_status         VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE',
+CREATE TABLE dte."DteIssued" (
+    "Id"                BIGSERIAL    PRIMARY KEY,
+    "OrderId"          BIGINT       NOT NULL REFERENCES sales."Orders"("Id"),
+    "DteType"          CHAR(2)      NOT NULL,  -- '01','03','05','06'
+    "ControlNumber"    VARCHAR(50)  NOT NULL UNIQUE,
+    "GenerationCode"   UUID         NOT NULL UNIQUE DEFAULT "UuidGenerateV4"(),
+    "ReceptionStamp"   VARCHAR(100),
+    "MhStatus"         VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE',
     -- PENDIENTE → PROCESADO | RECHAZADO | CONTINGENCIA
-    json_sent         JSONB        NOT NULL,
-    json_response     JSONB,
-    payment_method    VARCHAR(20)  NOT NULL DEFAULT 'EFECTIVO',
-    receiver_nit      VARCHAR(20),
-    receiver_name     VARCHAR(200),
+    "JsonSent"         JSONB        NOT NULL,
+    "JsonResponse"     JSONB,
+    "PaymentMethod"    VARCHAR(20)  NOT NULL DEFAULT 'EFECTIVO',
+    "ReceiverNit"      VARCHAR(20),
+    "ReceiverName"     VARCHAR(200),
     environment       CHAR(2)      NOT NULL DEFAULT '01',
-    sent_at           TIMESTAMPTZ,
-    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    reprints          SMALLINT     NOT NULL DEFAULT 0,
-    CONSTRAINT dte_type_valid  CHECK (dte_type  IN ('01','03','05','06')),
-    CONSTRAINT mh_status_valid CHECK (mh_status IN ('PENDIENTE','PROCESADO','RECHAZADO','CONTINGENCIA'))
+    "SentAt"           TIMESTAMPTZ,
+    "CreatedAt"        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "Reprints"          SMALLINT     NOT NULL DEFAULT 0,
+    CONSTRAINT "DteTypeValid"  CHECK ("DteType"  IN ('01','03','05','06')),
+    CONSTRAINT "MhStatusValid" CHECK ("MhStatus" IN ('PENDIENTE','PROCESADO','RECHAZADO','CONTINGENCIA'))
 );
 
-CREATE INDEX idx_dte_order   ON dte.dte_issued(order_id);
-CREATE INDEX idx_dte_status  ON dte.dte_issued(mh_status);
-CREATE INDEX idx_dte_date    ON dte.dte_issued(created_at);
+CREATE INDEX "IdxDteOrder"   ON dte."DteIssued"("OrderId");
+CREATE INDEX "IdxDteStatus"  ON dte."DteIssued"("MhStatus");
+CREATE INDEX "IdxDteDate"    ON dte."DteIssued"("CreatedAt");
 
 -- Contingency queue for automatic resend (every 15 min)
-CREATE TABLE dte.dte_contingency (
-    id              BIGSERIAL   PRIMARY KEY,
-    dte_id          BIGINT      NOT NULL REFERENCES dte.dte_issued(id),
-    attempts        SMALLINT    NOT NULL DEFAULT 0,
-    last_error      TEXT,
-    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    is_resolved     BOOLEAN     NOT NULL DEFAULT FALSE,
-    resolved_at     TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE dte."DteContingency" (
+    "Id"              BIGSERIAL   PRIMARY KEY,
+    "DteId"          BIGINT      NOT NULL REFERENCES dte."DteIssued"("Id"),
+    "Attempts"        SMALLINT    NOT NULL DEFAULT 0,
+    "LastError"      TEXT,
+    "NextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "IsResolved"     BOOLEAN     NOT NULL DEFAULT FALSE,
+    "ResolvedAt"     TIMESTAMPTZ,
+    "CreatedAt"      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
@@ -315,128 +315,128 @@ CREATE TABLE dte.dte_contingency (
 -- HR SCHEMA — Employees & Payroll
 -- =============================================================================
 
-CREATE TABLE hr.departments (
-    id          SERIAL       PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL UNIQUE,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE hr."Departments" (
+    "Id"          SERIAL       PRIMARY KEY,
+    "Name"        VARCHAR(100) NOT NULL UNIQUE,
+    "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER trg_department_timestamp
-BEFORE UPDATE ON hr.departments
+CREATE TRIGGER "TrgDepartmentTimestamp"
+BEFORE UPDATE ON hr."Departments"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
-CREATE TABLE hr.positions (
-    id             SERIAL       PRIMARY KEY,
-    department_id  INTEGER      NOT NULL REFERENCES hr.departments(id),
-    name           VARCHAR(100) NOT NULL,
-    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE hr."Positions" (
+    "Id"             SERIAL       PRIMARY KEY,
+    "DepartmentId"  INTEGER      NOT NULL REFERENCES hr."Departments"("Id"),
+    "Name"           VARCHAR(100) NOT NULL,
+    "IsActive"      BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER trg_position_timestamp
-BEFORE UPDATE ON hr.positions
+CREATE TRIGGER "TrgPositionTimestamp"
+BEFORE UPDATE ON hr."Positions"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Employees (unified with technicians)
-CREATE TABLE hr.employees (
-    id              SERIAL        PRIMARY KEY,
+CREATE TABLE hr."Employees" (
+    "Id"              SERIAL        PRIMARY KEY,
     -- Identity
-    first_name      VARCHAR(100)  NOT NULL,
-    last_name       VARCHAR(100)  NOT NULL,
-    dui             VARCHAR(15)   UNIQUE,
-    nit             VARCHAR(20)   UNIQUE,
-    isss_number     VARCHAR(20),
-    nup             VARCHAR(20),
+    "FirstName"      VARCHAR(100)  NOT NULL,
+    "LastName"       VARCHAR(100)  NOT NULL,
+    "Dui"             VARCHAR(15)   UNIQUE,
+    "Nit"             VARCHAR(20)   UNIQUE,
+    "IsssNumber"     VARCHAR(20),
+    "Nup"             VARCHAR(20),
     -- Job
-    position_id     INTEGER       REFERENCES hr.positions(id),
-    hire_date       DATE          NOT NULL,
-    termination_date DATE,
-    base_salary     NUMERIC(10,2) NOT NULL,
-    contract_type   VARCHAR(20)   NOT NULL DEFAULT 'PLANILLA',
-    afp             VARCHAR(50),  -- "CRECER", "CONFIA"
+    "PositionId"     INTEGER       REFERENCES hr."Positions"("Id"),
+    "HireDate"       DATE          NOT NULL,
+    "TerminationDate" DATE,
+    "BaseSalary"     NUMERIC(10,2) NOT NULL,
+    "ContractType"   VARCHAR(20)   NOT NULL DEFAULT 'PLANILLA',
+    "Afp"             VARCHAR(50),  -- "CRECER", "CONFIA"
     -- Contact
-    phone           VARCHAR(20),
-    alt_phone       VARCHAR(20),
-    email           VARCHAR(100),
-    address         TEXT,
-    municipality    VARCHAR(100),
+    "Phone"           VARCHAR(20),
+    "AltPhone"       VARCHAR(20),
+    "Email"           VARCHAR(100),
+    "Address"         TEXT,
+    "Municipality"    VARCHAR(100),
     -- Personal
-    marital_status  VARCHAR(20),
-    academic_level  VARCHAR(50),
+    "MaritalStatus"  VARCHAR(20),
+    "AcademicLevel"  VARCHAR(50),
     -- Emergency contact
-    emergency_name  VARCHAR(100),
-    emergency_phone VARCHAR(20),
-    emergency_relationship VARCHAR(50),
+    "EmergencyName"  VARCHAR(100),
+    "EmergencyPhone" VARCHAR(20),
+    "EmergencyRelationship" VARCHAR(50),
     -- POS access
-    pin_hash        TEXT,         -- bcrypt(PIN 4 digits, cost=12). NULL = cannot operate POS
-    can_sell        BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can process sales/confection
-    can_cashier     BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can operate cashier
+    "PinHash"        TEXT,         -- bcrypt(PIN 4 digits, cost=12). NULL = cannot operate POS
+    "CanSell"        BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can process sales/confection
+    "CanCashier"     BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can operate cashier
     -- Status
-    is_active       BOOLEAN       NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT contract_valid CHECK (contract_type IN ('PLANILLA','HONORARIOS'))
+    "IsActive"       BOOLEAN       NOT NULL DEFAULT TRUE,
+    "CreatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "UpdatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT "ContractValid" CHECK ("ContractType" IN ('PLANILLA','HONORARIOS'))
 );
 
-CREATE TRIGGER trg_employee_timestamp
-BEFORE UPDATE ON hr.employees
+CREATE TRIGGER "TrgEmployeeTimestamp"
+BEFORE UPDATE ON hr."Employees"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Monthly payroll (header)
-CREATE TABLE hr.payroll (
-    id                    SERIAL        PRIMARY KEY,
-    period_month          SMALLINT      NOT NULL,
-    period_year           SMALLINT      NOT NULL,
-    status                VARCHAR(20)   NOT NULL DEFAULT 'BORRADOR',
+CREATE TABLE hr."Payroll" (
+    "Id"                    SERIAL        PRIMARY KEY,
+    "PeriodMonth"          SMALLINT      NOT NULL,
+    "PeriodYear"           SMALLINT      NOT NULL,
+    "Status"                VARCHAR(20)   NOT NULL DEFAULT 'BORRADOR',
     -- BORRADOR → APROBADA → PAGADA (immutable once PAGADA)
-    total_salaries        NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_isss_employee   NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_afp_employee    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_isr             NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_deductions      NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_net             NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_isss_employer   NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total_afp_employer    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    approved_at           TIMESTAMPTZ,
-    paid_at               TIMESTAMPTZ,
-    UNIQUE (period_month, period_year),
-    CONSTRAINT payroll_status_valid CHECK (status IN ('BORRADOR','APROBADA','PAGADA')),
-    CONSTRAINT month_valid CHECK (period_month BETWEEN 1 AND 12)
+    "TotalSalaries"        NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalIsssEmployee"   NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalAfpEmployee"    NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalIsr"             NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalDeductions"      NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalNet"             NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalIsssEmployer"   NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "TotalAfpEmployer"    NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "CreatedAt"            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "UpdatedAt"            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "ApprovedAt"           TIMESTAMPTZ,
+    "PaidAt"               TIMESTAMPTZ,
+    UNIQUE ("PeriodMonth", "PeriodYear"),
+    CONSTRAINT "PayrollStatusValid" CHECK ("Status" IN ('BORRADOR','APROBADA','PAGADA')),
+    CONSTRAINT "MonthValid" CHECK ("PeriodMonth" BETWEEN 1 AND 12)
 );
 
-CREATE TRIGGER trg_payroll_timestamp
-BEFORE UPDATE ON hr.payroll
+CREATE TRIGGER "TrgPayrollTimestamp"
+BEFORE UPDATE ON hr."Payroll"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Payroll detail per employee
-CREATE TABLE hr.payroll_details (
-    id                   BIGSERIAL     PRIMARY KEY,
-    payroll_id           INTEGER       NOT NULL REFERENCES hr.payroll(id),
-    employee_id          INTEGER       NOT NULL REFERENCES hr.employees(id),
+CREATE TABLE hr."PayrollDetails" (
+    "Id"                   BIGSERIAL     PRIMARY KEY,
+    "PayrollId"           INTEGER       NOT NULL REFERENCES hr."Payroll"("Id"),
+    "EmployeeId"          INTEGER       NOT NULL REFERENCES hr."Employees"("Id"),
     -- Income
-    base_salary          NUMERIC(10,2) NOT NULL,
-    overtime_hours       NUMERIC(5,2)  NOT NULL DEFAULT 0,
-    overtime_amount      NUMERIC(10,2) NOT NULL DEFAULT 0,  -- hours × (hourly_rate × 2)
+    "BaseSalary"          NUMERIC(10,2) NOT NULL,
+    "OvertimeHours"       NUMERIC(5,2)  NOT NULL DEFAULT 0,
+    "OvertimeAmount"      NUMERIC(10,2) NOT NULL DEFAULT 0,  -- hours × ("HourlyRate" × 2)
     bonuses              NUMERIC(10,2) NOT NULL DEFAULT 0,
-    total_income         NUMERIC(10,2) NOT NULL,
+    "TotalIncome"         NUMERIC(10,2) NOT NULL,
     -- Employee deductions
-    isss_employee        NUMERIC(10,2) NOT NULL,  -- 3% of total_income
-    afp_employee         NUMERIC(10,2) NOT NULL,  -- 7.25% of total_income
+    "IsssEmployee"        NUMERIC(10,2) NOT NULL,  -- 3% of "TotalIncome"
+    "AfpEmployee"         NUMERIC(10,2) NOT NULL,  -- 7.25% of "TotalIncome"
     isr                  NUMERIC(10,2) NOT NULL DEFAULT 0,
-    other_deductions     NUMERIC(10,2) NOT NULL DEFAULT 0,
-    total_deductions     NUMERIC(10,2) NOT NULL,
+    "OtherDeductions"     NUMERIC(10,2) NOT NULL DEFAULT 0,
+    "TotalDeductions"     NUMERIC(10,2) NOT NULL,
     -- Net pay
-    net_salary           NUMERIC(10,2) NOT NULL,
+    "NetSalary"           NUMERIC(10,2) NOT NULL,
     -- Employer cost (not deducted from employee)
-    isss_employer        NUMERIC(10,2) NOT NULL,  -- 7.5%
-    afp_employer         NUMERIC(10,2) NOT NULL,  -- 8.75%
-    created_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    UNIQUE (payroll_id, employee_id)
+    "IsssEmployer"        NUMERIC(10,2) NOT NULL,  -- 7.5%
+    "AfpEmployer"         NUMERIC(10,2) NOT NULL,  -- 8.75%
+    "CreatedAt"           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    UNIQUE ("PayrollId", "EmployeeId")
 );
 
 
@@ -444,72 +444,72 @@ CREATE TABLE hr.payroll_details (
 -- SYSTEM SCHEMA — Settings, Printers & Audit
 -- =============================================================================
 
--- General settings (key-value)
-CREATE TABLE system.settings (
-    key             VARCHAR(100) PRIMARY KEY,
-    value           TEXT         NOT NULL,
-    description     VARCHAR(200),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+-- General settings ("Key"-"Value")
+CREATE TABLE system."Settings" (
+    "Key"             VARCHAR(100) PRIMARY KEY,
+    "Value"           TEXT         NOT NULL,
+    "Description"     VARCHAR(200),
+    "UpdatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- Printers configuration
-CREATE TABLE system.printers (
-    id              SERIAL       PRIMARY KEY,
-    name            VARCHAR(200) NOT NULL,  -- Windows device name
-    connection_type VARCHAR(10)  NOT NULL DEFAULT 'USB',  -- USB, ETHERNET
-    ip_address      VARCHAR(15),   -- Only for ETHERNET
-    network_port    INTEGER,       -- Default 9100
-    paper_width     SMALLINT     NOT NULL DEFAULT 80,  -- 80 or 58 mm
-    is_default      BOOLEAN      NOT NULL DEFAULT FALSE,
-    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE system."Printers" (
+    "Id"              SERIAL       PRIMARY KEY,
+    "Name"            VARCHAR(200) NOT NULL,  -- Windows device "Name"
+    "ConnectionType" VARCHAR(10)  NOT NULL DEFAULT 'USB',  -- USB, ETHERNET
+    "IpAddress"      VARCHAR(15),   -- Only for ETHERNET
+    "NetworkPort"    INTEGER,       -- Default 9100
+    "PaperWidth"     SMALLINT     NOT NULL DEFAULT 80,  -- 80 or 58 mm
+    "IsDefault"      BOOLEAN      NOT NULL DEFAULT FALSE,
+    "IsActive"       BOOLEAN      NOT NULL DEFAULT TRUE,
+    "CreatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- Ensure only one default printer at a time
-CREATE UNIQUE INDEX idx_printer_default
-    ON system.printers (is_default)
-    WHERE is_default = TRUE;
+CREATE UNIQUE INDEX "IdxPrinterDefault"
+    ON system."Printers" ("IsDefault")
+    WHERE "IsDefault" = TRUE;
 
-CREATE TRIGGER trg_printer_timestamp
-BEFORE UPDATE ON system.printers
+CREATE TRIGGER "TrgPrinterTimestamp"
+BEFORE UPDATE ON system."Printers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- WebApp users (for future web application)
-CREATE TABLE system.web_users (
-    id             SERIAL       PRIMARY KEY,
-    username       VARCHAR(50)  NOT NULL UNIQUE,
-    email          VARCHAR(100) NOT NULL UNIQUE,
-    password_hash  TEXT         NOT NULL,  -- bcrypt(12 rounds)
-    role           VARCHAR(20)  NOT NULL DEFAULT 'ADMIN',
+CREATE TABLE system."WebUsers" (
+    "Id"             SERIAL       PRIMARY KEY,
+    "Username"       VARCHAR(50)  NOT NULL UNIQUE,
+    "Email"          VARCHAR(100) NOT NULL UNIQUE,
+    "PasswordHash"  TEXT         NOT NULL,  -- bcrypt(12 rounds)
+    "Role"           VARCHAR(20)  NOT NULL DEFAULT 'ADMIN',
     -- ADMIN, ACCOUNTANT, OWNER
-    employee_id    INTEGER      REFERENCES hr.employees(id),  -- Link to HR employee
-    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
-    last_login_at  TIMESTAMPTZ,
-    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    CONSTRAINT role_valid CHECK (role IN ('ADMIN','ACCOUNTANT','OWNER'))
+    "EmployeeId"    INTEGER      REFERENCES hr."Employees"("Id"),  -- Link to HR employee
+    "IsActive"      BOOLEAN      NOT NULL DEFAULT TRUE,
+    "LastLoginAt"  TIMESTAMPTZ,
+    "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT "RoleValid" CHECK ("Role" IN ('ADMIN','ACCOUNTANT','OWNER'))
 );
 
-CREATE TRIGGER trg_web_user_timestamp
-BEFORE UPDATE ON system.web_users
+CREATE TRIGGER "TrgWebUserTimestamp"
+BEFORE UPDATE ON system."WebUsers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Action audit log
-CREATE TABLE system.audit_log (
-    id                BIGSERIAL    PRIMARY KEY,
-    table_name        VARCHAR(100) NOT NULL,
-    record_id         VARCHAR(50),
+CREATE TABLE system."AuditLog" (
+    "Id"                BIGSERIAL    PRIMARY KEY,
+    "TableName"        VARCHAR(100) NOT NULL,
+    "RecordId"         VARCHAR(50),
     action            VARCHAR(10)  NOT NULL,  -- INSERT, UPDATE, DELETE
-    old_data          JSONB,
-    new_data          JSONB,
-    description       TEXT,
-    ip_address        VARCHAR(45),
-    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    "OldData"          JSONB,
+    "NewData"          JSONB,
+    "Description"       TEXT,
+    "IpAddress"        VARCHAR(45),
+    "CreatedAt"        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_table ON system.audit_log(table_name);
-CREATE INDEX idx_audit_date   ON system.audit_log(created_at);
+CREATE INDEX "IdxAuditTable" ON system."AuditLog"("TableName");
+CREATE INDEX "IdxAuditDate"   ON system."AuditLog"("CreatedAt");
 
 
 -- =============================================================================
@@ -517,14 +517,14 @@ CREATE INDEX idx_audit_date   ON system.audit_log(created_at);
 -- =============================================================================
 
 -- Measurement types
-INSERT INTO public.measurement_types (code, name, unit_label, decimals) VALUES
+INSERT INTO public."MeasurementTypes" ("Code", "Name", "UnitLabel", "Decimals") VALUES
     ('METRO', 'Metros lineales',     'metros', 2),
     ('PIEZA', 'Piezas / unidades',   'piezas', 0),
     ('KIT',   'Kits pre-armados',    'kits',   0),
     ('PESO',  'Kilogramos a granel', 'kg',     3);
 
 -- 17 product families
-INSERT INTO public.families (code, name, description) VALUES
+INSERT INTO public."Families" ("Code", "Name", "Description") VALUES
     ('01',  'Cables de Acero',     'Cables galvanizados e inoxidables 7x7, 7x19'),
     ('02',  'Boquillas',           'Boquillas acelerador, cambios, embrague, freno'),
     ('03',  'Piezas en Caucho',    'Guardapolvos, bujes, empaques, soportes'),
@@ -544,52 +544,52 @@ INSERT INTO public.families (code, name, description) VALUES
     ('FLH', 'Flexoindustrial HD',  'Heavy Duty - trabajo pesado');
 
 -- Subfamilies of Boquillas (family 02)
-INSERT INTO public.subfamilies (family_id, code, name)
-SELECT id, 'AC', 'Acelerador' FROM public.families WHERE code = '02' UNION ALL
-SELECT id, 'CC', 'Cambios'    FROM public.families WHERE code = '02' UNION ALL
-SELECT id, 'EM', 'Embrague'   FROM public.families WHERE code = '02' UNION ALL
-SELECT id, 'FR', 'Freno'      FROM public.families WHERE code = '02';
+INSERT INTO public."Subfamilies" ("FamilyId", "Code", "Name")
+SELECT "Id", 'AC', 'Acelerador' FROM public."Families" WHERE "Code" = '02' UNION ALL
+SELECT "Id", 'CC', 'Cambios'    FROM public."Families" WHERE "Code" = '02' UNION ALL
+SELECT "Id", 'EM', 'Embrague'   FROM public."Families" WHERE "Code" = '02' UNION ALL
+SELECT "Id", 'FR', 'Freno'      FROM public."Families" WHERE "Code" = '02';
 
 -- Subfamilies of Steel Cables (family 01)
-INSERT INTO public.subfamilies (family_id, code, name)
-SELECT id, 'Cga', 'Cable galvanizado acero' FROM public.families WHERE code = '01' UNION ALL
-SELECT id, 'Cin', 'Cable inoxidable'        FROM public.families WHERE code = '01' UNION ALL
-SELECT id, 'Cre', 'Cable recubierto PVC'    FROM public.families WHERE code = '01';
+INSERT INTO public."Subfamilies" ("FamilyId", "Code", "Name")
+SELECT "Id", 'Cga', 'Cable galvanizado acero' FROM public."Families" WHERE "Code" = '01' UNION ALL
+SELECT "Id", 'Cin', 'Cable inoxidable'        FROM public."Families" WHERE "Code" = '01' UNION ALL
+SELECT "Id", 'Cre', 'Cable recubierto PVC'    FROM public."Families" WHERE "Code" = '01';
 
 -- Sales applications
-INSERT INTO sales.applications (code, name) VALUES
+INSERT INTO sales."Applications" ("Code", "Name") VALUES
     ('VT-01', 'Venta Nueva'),
     ('VT-02', 'Reparación'),
     ('VT-03', 'Garantía'),
     ('RP-01', 'Reposición');
 
 -- Departments and positions
-INSERT INTO hr.departments (name) VALUES
+INSERT INTO hr."Departments" ("Name") VALUES
     ('Producción'), ('Ventas'), ('Bodega'), ('Administración');
 
-INSERT INTO hr.positions (department_id, name)
-SELECT id, 'Técnico de Confección' FROM hr.departments WHERE name = 'Producción' UNION ALL
-SELECT id, 'Vendedor'              FROM hr.departments WHERE name = 'Ventas'     UNION ALL
-SELECT id, 'Bodeguero'             FROM hr.departments WHERE name = 'Bodega'     UNION ALL
-SELECT id, 'Administrador'         FROM hr.departments WHERE name = 'Administración' UNION ALL
-SELECT id, 'Gerente'               FROM hr.departments WHERE name = 'Administración';
+INSERT INTO hr."Positions" ("DepartmentId", "Name")
+SELECT "Id", 'Técnico de Confección' FROM hr."Departments" WHERE "Name" = 'Producción' UNION ALL
+SELECT "Id", 'Vendedor'              FROM hr."Departments" WHERE "Name" = 'Ventas'     UNION ALL
+SELECT "Id", 'Bodeguero'             FROM hr."Departments" WHERE "Name" = 'Bodega'     UNION ALL
+SELECT "Id", 'Administrador'         FROM hr."Departments" WHERE "Name" = 'Administración' UNION ALL
+SELECT "Id", 'Gerente'               FROM hr."Departments" WHERE "Name" = 'Administración';
 
 -- System settings
-INSERT INTO system.settings (key, value, description) VALUES
-    ('iva_percentage',           '13',                          'IVA vigente en El Salvador (%)'),
+INSERT INTO system."Settings" ("Key", "Value", "Description") VALUES
+    ('"IvaPercentage"',           '13',                          'IVA vigente en El Salvador (%)'),
     ('currency',                 'USD',                         'Moneda operativa'),
-    ('session_timeout_minutes',  '30',                          'Minutos de inactividad antes de cerrar sesión'),
-    ('business_name',            'FlexoCable El Salvador',      'Nombre para impresión en tickets'),
-    ('business_nit',             '',                            'NIT del emisor para DTE — configurar antes de producción'),
-    ('business_nrc',             '',                            'NRC del emisor para DTE'),
-    ('business_address',         'San Salvador, El Salvador',   'Dirección para tickets'),
-    ('business_phone',           '',                            'Teléfono para tickets'),
-    ('ticket_footer_message',    'Gracias por su compra.',      'Mensaje al pie del ticket'),
-    ('button_min_size_px',       '90',                          'Tamaño mínimo de botones táctiles'),
-    ('font_base_size_pt',        '16',                          'Tamaño base de fuente en puntos');
+    ('"SessionTimeoutMinutes"',  '30',                          'Minutos de inactividad antes de cerrar sesión'),
+    ('"BusinessName"',            'FlexoCable El Salvador',      'Nombre para impresión en tickets'),
+    ('"BusinessNit"',             '',                            'NIT del emisor para DTE — configurar antes de producción'),
+    ('"BusinessNrc"',             '',                            'NRC del emisor para DTE'),
+    ('"BusinessAddress"',         'San Salvador, El Salvador',   'Dirección para tickets'),
+    ('"BusinessPhone"',           '',                            'Teléfono para tickets'),
+    ('"TicketFooterMessage"',    'Gracias por su compra.',      'Mensaje al pie del ticket'),
+    ('"ButtonMinSizePx"',       '90',                          'Tamaño mínimo de botones táctiles'),
+    ('"FontBaseSizePt"',        '16',                          'Tamaño base de fuente en puntos');
 
 -- Initial DTE configuration (test environment)
-INSERT INTO dte.dte_config (environment, api_url, issuer_nit, issuer_name, is_active)
+INSERT INTO dte."DteConfig" (environment, "ApiUrl", "IssuerNit", "IssuerName", "IsActive")
 VALUES (
     '00',
     'https://apifacturatest.mh.gob.sv',
@@ -600,7 +600,7 @@ VALUES (
 
 -- Initial web user (admin)
 -- IMPORTANT: change password from WebApp before production
-INSERT INTO system.web_users (username, email, password_hash, role)
+INSERT INTO system."WebUsers" ("Username", "Email", "PasswordHash", "Role")
 VALUES (
     'admin',
     'admin@flexocable.com.sv',
@@ -613,78 +613,78 @@ VALUES (
 -- USEFUL VIEWS
 -- =============================================================================
 
--- Products with stock status (for inventory table with colors)
-CREATE OR REPLACE VIEW public.v_products_stock AS
+-- Products with stock "Status" (for inventory table with colors)
+CREATE OR REPLACE VIEW public."VProductsStock" AS
 SELECT
-    p.id,
-    p.code,
-    p.description,
-    f.name                                      AS family,
-    sf.name                                     AS subfamily,
-    mt.unit_label                               AS unit,
-    mt.decimals,
-    p.current_stock,
-    p.min_stock,
-    p.sale_price,
+    p."Id",
+    p."Code",
+    p."Description",
+    f."Name"                                      AS family,
+    sf."Name"                                     AS subfamily,
+    mt."UnitLabel"                               AS unit,
+    mt."Decimals",
+    p."CurrentStock",
+    p."MinStock",
+    p."SalePrice",
     CASE
-        WHEN p.current_stock = 0                THEN 'AGOTADO'
-        WHEN p.current_stock <= p.min_stock       THEN 'BAJO_MINIMO'
+        WHEN p."CurrentStock" = 0                THEN 'AGOTADO'
+        WHEN p."CurrentStock" <= p."MinStock"       THEN 'BAJO_MINIMO'
         ELSE                                            'OK'
-    END                                         AS stock_status
-FROM public.products p
-JOIN  public.families      f  ON p.family_id        = f.id
-LEFT JOIN public.subfamilies sf ON p.subfamily_id    = sf.id
-JOIN  public.measurement_types mt ON p.measurement_type_id = mt.id
-WHERE p.is_active = TRUE;
+    END                                         AS "StockStatus"
+FROM public."Products" p
+JOIN  public."Families"      f  ON p."FamilyId"        = f."Id"
+LEFT JOIN public."Subfamilies" sf ON p."SubfamilyId"    = sf."Id"
+JOIN  public."MeasurementTypes" mt ON p."MeasurementTypeId" = mt."Id"
+WHERE p."IsActive" = TRUE;
 
--- Today's sales with DTE status (for daily table)
-CREATE OR REPLACE VIEW sales.v_sales_today AS
+-- Today's sales with DTE "Status" (for daily table)
+CREATE OR REPLACE VIEW sales."VSalesToday" AS
 SELECT
-    o.id,
-    o.order_date,
-    o.order_time,
-    o.customer_name,
-    o.total,
-    o.status,
-    e.first_name || ' ' || COALESCE(e.last_name,'') AS employee,
-    a.name                                          AS application,
-    d.reception_stamp,
-    d.mh_status                                     AS dte_status,
-    d.reprints
-FROM sales.orders o
-JOIN hr.employees      e ON o.employee_id    = e.id
-JOIN sales.applications a ON o.application_id = a.id
-LEFT JOIN dte.dte_issued d ON d.order_id      = o.id
-WHERE o.order_date = CURRENT_DATE
-ORDER BY o.order_time DESC;
+    o."Id",
+    o."OrderDate",
+    o."OrderTime",
+    o."CustomerName",
+    o."Total",
+    o."Status",
+    e."FirstName" || ' ' || COALESCE(e."LastName",'') AS employee,
+    a."Name"                                          AS application,
+    d."ReceptionStamp",
+    d."MhStatus"                                     AS "DteStatus",
+    d."Reprints"
+FROM sales."Orders" o
+JOIN hr."Employees"      e ON o."EmployeeId"    = e."Id"
+JOIN sales."Applications" a ON o."ApplicationId" = a."Id"
+LEFT JOIN dte."DteIssued" d ON d."OrderId"      = o."Id"
+WHERE o."OrderDate" = CURRENT_DATE
+ORDER BY o."OrderTime" DESC;
 
 -- Active stock alerts (for dashboard)
-CREATE OR REPLACE VIEW public.v_active_alerts AS
+CREATE OR REPLACE VIEW public."VActiveAlerts" AS
 SELECT
-    al.id,
-    al.created_at,
-    p.code,
-    p.description,
-    al.current_stock,
-    al.min_stock,
-    CASE WHEN al.current_stock = 0 THEN 'AGOTADO' ELSE 'BAJO_MINIMO' END AS alert_type
-FROM public.stock_alerts al
-JOIN public.products p ON al.product_id = p.id
-WHERE al.is_resolved = FALSE
-ORDER BY al.created_at DESC;
+    al."Id",
+    al."CreatedAt",
+    p."Code",
+    p."Description",
+    al."CurrentStock",
+    al."MinStock",
+    CASE WHEN al."CurrentStock" = 0 THEN 'AGOTADO' ELSE 'BAJO_MINIMO' END AS "AlertType"
+FROM public."StockAlerts" al
+JOIN public."Products" p ON al."ProductId" = p."Id"
+WHERE al."IsResolved" = FALSE
+ORDER BY al."CreatedAt" DESC;
 
 -- Today's KPIs for WebApp dashboard
-CREATE OR REPLACE VIEW sales.v_kpis_today AS
+CREATE OR REPLACE VIEW sales."VKpisToday" AS
 SELECT
-    COUNT(*)                                     AS total_orders,
-    COALESCE(SUM(o.total), 0)                    AS total_amount,
-    COALESCE(AVG(o.total), 0)                  AS avg_ticket,
-    COUNT(*) FILTER (WHERE d.mh_status = 'PROCESADO') AS dtes_sent,
-    COUNT(*) FILTER (WHERE d.mh_status = 'CONTINGENCIA') AS in_contingency
-FROM sales.orders o
-LEFT JOIN dte.dte_issued d ON d.order_id = o.id
-WHERE o.order_date = CURRENT_DATE
-  AND o.status NOT IN ('CANCELADA');
+    COUNT(*)                                     AS "TotalOrders",
+    COALESCE(SUM(o."Total"), 0)                    AS "TotalAmount",
+    COALESCE(AVG(o."Total"), 0)                  AS "AvgTicket",
+    COUNT(*) FILTER (WHERE d."MhStatus" = 'PROCESADO') AS "DtesSent",
+    COUNT(*) FILTER (WHERE d."MhStatus" = 'CONTINGENCIA') AS "InContingency"
+FROM sales."Orders" o
+LEFT JOIN dte."DteIssued" d ON d."OrderId" = o."Id"
+WHERE o."OrderDate" = CURRENT_DATE
+  AND o."Status" NOT IN ('CANCELADA');
 
 
 -- =============================================================================
@@ -707,12 +707,12 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA system  TO flexo_user;
 -- END OF SCHEMA — FlexoCable SV v1.1.0
 -- =============================================================================
 -- Production Checklist:
---   [ ] Update business_nit and business_nrc in system.settings
---   [ ] Update dte.dte_config with real issuer data
+--   [ ] Update "BusinessNit" and "BusinessNrc" in system."Settings"
+--   [ ] Update dte."DteConfig" with real issuer data
 --   [ ] Change DTE environment from '00' to '01'
 --   [ ] Upload .p12 certificate to server
 --   [ ] Change admin web user password
 --   [ ] Load complete catalog of 500+ products (additional seed)
 --   [ ] Create employees and assign PINs from the app
---   [ ] Configure automatic backup with pg_dump
+--   [ ] Configure automatic backup with "PgDump"
 -- =============================================================================

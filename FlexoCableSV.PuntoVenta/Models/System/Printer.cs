@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
-
-[Table("printers", Schema = "system")]
 public class Printer
 {
     [Key]
@@ -17,16 +15,10 @@ public class Printer
 
     [MaxLength(15)]
     public string? IpAddress { get; set; }
-
     public int? NetworkPort { get; set; }
-
     public short PaperWidth { get; set; } = 80;
-
     public bool IsDefault { get; set; } = false;
-
     public bool IsActive { get; set; } = true;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
