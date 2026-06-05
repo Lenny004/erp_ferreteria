@@ -3,6 +3,7 @@ using FlexoCableSV.PuntoVenta.Views.Inicio;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.IO;
 using System.Windows;
 
 namespace FlexoCableSV.PuntoVenta;
@@ -17,8 +18,11 @@ public partial class App : Application
         _host = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration(config =>
             {
-                // Lee appsettings.json automáticamente
-                config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                config.SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile(
+                        Path.Combine("Config", "appsettings.json"),
+                        optional: false,
+                        reloadOnChange: true);
             })
             .ConfigureServices((context, services) =>
             {
@@ -33,30 +37,52 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
-        await _host.StartAsync();
+        try
+        {
+            await _host.StartAsync();
 
-        // Verificar conexión a BD al arrancar
-        await VerifyDatabaseConnectionAsync();
+            var dbOk = await VerifyDatabaseConnectionAsync();
+            if (!dbOk)
+            {
+                Shutdown();
+                return;
+            }
 
-        // Mostrar pantalla de inicio
-        var inicioWindow = _host.Services.GetRequiredService<InicioWindow>();
-        inicioWindow.Show();
+            var inicioWindow = _host.Services.GetRequiredService<InicioWindow>();
+            inicioWindow.Show();
 
-        base.OnStartup(e);
+            base.OnStartup(e);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Error critico al iniciar la aplicacion:\n{ex.Message}",
+                "Error de Arranque",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown();
+        }
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
-        await _host.StopAsync();
-        _host.Dispose();
-        base.OnExit(e);
+        try
+        {
+            await _host.StopAsync();
+        }
+        finally
+        {
+            _host.Dispose();
+            base.OnExit(e);
+        }
     }
 
-    private async Task VerifyDatabaseConnectionAsync()
+    private async Task<bool> VerifyDatabaseConnectionAsync()
     {
         try
         {
-            var dbContext = _host.Services.GetRequiredService<FlexoDbContext>();
+            using var scope = _host.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
             var canConnect = await dbContext.Database.CanConnectAsync();
 
             if (!canConnect)
@@ -68,8 +94,10 @@ public partial class App : Application
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
-                Shutdown();
+                return false;
             }
+
+            return true;
         }
         catch (Exception ex)
         {
@@ -79,7 +107,7 @@ public partial class App : Application
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
 
-            Shutdown();
+            return false;
         }
     }
 }
