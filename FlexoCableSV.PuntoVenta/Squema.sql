@@ -208,7 +208,7 @@ CREATE TABLE sales."Orders" (
     "OrderTime"      TIME          NOT NULL DEFAULT CURRENT_TIME,
     "Status"          VARCHAR(20)   NOT NULL DEFAULT 'PENDIENTE',
     -- PENDIENTE → COMPLETADA | CANCELADA
-    subtotal        NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "Subtotal"      NUMERIC(12,2) NOT NULL DEFAULT 0,
     "Iva"             NUMERIC(12,2) NOT NULL DEFAULT 0,   -- 13% calculated
     "Total"           NUMERIC(12,2) NOT NULL DEFAULT 0,
     "Notes"           TEXT,
@@ -234,7 +234,7 @@ CREATE TABLE sales."OrderDetails" (
     "ProductId"      INTEGER       NOT NULL REFERENCES public."Products"("Id"),
     "Quantity"        NUMERIC(12,3) NOT NULL,
     "UnitPrice"      NUMERIC(12,2) NOT NULL,
-    subtotal        NUMERIC(12,2) NOT NULL,
+    "Subtotal"      NUMERIC(12,2) NOT NULL,
     "CreatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT "QuantityPositive" CHECK ("Quantity" > 0)
 );
@@ -249,11 +249,11 @@ CREATE INDEX "IdxDetailOrder" ON sales."OrderDetails"("OrderId");
 -- DTE issuer configuration
 CREATE TABLE dte."DteConfig" (
     "Id"                    SERIAL       PRIMARY KEY,
-    environment           CHAR(2)      NOT NULL,  -- '00' test, '01' production
+    "Environment"         CHAR(2)      NOT NULL,  -- '00' test, '01' production
     "ApiUrl"               VARCHAR(200) NOT NULL,
     "IssuerNit"            VARCHAR(20)  NOT NULL,
     "IssuerName"           VARCHAR(200) NOT NULL,
-    "IssuerNrc"            VARCHAR(20),
+    "IssuerNrc"            VARCHAR(9),
     "ActivityCode"         VARCHAR(10),
     "ActivityDescription"  VARCHAR(200),
     "Address"               TEXT,
@@ -264,7 +264,7 @@ CREATE TABLE dte."DteConfig" (
     "IsActive"             BOOLEAN      NOT NULL DEFAULT TRUE,
     "CreatedAt"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     "UpdatedAt"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    CONSTRAINT "EnvironmentValid" CHECK (environment IN ('00','01'))
+    CONSTRAINT "EnvironmentValid" CHECK ("Environment" IN ('00','01'))
 );
 
 CREATE TRIGGER "TrgDteConfigTimestamp"
@@ -286,7 +286,7 @@ CREATE TABLE dte."DteIssued" (
     "PaymentMethod"    VARCHAR(20)  NOT NULL DEFAULT 'EFECTIVO',
     "ReceiverNit"      VARCHAR(20),
     "ReceiverName"     VARCHAR(200),
-    environment       CHAR(2)      NOT NULL DEFAULT '01',
+    "Environment"     CHAR(2)      NOT NULL DEFAULT '01',
     "SentAt"           TIMESTAMPTZ,
     "CreatedAt"        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     "Reprints"          SMALLINT     NOT NULL DEFAULT 0,
@@ -422,12 +422,12 @@ CREATE TABLE hr."PayrollDetails" (
     "BaseSalary"          NUMERIC(10,2) NOT NULL,
     "OvertimeHours"       NUMERIC(5,2)  NOT NULL DEFAULT 0,
     "OvertimeAmount"      NUMERIC(10,2) NOT NULL DEFAULT 0,  -- hours × ("HourlyRate" × 2)
-    bonuses              NUMERIC(10,2) NOT NULL DEFAULT 0,
+    "Bonuses"            NUMERIC(10,2) NOT NULL DEFAULT 0,
     "TotalIncome"         NUMERIC(10,2) NOT NULL,
     -- Employee deductions
     "IsssEmployee"        NUMERIC(10,2) NOT NULL,  -- 3% of "TotalIncome"
     "AfpEmployee"         NUMERIC(10,2) NOT NULL,  -- 7.25% of "TotalIncome"
-    isr                  NUMERIC(10,2) NOT NULL DEFAULT 0,
+    "Isr"                NUMERIC(10,2) NOT NULL DEFAULT 0,
     "OtherDeductions"     NUMERIC(10,2) NOT NULL DEFAULT 0,
     "TotalDeductions"     NUMERIC(10,2) NOT NULL,
     -- Net pay
@@ -500,7 +500,7 @@ CREATE TABLE system."AuditLog" (
     "Id"                BIGSERIAL    PRIMARY KEY,
     "TableName"        VARCHAR(100) NOT NULL,
     "RecordId"         VARCHAR(50),
-    action            VARCHAR(10)  NOT NULL,  -- INSERT, UPDATE, DELETE
+    "Action"          VARCHAR(10)  NOT NULL,  -- INSERT, UPDATE, DELETE
     "OldData"          JSONB,
     "NewData"          JSONB,
     "Description"       TEXT,
@@ -589,7 +589,7 @@ INSERT INTO system."Settings" ("Key", "Value", "Description") VALUES
     ('"FontBaseSizePt"',        '16',                          'Tamaño base de fuente en puntos');
 
 -- Initial DTE configuration (test environment)
-INSERT INTO dte."DteConfig" (environment, "ApiUrl", "IssuerNit", "IssuerName", "IsActive")
+INSERT INTO dte."DteConfig" ("Environment", "ApiUrl", "IssuerNit", "IssuerName", "IsActive")
 VALUES (
     '00',
     'https://apifacturatest.mh.gob.sv',

@@ -51,6 +51,7 @@ public class PayrollDetail
 
     [Column(TypeName = "numeric(10,2)")]
     public decimal AfpEmployer { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

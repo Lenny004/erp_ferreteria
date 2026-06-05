@@ -14,16 +14,16 @@ public class Employee
     [Required, MaxLength(100)]
     public string LastName { get; set; } = string.Empty;
 
-    [MaxLength(10)]
+    [MaxLength(15)]
     public string? Dui { get; set; }
 
-    [MaxLength(17)]
+    [MaxLength(20)]
     public string? Nit { get; set; }
 
-    [MaxLength(12)]
+    [MaxLength(20)]
     public string? IsssNumber { get; set; }
 
-    [MaxLength(15)]
+    [MaxLength(20)]
     public string? Nup { get; set; }
 
     // Job
@@ -34,7 +34,7 @@ public class Employee
     [Column(TypeName = "numeric(10,2)")]
     public decimal BaseSalary { get; set; }
 
-    [Required, MaxLength(10)]
+    [Required, MaxLength(20)]
     public string ContractType { get; set; } = "PLANILLA";
 
     [MaxLength(50)]
@@ -78,7 +78,9 @@ public class Employee
 
     // Status
     public bool IsActive { get; set; } = true;
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

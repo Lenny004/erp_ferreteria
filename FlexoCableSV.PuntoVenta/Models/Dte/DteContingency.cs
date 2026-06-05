@@ -9,9 +9,12 @@ public class DteContingency
     public long DteId { get; set; }
     public short Attempts { get; set; } = 0;
     public string? LastError { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime NextAttemptAt { get; set; } = DateTime.UtcNow;
     public bool IsResolved { get; set; } = false;
+    [Column(TypeName = "timestamptz")]
     public DateTime? ResolvedAt { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

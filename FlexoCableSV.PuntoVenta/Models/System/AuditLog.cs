@@ -13,7 +13,7 @@ public class AuditLog
     [MaxLength(50)]
     public string? RecordId { get; set; }
 
-    [Required, MaxLength(6)]
+    [Required, MaxLength(10)]
     public string Action { get; set; } = string.Empty;
 
     [Column(TypeName = "jsonb")]
@@ -25,5 +25,6 @@ public class AuditLog
 
     [MaxLength(45)]
     public string? IpAddress { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

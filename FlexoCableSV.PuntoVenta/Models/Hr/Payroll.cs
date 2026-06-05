@@ -9,7 +9,7 @@ public class Payroll
     public short PeriodMonth { get; set; }
     public short PeriodYear { get; set; }
 
-    [Required, MaxLength(8)]
+    [Required, MaxLength(20)]
     public string Status { get; set; } = "BORRADOR";
 
     [Column(TypeName = "numeric(12,2)")]
@@ -35,9 +35,13 @@ public class Payroll
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalAfpEmployer { get; set; } = 0;
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime? ApprovedAt { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime? PaidAt { get; set; }
 
     // Navigation

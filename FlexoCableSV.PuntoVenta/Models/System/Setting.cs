@@ -13,5 +13,6 @@ public class Setting
 
     [MaxLength(200)]
     public string? Description { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -13,7 +13,9 @@ public class Application
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

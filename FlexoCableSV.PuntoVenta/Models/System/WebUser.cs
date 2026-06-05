@@ -16,12 +16,15 @@ public class WebUser
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
-    [Required, MaxLength(10)]
+    [Required, MaxLength(20)]
     public string Role { get; set; } = "ADMIN";
     public int? EmployeeId { get; set; }
     public bool IsActive { get; set; } = true;
+    [Column(TypeName = "timestamptz")]
     public DateTime? LastLoginAt { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

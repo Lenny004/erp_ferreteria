@@ -17,6 +17,7 @@ public class OrderDetail
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal Subtotal { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

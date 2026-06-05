@@ -19,7 +19,9 @@ public class Supplier
     [MaxLength(100)]
     public string? Email { get; set; }
     public bool IsActive { get; set; } = true;
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

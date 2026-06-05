@@ -14,7 +14,7 @@ public class Order
     public DateTime OrderDate { get; set; } = DateTime.UtcNow.Date;
     public TimeSpan OrderTime { get; set; } = DateTime.UtcNow.TimeOfDay;
 
-    [Required, MaxLength(11)]
+    [Required, MaxLength(20)]
     public string Status { get; set; } = "PENDIENTE";
 
     [Column(TypeName = "numeric(12,2)")]
@@ -26,7 +26,9 @@ public class Order
     [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
     public string? Notes { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

@@ -18,7 +18,7 @@ public class DteIssued
     [MaxLength(100)]
     public string? ReceptionStamp { get; set; }
 
-    [Required, MaxLength(12)]
+    [Required, MaxLength(20)]
     public string MhStatus { get; set; } = "PENDIENTE";
 
     [Required]
@@ -31,7 +31,7 @@ public class DteIssued
     [Required, MaxLength(20)]
     public string PaymentMethod { get; set; } = "EFECTIVO";
 
-    [MaxLength(17)]
+    [MaxLength(20)]
     public string? ReceiverNit { get; set; }
 
     [MaxLength(200)]
@@ -39,7 +39,9 @@ public class DteIssued
 
     [Required, MaxLength(2)]
     public string Environment { get; set; } = "01";
+    [Column(TypeName = "timestamptz")]
     public DateTime? SentAt { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public short Reprints { get; set; } = 0;
 

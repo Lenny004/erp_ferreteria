@@ -14,7 +14,9 @@ public class StockAlert
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; }
     public bool IsResolved { get; set; } = false;
+    [Column(TypeName = "timestamptz")]
     public DateTime? ResolvedAt { get; set; }
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

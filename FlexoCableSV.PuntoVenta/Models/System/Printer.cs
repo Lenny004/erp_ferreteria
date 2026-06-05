@@ -19,6 +19,8 @@ public class Printer
     public short PaperWidth { get; set; } = 80;
     public bool IsDefault { get; set; } = false;
     public bool IsActive { get; set; } = true;
+    [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
