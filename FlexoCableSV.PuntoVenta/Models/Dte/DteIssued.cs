@@ -44,7 +44,7 @@ public class DteIssued
     public short Reprints { get; set; } = 0;
 
     // Navigation
-    [ForeignKey("OrderId")]
+    [ForeignKey(nameof(OrderId))]
     public Order Order { get; set; } = null!;
     public DteContingency? Contingency { get; set; }
 }

@@ -25,6 +25,6 @@ public class WebUser
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("EmployeeId")]
+    [ForeignKey(nameof(EmployeeId))]
     public Employee? Employee { get; set; }
 }

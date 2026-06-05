@@ -10,6 +10,10 @@ namespace FlexoCableSV.PuntoVenta
     {
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
+        /// <summary>
+        /// Inicializa la aplicación y muestra la ventana principal resolviéndola desde DI.
+        /// </summary>
+        /// <param name="e">Argumentos de inicio de la aplicación WPF.</param>
         protected override void OnStartup(StartupEventArgs e)
         {
             var services = new ServiceCollection();
@@ -20,6 +24,10 @@ namespace FlexoCableSV.PuntoVenta
             mainWindow.Show();
         }
 
+        /// <summary>
+        /// Registra configuración y servicios base en el contenedor de dependencias.
+        /// </summary>
+        /// <param name="services">Colección de servicios a configurar.</param>
         private static void ConfigureServices(IServiceCollection services)
         {
             var configuration = new ConfigurationBuilder()

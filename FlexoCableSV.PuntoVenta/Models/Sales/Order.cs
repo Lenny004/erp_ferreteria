@@ -30,10 +30,10 @@ public class Order
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("EmployeeId")]
+    [ForeignKey(nameof(EmployeeId))]
     public Employee Employee { get; set; } = null!;
 
-    [ForeignKey("ApplicationId")]
+    [ForeignKey(nameof(ApplicationId))]
     public Application Application { get; set; } = null!;
 
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();

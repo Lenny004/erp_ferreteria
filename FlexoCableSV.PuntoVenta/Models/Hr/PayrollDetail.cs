@@ -54,9 +54,9 @@ public class PayrollDetail
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("PayrollId")]
+    [ForeignKey(nameof(PayrollId))]
     public Payroll Payroll { get; set; } = null!;
 
-    [ForeignKey("EmployeeId")]
+    [ForeignKey(nameof(EmployeeId))]
     public Employee Employee { get; set; } = null!;
 }

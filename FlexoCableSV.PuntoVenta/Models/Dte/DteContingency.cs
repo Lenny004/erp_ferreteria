@@ -15,6 +15,6 @@ public class DteContingency
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("DteId")]
+    [ForeignKey(nameof(DteId))]
     public DteIssued DteIssued { get; set; } = null!;
 }

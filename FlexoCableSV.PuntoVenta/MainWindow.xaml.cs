@@ -16,6 +16,9 @@ namespace FlexoCableSV.PuntoVenta
     /// </summary>
     public partial class MainWindow : Window
     {
+        /// <summary>
+        /// Inicializa la ventana principal de la aplicación.
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();

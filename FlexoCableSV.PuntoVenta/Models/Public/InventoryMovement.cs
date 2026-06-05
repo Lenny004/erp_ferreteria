@@ -30,12 +30,12 @@ public class InventoryMovement
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("ProductId")]
+    [ForeignKey(nameof(ProductId))]
     public Product Product { get; set; } = null!;
 
-    [ForeignKey("SupplierId")]
+    [ForeignKey(nameof(SupplierId))]
     public Supplier? Supplier { get; set; }
 
-    [ForeignKey("EmployeeId")]
+    [ForeignKey(nameof(EmployeeId))]
     public Employee? Employee { get; set; }
 }

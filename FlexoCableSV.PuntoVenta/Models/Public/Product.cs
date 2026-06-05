@@ -33,19 +33,24 @@ public class Product
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("FamilyId")]
+    [ForeignKey(nameof(FamilyId))]
     public Family Family { get; set; } = null!;
 
-    [ForeignKey("SubfamilyId")]
+    [ForeignKey(nameof(SubfamilyId))]
     public Subfamily? Subfamily { get; set; }
 
-    [ForeignKey("MeasurementTypeId")]
+    [ForeignKey(nameof(MeasurementTypeId))]
     public MeasurementType MeasurementType { get; set; } = null!;
 
-    [ForeignKey("SupplierId")]
+    [ForeignKey(nameof(SupplierId))]
     public Supplier? Supplier { get; set; }
 
     public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
+
+    /// <summary>
+    /// Detalles de venta asociados al producto.
+    /// Debe mantenerse como colección inicializada (vacía cuando no hay ventas), y no como <see langword="null" />.
+    /// </summary>
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<StockAlert> StockAlerts { get; set; } = new List<StockAlert>();
 }

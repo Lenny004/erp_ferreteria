@@ -15,7 +15,7 @@ public class Position
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("DepartmentId")]
+    [ForeignKey(nameof(DepartmentId))]
     public Department Department { get; set; } = null!;
     public ICollection<Employee> Employees { get; set; } = new List<Employee>();
 }

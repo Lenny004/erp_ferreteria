@@ -5,6 +5,10 @@ namespace FlexoCableSV.PuntoVenta.Data;
 
 public class FlexoDbContext : DbContext
 {
+    /// <summary>
+    /// Crea una instancia del contexto principal de EF Core para FlexoCable.
+    /// </summary>
+    /// <param name="options">Opciones de configuración inyectadas para el contexto.</param>
     public FlexoDbContext(DbContextOptions<FlexoDbContext> options) : base(options) { }
 
     // public schema — catálogo e inventario
@@ -39,6 +43,10 @@ public class FlexoDbContext : DbContext
     public DbSet<WebUser> WebUsers => Set<WebUser>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    /// <summary>
+    /// Configura mapeos de tablas, tipos de columna y relaciones entre entidades mediante Fluent API.
+    /// </summary>
+    /// <param name="modelBuilder">Constructor del modelo que define la forma final del esquema EF Core.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

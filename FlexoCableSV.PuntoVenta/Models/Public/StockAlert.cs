@@ -18,6 +18,6 @@ public class StockAlert
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("ProductId")]
+    [ForeignKey(nameof(ProductId))]
     public Product Product { get; set; } = null!;
 }

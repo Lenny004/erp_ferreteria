@@ -12,6 +12,13 @@ public static class DatabaseConfig
 {
     private const string ConnectionStringKey = "FlexoCableDB";
 
+    /// <summary>
+    /// Registra el contexto de datos de FlexoCable usando PostgreSQL.
+    /// </summary>
+    /// <param name="services">Colección de servicios del contenedor de inyección de dependencias.</param>
+    /// <param name="configuration">Configuración de aplicación desde la que se obtiene la cadena de conexión.</param>
+    /// <returns>La misma colección de servicios para permitir encadenamiento.</returns>
+    /// <exception cref="InvalidOperationException">Se lanza cuando no existe la cadena de conexión requerida.</exception>
     public static IServiceCollection AddFlexoDatabase(
         this IServiceCollection services,
         IConfiguration configuration)

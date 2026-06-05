@@ -20,9 +20,9 @@ public class OrderDetail
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("OrderId")]
+    [ForeignKey(nameof(OrderId))]
     public Order Order { get; set; } = null!;
 
-    [ForeignKey("ProductId")]
+    [ForeignKey(nameof(ProductId))]
     public Product Product { get; set; } = null!;
 }

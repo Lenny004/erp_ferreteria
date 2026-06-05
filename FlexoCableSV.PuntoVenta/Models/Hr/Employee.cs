@@ -82,7 +82,7 @@ public class Employee
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("PositionId")]
+    [ForeignKey(nameof(PositionId))]
     public Position? Position { get; set; }
 
     public ICollection<Order> Orders { get; set; } = new List<Order>();

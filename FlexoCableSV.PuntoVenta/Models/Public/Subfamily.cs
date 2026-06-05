@@ -18,7 +18,7 @@ public class Subfamily
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    [ForeignKey("FamilyId")]
+    [ForeignKey(nameof(FamilyId))]
     public Family Family { get; set; } = null!;
     public ICollection<Product> Products { get; set; } = new List<Product>();
 }
