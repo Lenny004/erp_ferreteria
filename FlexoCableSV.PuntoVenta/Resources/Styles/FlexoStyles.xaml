@@ -25,8 +25,8 @@
 	<SolidColorBrush x:Key="FlexoInfo" Color="#64B5F6"/>
 
 	<!-- Azules de fondo -->
-	<SolidColorBrush x:Key="FlexoAzulOscuro" Color="#051322"/>
-	<SolidColorBrush x:Key="FlexoAzulMedio" Color="#1A1F2E"/>
+	<SolidColorBrush x:Key="FlexoAzulOscuro" Color="#010E1C"/>
+	<SolidColorBrush x:Key="FlexoAzulMedio" Color="#0D1C2D"/>
 	<SolidColorBrush x:Key="FlexoAzulClaro" Color="#1C2B3C"/>
 	<!-- NUEVO: Fondo alterno para filas de tabla -->
 	<SolidColorBrush x:Key="FlexoAzulFilaAlt" Color="#151A28"/>
@@ -36,7 +36,7 @@
     ════════════════════════════════════════════ -->
 
 	<FontFamily x:Key="FlexoFontFamily">Segoe UI</FontFamily>
-
+	<sys:Double x:Key="FlexoFontSize_Display">40</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_XL">24</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_LG">16</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_MD">14</sys:Double>
@@ -82,7 +82,7 @@
 	<sys:Double x:Key="FlexoHeight_Tab">40</sys:Double>
 
 	<!-- Anchos -->
-	<sys:Double x:Key="FlexoWidth_Sidebar">200</sys:Double>
+	<GridLength x:Key="FlexoWidth_Sidebar">200</GridLength>
 	<!-- REDUCIDO: 240→200 -->
 	<sys:Double x:Key="FlexoWidth_Button">120</sys:Double>
 	<sys:Double x:Key="FlexoWidth_Icon">18</sys:Double>

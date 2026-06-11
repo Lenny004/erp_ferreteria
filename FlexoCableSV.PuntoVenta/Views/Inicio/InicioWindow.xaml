@@ -116,10 +116,10 @@
                                Fill="{StaticResource FlexoRojo}"
                                RadiusX="2" RadiusY="2"/>
                     <TextBlock Text="EL SALVADOR  ·  PUNTO DE VENTA"
-                               FontSize="{StaticResource FlexoFontSize_XS}"
+                               FontSize="{StaticResource FlexoFontSize_MD}"
                                FontWeight="{StaticResource FlexoFontWeight_Light}"
-                               Foreground="{StaticResource FlexoGris}"
-                               Margin="2,2,0,0" Width="162"/>
+                               Foreground="{StaticResource FlexoBlanco}"
+                               Margin="2,2,0,0" Width="207"/>
                 </StackPanel>
             </StackPanel>
 
@@ -129,9 +129,9 @@
                 <Border Background="{StaticResource FlexoAzulMedio}"
                         HorizontalAlignment="Center" Padding="16,0">
                     <TextBlock Text="SELECCIONA UN MÓDULO"
-                               FontSize="{StaticResource FlexoFontSize_XS}"
+                               FontSize="{StaticResource FlexoFontSize_MD}"
                                FontWeight="{StaticResource FlexoFontWeight_Light}"
-                               Foreground="{StaticResource FlexoGris}"/>
+                               Foreground="{StaticResource FlexoBlanco}"/>
                 </Border>
             </Grid>
 
@@ -186,7 +186,6 @@
             <TextBlock Text="v1.0.0-MVP · 2026"
                        FontSize="{StaticResource FlexoFontSize_XS}"
                        Foreground="{StaticResource FlexoGris}"
-                       Opacity="0.5"
                        HorizontalAlignment="Center"/>
 
         </StackPanel>
