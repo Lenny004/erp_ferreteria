@@ -41,12 +41,13 @@ public partial class App : Application
         {
             await _host.StartAsync();
 
-            var dbOk = await VerifyDatabaseConnectionAsync();
-            if (!dbOk)
-            {
-                Shutdown();
-                return;
-            }
+            // DB validation commented out for UI/UX testing
+            // var dbOk = await VerifyDatabaseConnectionAsync();
+            // if (!dbOk)
+            // {
+            //     Shutdown();
+            //     return;
+            // }
 
             var inicioWindow = _host.Services.GetRequiredService<InicioWindow>();
             inicioWindow.Show();

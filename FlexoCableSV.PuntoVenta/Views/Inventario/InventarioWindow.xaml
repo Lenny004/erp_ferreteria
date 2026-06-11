@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="FlexoCable SV - Inventario"
-        Height="560" Width="760"
-        MinHeight="480" MinWidth="680"
+        Height="600" Width="900"
+        MinHeight="520" MinWidth="760"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -33,12 +33,16 @@
             <RowDefinition Height="30"/>
         </Grid.RowDefinitions>
 
+        <!-- ─── BARRA ROJA SUPERIOR ─── -->
         <Rectangle Grid.ColumnSpan="2"
                    Height="3"
                    VerticalAlignment="Top"
                    Fill="{StaticResource FlexoRojo}"
                    Opacity="0.8"/>
 
+        <!-- ═══════════════════════════════════════
+             SIDENAV (COLUMNA 0) — ANCHO REDUCIDO A 200px
+        ═══════════════════════════════════════ -->
         <Border Grid.Column="0"
                 Grid.RowSpan="3"
                 Background="{StaticResource FlexoAzulMedio}"
@@ -46,165 +50,211 @@
                 BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="120"/>
+                    <!-- Logo: altura reducida -->
+                    <RowDefinition Height="100"/>
+                    <!-- Navegación (con scroll) -->
                     <RowDefinition Height="*"/>
+                    <!-- Cerrar sesión -->
                     <RowDefinition Height="64"/>
                 </Grid.RowDefinitions>
 
+                <!-- ── LOGO — TAMAÑO REDUCIDO ── -->
                 <StackPanel Grid.Row="0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center">
                     <Image Source="/Resources/Images/logo.png"
-                           Width="64"
-                           Height="64"
+                           Width="48" Height="48"
                            Stretch="Uniform"/>
                     <TextBlock Text="FlexoCable SV"
                                Foreground="{StaticResource FlexoBlanco}"
                                FontSize="{StaticResource FlexoFontSize_MD}"
                                FontWeight="{StaticResource FlexoFontWeight_Bold}"
                                HorizontalAlignment="Center"
-                               Margin="0,8,0,0"/>
-                    <TextBlock Text="Punto de venta"
-                               Foreground="{StaticResource FlexoGris}"
-                               FontSize="{StaticResource FlexoFontSize_XS}"
-                               HorizontalAlignment="Center"
-                               Margin="0,2,0,0"/>
+                               Margin="0,6,0,0"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1">
-                    <TextBlock Text="CAJA"
-                               Foreground="{StaticResource FlexoGris}"
-                               FontSize="{StaticResource FlexoFontSize_XS}"
-                               FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                               Margin="20,8,0,6"/>
+                <!-- ── BOTONES DE NAVEGACIÓN ── -->
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Margin="0,4,0,0">
+                    <StackPanel>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/register-w.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Ventas" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
+                        <!-- SECCIÓN CAJA -->
+                        <TextBlock Text="CAJA"
+                                   Style="{StaticResource FlexoNavSectionTitleStyle}"/>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/add-w.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Nueva orden" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
+                        <!-- INVENTARIO — ACTIVO (con indicador rojo) -->
+                        <Button Style="{StaticResource FlexoNavButtonActiveStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/boxes.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Inventario"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"
+                                           Foreground="{StaticResource FlexoBlanco}"
+                                           FontSize="{StaticResource FlexoFontSize_MD}"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}"
-                            Background="{StaticResource FlexoAzulClaro}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/boxes.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Inventario" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/register-w.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Ventas"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/bill.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Facturacion" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/add-w.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Nueva orden"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
 
-                    <TextBlock Text="CONFECCION"
-                               Foreground="{StaticResource FlexoGris}"
-                               FontSize="{StaticResource FlexoFontSize_XS}"
-                               FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                               Margin="20,18,0,6"/>
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/bill.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Facturacion"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/rule-w.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Codigos" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
+                        <Rectangle Style="{StaticResource FlexoNavDividerStyle}"/>
 
-                    <Button Style="{StaticResource FlexoNavButtonStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/printer-w.png" Width="20" Height="20"/>
-                            <TextBlock Grid.Column="1" Text="Impresoras" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </Grid>
-                    </Button>
-                </StackPanel>
+                        <!-- SECCIÓN CONFECCIÓN -->
+                        <TextBlock Text="CONFECCION"
+                                   Style="{StaticResource FlexoNavSectionTitleStyle}"/>
 
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/rule-w.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Codigos"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="/Resources/Images/printer-w.png"
+                                       Width="18" Height="18"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Impresoras"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- ── CERRAR SESIÓN ── -->
                 <Button Grid.Row="2"
-                        Style="{StaticResource FlexoNavButtonStyle}">
+                        Style="{StaticResource FlexoNavLogoutStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="26"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Image Source="/Resources/Images/exit-w.png" Width="20" Height="20"/>
-                        <TextBlock Grid.Column="1" Text="Cerrar sesion" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        <Image Source="/Resources/Images/exit-w.png"
+                               Width="18" Height="18"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="Cerrar sesion"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
                     </Grid>
                 </Button>
             </Grid>
         </Border>
 
+        <!-- ═══════════════════════════════════════
+             HEADER (COLUMNA 1, FILA 0)
+        ═══════════════════════════════════════ -->
         <Border Grid.Column="1"
                 Grid.Row="0"
-                Background="{StaticResource FlexoAzulMedio}"
-                BorderBrush="{StaticResource FlexoAzulClaro}"
-                BorderThickness="0,0,0,1">
+                Style="{StaticResource FlexoHeaderStyle}">
             <Grid>
                 <TextBlock Text="Inventario"
-                           Foreground="{StaticResource FlexoBlanco}"
-                           FontSize="{StaticResource FlexoFontSize_MD}"
-                           FontWeight="{StaticResource FlexoFontWeight_Medium}"
-                           VerticalAlignment="Center"
-                           Margin="16,0,0,0"/>
+                           Style="{StaticResource FlexoHeaderTitleStyle}"/>
 
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Margin="0,0,8,0">
-                    <Button Content="-"
-                            Style="{StaticResource FlexoWindowButtonStyle}"/>
-                    <Button Content="[]"
-                            Style="{StaticResource FlexoWindowButtonStyle}"/>
-                    <Button Content="X"
+                    <Button Content="&#x2014;"
                             Style="{StaticResource FlexoWindowButtonStyle}"
-                            Foreground="{StaticResource FlexoRojo}"/>
+                            x:Name="BtnMinimizar"/>
+                    <Button Content="&#x25A1;"
+                            Style="{StaticResource FlexoWindowButtonStyle}"
+                            x:Name="BtnMaximizar"/>
+                    <Button Content="&#x2715;"
+                            Style="{StaticResource FlexoHeaderCloseHover}"
+                            x:Name="BtnCerrar"/>
                 </StackPanel>
             </Grid>
         </Border>
 
+        <!-- ═══════════════════════════════════════
+             CONTENIDO PRINCIPAL (COLUMNA 1, FILA 1)
+             REESTRUCTURADO: Tabs → Buscador → Tabla → Stats
+        ═══════════════════════════════════════ -->
         <Border Grid.Column="1"
                 Grid.Row="1"
                 Padding="24">
             <Grid>
                 <Grid.RowDefinitions>
+                    <!-- Título + botones -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Tabs -->
                     <RowDefinition Height="Auto"/>
+                    <!-- Buscador -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Tabla -->
                     <RowDefinition Height="*"/>
+                    <!-- Stat cards (ahora abajo, como en referencia) -->
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0">
+                <!-- ── FILA 0: TITULO + BOTONES ACCION ── -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -223,17 +273,12 @@
 
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal">
-                        <Button Style="{StaticResource FlexoNavButtonStyle}"
-                                Width="112"
-                                Margin="4,0"
-                                Background="{StaticResource GradienteBoton}">
+                        <Button Style="{StaticResource FlexoActionButtonStyle}">
                             <TextBlock Text="Entrada"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                         </Button>
-                        <Button Style="{StaticResource FlexoNavButtonStyle}"
-                                Width="112"
-                                Margin="4,0">
+                        <Button Style="{StaticResource FlexoActionButtonSecondaryStyle}">
                             <TextBlock Text="Ajuste"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
@@ -241,8 +286,325 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid Grid.Row="1"
-                      Margin="0,22,0,18">
+                <!-- ── FILA 1: TABS (NUEVO — como en referencia) ── -->
+                <StackPanel Grid.Row="1"
+                            Orientation="Horizontal"
+                            Margin="0,0,0,16">
+                    <Button Content="STOCK ACTUAL"
+                            Style="{StaticResource FlexoTabActiveStyle}"/>
+                    <Button Content="ENTRADAS"
+                            Style="{StaticResource FlexoTabInactiveStyle}"/>
+                    <Button Content="MOVIMIENTOS"
+                            Style="{StaticResource FlexoTabInactiveStyle}"/>
+                    <Button Content="ALERTAS"
+                            Style="{StaticResource FlexoTabInactiveStyle}"/>
+                </StackPanel>
+
+                <!-- ── FILA 2: BUSCADOR + FILTROS ── -->
+                <Grid Grid.Row="2" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="130"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Background="{StaticResource FlexoAzulOscuro}"
+                            BorderBrush="{StaticResource FlexoAzulClaro}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource FlexoRadius_SM}"
+                            Padding="12,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Source="/Resources/Images/search.png"
+                                   Width="18" Height="18"
+                                   Opacity="0.7"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Buscar codigo o descripcion"
+                                       Foreground="{StaticResource FlexoGris}"
+                                       FontSize="{StaticResource FlexoFontSize_MD}"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource FlexoActionButtonSecondaryStyle}"
+                            Margin="0"
+                            Width="130">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image Source="/Resources/Images/search.png"
+                                   Width="14" Height="14" Margin="0,0,6,0"/>
+                            <TextBlock Text="Filtros"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- ── FILA 3: TABLA DE DATOS ── -->
+                <Border Grid.Row="3"
+                        Background="{StaticResource FlexoAzulMedio}"
+                        BorderBrush="{StaticResource FlexoAzulClaro}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource FlexoRadius_MD}"
+                        Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Headers de tabla -->
+                        <Grid Grid.Row="0"
+                              Style="{StaticResource FlexoGridHeaderStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="CODIGO" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                            <TextBlock Grid.Column="1" Text="DESCRIPCION" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                            <TextBlock Grid.Column="2" Text="TIPO" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                            <TextBlock Grid.Column="3" Text="STOCK ACTUAL" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                            <TextBlock Grid.Column="4" Text="STOCK MINIMO" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                            <TextBlock Grid.Column="5" Text="ESTADO" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                        </Grid>
+
+                        <!-- Filas con alternancia de color -->
+                        <ScrollViewer Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <!-- Fila 1: fondo normal -->
+                                <Border Style="{StaticResource FlexoDataGridRowStyle}"
+                                        Background="{StaticResource FlexoAzulMedio}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CBL-THW-12AWG-BK"
+                                                   Foreground="{StaticResource FlexoRojo}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="14,0"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"
+                                                   FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Cable THW 12 AWG Negro Industrial"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="Conductor"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="1,258 m"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="4"
+                                                   Text="500 m"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <Grid Grid.Column="5" VerticalAlignment="Center" Margin="14,0">
+                                            <Border Style="{StaticResource FlexoBadgeStyle}"
+                                                    Background="#1B4D2E">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{StaticResource FlexoSuccess}"
+                                                             Margin="0,0,4,0"
+                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="OK"
+                                                               Foreground="{StaticResource FlexoSuccess}"
+                                                               FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Fila 2: fondo alterno -->
+                                <Border Style="{StaticResource FlexoDataGridRowStyle}"
+                                        Background="{StaticResource FlexoAzulFilaAlt}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CBL-SOOW-10/3"
+                                                   Foreground="{StaticResource FlexoRojo}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="14,0"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"
+                                                   FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Cable SOOW 10/3 Uso Rudo 600V"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="Conductor"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="185 m"
+                                                   Foreground="{StaticResource FlexoWarning}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="4"
+                                                   Text="250 m"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <Grid Grid.Column="5" VerticalAlignment="Center" Margin="14,0">
+                                            <Border Style="{StaticResource FlexoBadgeStyle}"
+                                                    Background="#4D2E1B">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{StaticResource FlexoWarning}"
+                                                             Margin="0,0,4,0"
+                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="BAJO"
+                                                               Foreground="{StaticResource FlexoWarning}"
+                                                               FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Fila 3: fondo normal -->
+                                <Border Style="{StaticResource FlexoDataGridRowStyle}"
+                                        Background="{StaticResource FlexoAzulMedio}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CON-EMT-3/4"
+                                                   Foreground="{StaticResource FlexoRojo}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="14,0"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"
+                                                   FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Conector EMT 3/4 Zinc Presion"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="Ferreteria"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="8 pz"
+                                                   Foreground="{StaticResource FlexoError}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="4"
+                                                   Text="100 pz"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <Grid Grid.Column="5" VerticalAlignment="Center" Margin="14,0">
+                                            <Border Style="{StaticResource FlexoBadgeStyle}"
+                                                    Background="#4D1B1B">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{StaticResource FlexoError}"
+                                                             Margin="0,0,4,0"
+                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="AGOTADO"
+                                                               Foreground="{StaticResource FlexoError}"
+                                                               FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Fila 4: fondo alterno -->
+                                <Border Style="{StaticResource FlexoDataGridRowStyle}"
+                                        Background="{StaticResource FlexoAzulFilaAlt}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CBL-RG6-QUAD-WH"
+                                                   Foreground="{StaticResource FlexoRojo}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="14,0"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"
+                                                   FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="Coaxial RG6 Quad Shield Blanco"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="Telecom"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="3,800 m"
+                                                   Foreground="{StaticResource FlexoBlanco}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <TextBlock Grid.Column="4"
+                                                   Text="1,000 m"
+                                                   Foreground="{StaticResource FlexoGrisClaro}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                        <Grid Grid.Column="5" VerticalAlignment="Center" Margin="14,0">
+                                            <Border Style="{StaticResource FlexoBadgeStyle}"
+                                                    Background="#1B4D2E">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Width="6" Height="6"
+                                                             Fill="{StaticResource FlexoSuccess}"
+                                                             Margin="0,0,4,0"
+                                                             VerticalAlignment="Center"/>
+                                                    <TextBlock Text="OK"
+                                                               Foreground="{StaticResource FlexoSuccess}"
+                                                               FontSize="{StaticResource FlexoFontSize_XS}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <!-- ── FILA 4: STAT CARDS (ABAJO — como en referencia) ── -->
+                <Grid Grid.Row="4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="12"/>
@@ -251,194 +613,102 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Background="{StaticResource FlexoAzulMedio}"
-                            BorderBrush="{StaticResource FlexoAzulClaro}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14">
+                    <!-- Card 1: Valor Total Stock -->
+                    <Border Style="{StaticResource FlexoStatCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Productos"
+                            <TextBlock Text="VALOR TOTAL STOCK"
                                        Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"/>
-                            <TextBlock Text="528"
+                                       FontSize="{StaticResource FlexoFontSize_XS}"
+                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                            <TextBlock Text="$142,500.25"
                                        Foreground="{StaticResource FlexoBlanco}"
                                        FontSize="{StaticResource FlexoFontSize_XL}"
                                        FontWeight="{StaticResource FlexoFontWeight_Bold}"
+                                       Margin="0,6,0,0"/>
+                            <TextBlock Text="+2.5% este mes"
+                                       Foreground="{StaticResource FlexoSuccess}"
+                                       FontSize="{StaticResource FlexoFontSize_XS}"
                                        Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
+                    <!-- Card 2: Items en Alerta -->
                     <Border Grid.Column="2"
-                            Background="{StaticResource FlexoAzulMedio}"
-                            BorderBrush="{StaticResource FlexoAzulClaro}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14">
+                            Style="{StaticResource FlexoStatCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Stock bajo"
+                            <TextBlock Text="ITEMS EN ALERTA"
                                        Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"/>
-                            <TextBlock Text="18"
+                                       FontSize="{StaticResource FlexoFontSize_XS}"
+                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                            <TextBlock Text="05"
                                        Foreground="{StaticResource FlexoWarning}"
                                        FontSize="{StaticResource FlexoFontSize_XL}"
                                        FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                                       Margin="0,4,0,0"/>
+                                       Margin="0,6,0,0"/>
+                            <TextBlock Text="Ver productos criticos"
+                                       Foreground="{StaticResource FlexoRojo}"
+                                       FontSize="{StaticResource FlexoFontSize_XS}"
+                                       Margin="0,4,0,0"
+                                       TextDecorations="Underline"
+                                       Cursor="Hand"/>
                         </StackPanel>
                     </Border>
 
+                    <!-- Card 3: Estado Almacén -->
                     <Border Grid.Column="4"
-                            Background="{StaticResource FlexoAzulMedio}"
-                            BorderBrush="{StaticResource FlexoAzulClaro}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14">
+                            Style="{StaticResource FlexoStatCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Movimientos"
+                            <TextBlock Text="ESTADO DE ALMACEN CENTRAL"
                                        Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"/>
-                            <TextBlock Text="42"
-                                       Foreground="{StaticResource FlexoInfo}"
-                                       FontSize="{StaticResource FlexoFontSize_XL}"
+                                       FontSize="{StaticResource FlexoFontSize_XS}"
+                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
+                            <TextBlock Text="Capacidad ocupada: 82%"
+                                       Foreground="{StaticResource FlexoBlanco}"
+                                       FontSize="{StaticResource FlexoFontSize_LG}"
                                        FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                                       Margin="0,4,0,0"/>
+                                       Margin="0,6,0,0"/>
+                            <ProgressBar Value="82"
+                                         Maximum="100"
+                                         Height="4"
+                                         Margin="0,8,0,0"
+                                         Background="{StaticResource FlexoAzulOscuro}"
+                                         Foreground="{StaticResource FlexoRojo}"/>
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <Border Grid.Row="2"
-                        Background="{StaticResource FlexoAzulMedio}"
-                        BorderBrush="{StaticResource FlexoAzulClaro}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="54"/>
-                            <RowDefinition Height="36"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0"
-                              Margin="14,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="130"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Border Background="{StaticResource FlexoAzulOscuro}"
-                                    BorderBrush="{StaticResource FlexoAzulClaro}"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="26"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Image Source="/Resources/Images/search.png"
-                                           Width="18"
-                                           Height="18"
-                                           Opacity="0.7"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="Buscar codigo o descripcion"
-                                               Foreground="{StaticResource FlexoGris}"
-                                               FontSize="{StaticResource FlexoFontSize_MD}"
-                                               VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-
-                            <Button Grid.Column="2"
-                                    Style="{StaticResource FlexoNavButtonStyle}"
-                                    Margin="0"
-                                    Background="{StaticResource FlexoAzulClaro}">
-                                <TextBlock Text="Filtros"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Button>
-                        </Grid>
-
-                        <Grid Grid.Row="1"
-                              Background="{StaticResource FlexoAzulClaro}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="90"/>
-                                <ColumnDefinition Width="90"/>
-                                <ColumnDefinition Width="110"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Codigo" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center" Margin="14,0"/>
-                            <TextBlock Grid.Column="1" Text="Producto" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="Stock" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="Minimo" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="4" Text="Estado" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <StackPanel Grid.Row="2">
-                            <Grid Height="44">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="110"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="02-AC-01" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center" Margin="14,0"/>
-                                <TextBlock Grid.Column="1" Text="Cable acero inoxidable" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="148.50" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Text="25.00" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="4" Text="Disponible" Foreground="{StaticResource FlexoSuccess}" VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <Rectangle Height="1" Fill="{StaticResource FlexoAzulClaro}"/>
-
-                            <Grid Height="44">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="110"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="04-TR-12" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center" Margin="14,0"/>
-                                <TextBlock Grid.Column="1" Text="Terminal reforzado" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="14" Foreground="{StaticResource FlexoWarning}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Text="20" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="4" Text="Stock bajo" Foreground="{StaticResource FlexoWarning}" VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <Rectangle Height="1" Fill="{StaticResource FlexoAzulClaro}"/>
-
-                            <Grid Height="44">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="110"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="07-KT-03" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center" Margin="14,0"/>
-                                <TextBlock Grid.Column="1" Text="Kit reparacion cable" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="36" Foreground="{StaticResource FlexoBlanco}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Text="10" Foreground="{StaticResource FlexoGrisClaro}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="4" Text="Disponible" Foreground="{StaticResource FlexoSuccess}" VerticalAlignment="Center"/>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-                </Border>
             </Grid>
         </Border>
 
+        <!-- ═══════════════════════════════════════
+             STATUSBAR (COLUMNA 1, FILA 2)
+        ═══════════════════════════════════════ -->
         <Border Grid.Column="1"
                 Grid.Row="2"
-                Background="{StaticResource FlexoAzulMedio}"
-                BorderBrush="{StaticResource FlexoAzulClaro}"
-                BorderThickness="0,1,0,0">
-            <TextBlock Text="FlexoCable El Salvador 2026"
-                       Foreground="{StaticResource FlexoBlanco}"
-                       FontSize="{StaticResource FlexoFontSize_XS}"
-                       FontWeight="{StaticResource FlexoFontWeight_Light}"
-                       VerticalAlignment="Center"
-                       Margin="16,0,0,0"/>
+                Style="{StaticResource FlexoStatusBarStyle}">
+            <Grid>
+                <TextBlock Text="FlexoCable El Salvador 2026"
+                           Style="{StaticResource FlexoStatusBarTextStyle}"/>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,16,0">
+                    <TextBlock Text="Technical Support"
+                               Foreground="{StaticResource FlexoGris}"
+                               FontSize="{StaticResource FlexoFontSize_XS}"
+                               Margin="0,0,16,0"
+                               Cursor="Hand"/>
+                    <TextBlock Text="System Status"
+                               Foreground="{StaticResource FlexoGris}"
+                               FontSize="{StaticResource FlexoFontSize_XS}"
+                               Margin="0,0,16,0"
+                               Cursor="Hand"/>
+                    <TextBlock Text="Privacy Policy"
+                               Foreground="{StaticResource FlexoGris}"
+                               FontSize="{StaticResource FlexoFontSize_XS}"
+                               Cursor="Hand"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

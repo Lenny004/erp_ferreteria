@@ -28,7 +28,7 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="bordePrincipal"
-                                    CornerRadius="20"
+                                    CornerRadius="{StaticResource FlexoRadius_XL}"
                                     Background="{TemplateBinding Background}">
                                 <Border.Effect>
                                     <DropShadowEffect Color="#cb2431"

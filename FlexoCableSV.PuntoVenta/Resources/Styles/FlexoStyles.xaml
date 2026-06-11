@@ -3,7 +3,7 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
 	<!-- ════════════════════════════════════════════
-         PALETA OFICIAL FLEXOCABLE SV
+         PALETA OFICIAL FLEXOCABLE SV (OPTIMIZADA)
     ════════════════════════════════════════════ -->
 
 	<!-- Rojos corporativos -->
@@ -28,130 +28,79 @@
 	<SolidColorBrush x:Key="FlexoAzulOscuro" Color="#051322"/>
 	<SolidColorBrush x:Key="FlexoAzulMedio" Color="#1A1F2E"/>
 	<SolidColorBrush x:Key="FlexoAzulClaro" Color="#1C2B3C"/>
+	<!-- NUEVO: Fondo alterno para filas de tabla -->
+	<SolidColorBrush x:Key="FlexoAzulFilaAlt" Color="#151A28"/>
 
 	<!-- ════════════════════════════════════════════
-         TIPOGRAFÍA FLEXOCABLE SV
+         TIPOGRAFÍA (OPTIMIZADA - 4 TAMAÑOS ESENCIALES)
     ════════════════════════════════════════════ -->
 
 	<FontFamily x:Key="FlexoFontFamily">Segoe UI</FontFamily>
 
-	<!-- Tamaños de fuente -->
-	<sys:Double x:Key="FlexoFontSize_Display">30</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_XL">24</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_LG">16</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_MD">14</sys:Double>
 	<sys:Double x:Key="FlexoFontSize_XS">11</sys:Double>
 
-	<!-- Pesos de fuente -->
 	<FontWeight x:Key="FlexoFontWeight_Light">Light</FontWeight>
 	<FontWeight x:Key="FlexoFontWeight_Normal">Normal</FontWeight>
 	<FontWeight x:Key="FlexoFontWeight_Medium">Medium</FontWeight>
 	<FontWeight x:Key="FlexoFontWeight_Bold">Bold</FontWeight>
 
 	<!-- ════════════════════════════════════════════
-         ESPACIADOS FLEXOCABLE SV
+         ESPACIADOS (REDUCIDOS A 4 ESENCIALES)
     ════════════════════════════════════════════ -->
 
-	<!-- Espaciados generales: mismo valor en los 4 lados -->
 	<Thickness x:Key="FlexoSpacing_None">0</Thickness>
-	<Thickness x:Key="FlexoSpacing_XXS">4</Thickness>
 	<Thickness x:Key="FlexoSpacing_XS">8</Thickness>
-	<Thickness x:Key="FlexoSpacing_SM">12</Thickness>
 	<Thickness x:Key="FlexoSpacing_MD">16</Thickness>
 	<Thickness x:Key="FlexoSpacing_LG">24</Thickness>
-	<Thickness x:Key="FlexoSpacing_XL">32</Thickness>
-	<Thickness x:Key="FlexoSpacing_XXL">40</Thickness>
 
-	<!-- Espaciados horizontales: izquierda y derecha -->
-	<Thickness x:Key="FlexoSpacing_XXS_Horizontal">4,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_XS_Horizontal">8,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_SM_Horizontal">12,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_MD_Horizontal">16,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_LG_Horizontal">24,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_XL_Horizontal">32,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_XXL_Horizontal">40,0</Thickness>
-
-	<!-- Espaciados verticales: arriba y abajo -->
-	<Thickness x:Key="FlexoSpacing_XXS_Vertical">0,4</Thickness>
-	<Thickness x:Key="FlexoSpacing_XS_Vertical">0,8</Thickness>
-	<Thickness x:Key="FlexoSpacing_SM_Vertical">0,12</Thickness>
-	<Thickness x:Key="FlexoSpacing_MD_Vertical">0,16</Thickness>
-	<Thickness x:Key="FlexoSpacing_LG_Vertical">0,24</Thickness>
-	<Thickness x:Key="FlexoSpacing_XL_Vertical">0,32</Thickness>
-	<Thickness x:Key="FlexoSpacing_XXL_Vertical">0,40</Thickness>
-
-	<!-- Espaciados solo arriba -->
-	<Thickness x:Key="FlexoSpacing_Top_XXS">0,4,0,0</Thickness>
+	<!-- Espaciados direccionales (solo los usados) -->
 	<Thickness x:Key="FlexoSpacing_Top_XS">0,8,0,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_Top_SM">0,12,0,0</Thickness>
 	<Thickness x:Key="FlexoSpacing_Top_MD">0,16,0,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_Top_LG">0,24,0,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_Top_XL">0,32,0,0</Thickness>
-	<Thickness x:Key="FlexoSpacing_Top_XXL">0,40,0,0</Thickness>
-
-	<!-- Espaciados solo abajo -->
-	<Thickness x:Key="FlexoSpacing_Bottom_XXS">0,0,0,4</Thickness>
-	<Thickness x:Key="FlexoSpacing_Bottom_XS">0,0,0,8</Thickness>
-	<Thickness x:Key="FlexoSpacing_Bottom_SM">0,0,0,12</Thickness>
 	<Thickness x:Key="FlexoSpacing_Bottom_MD">0,0,0,16</Thickness>
-	<Thickness x:Key="FlexoSpacing_Bottom_LG">0,0,0,24</Thickness>
-	<Thickness x:Key="FlexoSpacing_Bottom_XL">0,0,0,32</Thickness>
-	<Thickness x:Key="FlexoSpacing_Bottom_XXL">0,0,0,40</Thickness>
 
-	<!-- Espaciados personalizados comunes -->
+	<!-- Padding específicos -->
 	<Thickness x:Key="FlexoPadding_Button">16,8</Thickness>
-	<Thickness x:Key="FlexoPadding_ButtonLarge">24,12</Thickness>
 	<Thickness x:Key="FlexoPadding_Card">16</Thickness>
 	<Thickness x:Key="FlexoPadding_Window">24</Thickness>
 	<Thickness x:Key="FlexoPadding_Input">12,8</Thickness>
 
+	<!-- Margenes comunes -->
 	<Thickness x:Key="FlexoMargin_Section">0,0,0,24</Thickness>
 	<Thickness x:Key="FlexoMargin_Card">0,0,0,16</Thickness>
-	<Thickness x:Key="FlexoMargin_Title">0,0,0,12</Thickness>
-	<Thickness x:Key="FlexoMargin_Subtitle">0,0,0,8</Thickness>
 
 	<!-- ════════════════════════════════════════════
-         TAMAÑOS NUMÉRICOS
+         TAMAÑOS NUMÉRICOS (OPTIMIZADOS)
     ════════════════════════════════════════════ -->
 
 	<!-- Alturas -->
 	<sys:Double x:Key="FlexoHeight_Button">36</sys:Double>
-	<sys:Double x:Key="FlexoHeight_ButtonLarge">44</sys:Double>
 	<sys:Double x:Key="FlexoHeight_Input">36</sys:Double>
-	<sys:Double x:Key="FlexoHeight_Header">60</sys:Double>
-	<sys:Double x:Key="FlexoHeight_Separator">4</sys:Double>
+	<sys:Double x:Key="FlexoHeight_Header">48</sys:Double>
+	<sys:Double x:Key="FlexoHeight_Tab">40</sys:Double>
 
 	<!-- Anchos -->
+	<sys:Double x:Key="FlexoWidth_Sidebar">200</sys:Double>
+	<!-- REDUCIDO: 240→200 -->
 	<sys:Double x:Key="FlexoWidth_Button">120</sys:Double>
-	<sys:Double x:Key="FlexoWidth_ButtonLarge">180</sys:Double>
-	<sys:Double x:Key="FlexoWidth_Sidebar">240</sys:Double>
-	<sys:Double x:Key="FlexoWidth_Icon">24</sys:Double>
+	<sys:Double x:Key="FlexoWidth_Icon">18</sys:Double>
+	<!-- REDUCIDO: 24→18 -->
 
-	<!-- Bordes redondeados -->
-	<sys:Double x:Key="FlexoRadius_XS">2</sys:Double>
-	<sys:Double x:Key="FlexoRadius_SM">4</sys:Double>
-	<sys:Double x:Key="FlexoRadius_MD">8</sys:Double>
-	<sys:Double x:Key="FlexoRadius_LG">12</sys:Double>
-	<sys:Double x:Key="FlexoRadius_XL">16</sys:Double>
-
-	<!-- Grosor de bordes -->
-	<sys:Double x:Key="FlexoBorderThickness_Thin">1</sys:Double>
-	<sys:Double x:Key="FlexoBorderThickness_MD">2</sys:Double>
-	<sys:Double x:Key="FlexoBorderThickness_LG">4</sys:Double>
+	<!-- Bordes redondeados (como CornerRadius, no Double, para evitar error de conversion) -->
+	<CornerRadius x:Key="FlexoRadius_SM">4</CornerRadius>
+	<CornerRadius x:Key="FlexoRadius_MD">8</CornerRadius>
+	<CornerRadius x:Key="FlexoRadius_LG">12</CornerRadius>
+	<CornerRadius x:Key="FlexoRadius_XL">20</CornerRadius>
 
 	<!-- Opacidades -->
 	<sys:Double x:Key="FlexoOpacity_Disabled">0.5</sys:Double>
-	<sys:Double x:Key="FlexoOpacity_Hover">0.85</sys:Double>
 	<sys:Double x:Key="FlexoOpacity_Pressed">0.7</sys:Double>
 
-	<!-- ════════════════════════════════════════════
-         BORDER THICKNESS
-    ════════════════════════════════════════════ -->
-
+	<!-- Border Thickness -->
 	<Thickness x:Key="FlexoBorder_None">0</Thickness>
 	<Thickness x:Key="FlexoBorder_Thin">1</Thickness>
-	<Thickness x:Key="FlexoBorder_MD">2</Thickness>
-	<Thickness x:Key="FlexoBorder_LG">4</Thickness>
 
 	<!-- ════════════════════════════════════════════
          GRADIENTES
@@ -173,10 +122,15 @@
 		<GradientStop Color="#B02030" Offset="1"/>
 	</LinearGradientBrush>
 
-	<Style x:Key="FlexoNavButtonStyle" TargetType="Button">
-		<Setter Property="Height" Value="44"/>
-		<Setter Property="Margin" Value="8,2"/>
-		<Setter Property="Padding" Value="12,0"/>
+	<!-- ════════════════════════════════════════════
+         ESTILO BASE: BOTÓN DE NAVEGACIÓN
+         (Consolida FlexoNavButtonStyle + FlexoNavItemTemplate)
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoNavButtonBaseStyle" TargetType="Button">
+		<Setter Property="Height" Value="40"/>
+		<Setter Property="Margin" Value="6,1"/>
+		<Setter Property="Padding" Value="10,0"/>
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
 		<Setter Property="Background" Value="Transparent"/>
@@ -189,31 +143,107 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="Button">
 					<Border x:Name="Root"
-							Background="{TemplateBinding Background}"
-							CornerRadius="4">
-						<ContentPresenter VerticalAlignment="Center"/>
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="26"/>
+								<ColumnDefinition Width="*"/>
+							</Grid.ColumnDefinitions>
+							<ContentPresenter x:Name="IconPresenter"
+                                              Grid.Column="0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"/>
+							<ContentPresenter x:Name="TextPresenter"
+                                              Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              Margin="8,0,0,0"/>
+						</Grid>
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
-							<Setter TargetName="Root"
-									Property="Background"
-									Value="{StaticResource FlexoAzulClaro}"/>
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="True">
-							<Setter TargetName="Root"
-									Property="Opacity"
-									Value="{StaticResource FlexoOpacity_Pressed}"/>
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
 						</Trigger>
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter TargetName="Root"
-									Property="Opacity"
-									Value="{StaticResource FlexoOpacity_Disabled}"/>
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<!-- Botón de nav normal (hereda del base) -->
+	<Style x:Key="FlexoNavButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoNavButtonBaseStyle}"/>
+
+	<!-- Botón de nav ACTIVO (con indicador rojo lateral) -->
+	<Style x:Key="FlexoNavButtonActiveStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoNavButtonBaseStyle}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{StaticResource FlexoAzulClaro}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}"
+                            Margin="6,1">
+						<Grid>
+							<Rectangle Width="3"
+                                       HorizontalAlignment="Left"
+                                       Fill="{StaticResource FlexoRojo}"
+                                       RadiusX="1.5" RadiusY="1.5"
+                                       Margin="0,6,0,6"/>
+							<Grid Margin="12,0,12,0">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="26"/>
+									<ColumnDefinition Width="*"/>
+								</Grid.ColumnDefinitions>
+								<ContentPresenter Grid.Column="0"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Center"/>
+								<ContentPresenter Grid.Column="1"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,0,0,0"/>
+							</Grid>
+						</Grid>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<!-- Botón de logout (hereda del base, cambia colores) -->
+	<Style x:Key="FlexoNavLogoutStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoNavButtonBaseStyle}">
+		<Setter Property="Foreground" Value="{StaticResource FlexoError}"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
+						<ContentPresenter VerticalAlignment="Center"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
+							<Setter Property="Foreground" Value="{StaticResource FlexoRojoHover}"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE VENTANA Y HEADER
+    ════════════════════════════════════════════ -->
 
 	<Style x:Key="FlexoWindowButtonStyle" TargetType="Button">
 		<Setter Property="Width" Value="42"/>
@@ -229,26 +259,228 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="Button">
 					<Border x:Name="Root"
-							Background="{TemplateBinding Background}"
-							CornerRadius="4">
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
 						<ContentPresenter HorizontalAlignment="Center"
-										  VerticalAlignment="Center"/>
+                                          VerticalAlignment="Center"/>
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
-							<Setter TargetName="Root"
-									Property="Background"
-									Value="{StaticResource FlexoAzulClaro}"/>
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="True">
-							<Setter TargetName="Root"
-									Property="Opacity"
-									Value="{StaticResource FlexoOpacity_Pressed}"/>
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
+	</Style>
+
+	<Style x:Key="FlexoHeaderCloseHover" TargetType="Button"
+           BasedOn="{StaticResource FlexoWindowButtonStyle}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
+						<ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoRojo}"/>
+							<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoRojoDark}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="FlexoHeaderStyle" TargetType="Border">
+		<Setter Property="Background" Value="{StaticResource FlexoAzulMedio}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="BorderThickness" Value="0,0,0,1"/>
+	</Style>
+
+	<Style x:Key="FlexoHeaderTitleStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_MD}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Medium}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Margin" Value="16,0,0,0"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE SIDENAV
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoNavSectionTitleStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoGris}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Bold}"/>
+		<Setter Property="Margin" Value="16,14,0,6"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoNavDividerStyle" TargetType="Rectangle">
+		<Setter Property="Height" Value="1"/>
+		<Setter Property="Margin" Value="12,4,12,4"/>
+		<Setter Property="Fill" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="RadiusX" Value="1"/>
+		<Setter Property="RadiusY" Value="1"/>
+		<Setter Property="Opacity" Value="0.5"/>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         NUEVO: ESTILOS DE TABS
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoTabBaseStyle" TargetType="Button">
+		<Setter Property="Height" Value="{StaticResource FlexoHeight_Tab}"/>
+		<Setter Property="Padding" Value="16,0"/>
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderBrush" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0,0,0,2"/>
+		<Setter Property="Foreground" Value="{StaticResource FlexoGris}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Medium}"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+						<ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="FlexoTabActiveStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoTabBaseStyle}">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoRojo}"/>
+	</Style>
+
+	<Style x:Key="FlexoTabInactiveStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoTabBaseStyle}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+						<ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE STAT CARDS
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoStatCardStyle" TargetType="Border">
+		<Setter Property="Background" Value="{StaticResource FlexoAzulMedio}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="CornerRadius" Value="{StaticResource FlexoRadius_MD}"/>
+		<Setter Property="Padding" Value="{StaticResource FlexoPadding_Card}"/>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE DATA GRID / TABLA
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoGridHeaderStyle" TargetType="Grid">
+		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
+	</Style>
+
+	<Style x:Key="FlexoGridHeaderTextStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Bold}"/>
+		<Setter Property="Margin" Value="14,0"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<!-- NUEVO: Estilo para filas de tabla con alternancia -->
+	<Style x:Key="FlexoDataGridRowStyle" TargetType="Border">
+		<Setter Property="Height" Value="44"/>
+		<Setter Property="Background" Value="{StaticResource FlexoAzulMedio}"/>
+		<Style.Triggers>
+			<Trigger Property="IsMouseOver" Value="True">
+				<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
+			</Trigger>
+		</Style.Triggers>
+	</Style>
+
+	<!-- NUEVO: Estilo para badges de estado (OK, Bajo, Agotado) -->
+	<Style x:Key="FlexoBadgeStyle" TargetType="Border">
+		<Setter Property="CornerRadius" Value="{StaticResource FlexoRadius_LG}"/>
+		<Setter Property="Padding" Value="8,2"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="HorizontalAlignment" Value="Left"/>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE STATUSBAR
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoStatusBarStyle" TargetType="Border">
+		<Setter Property="Background" Value="{StaticResource FlexoAzulMedio}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="BorderThickness" Value="0,1,0,0"/>
+	</Style>
+
+	<Style x:Key="FlexoStatusBarTextStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Light}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Margin" Value="16,0,0,0"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<!-- ════════════════════════════════════════════
+         ESTILOS DE BOTÓN DE ACCIÓN (ENTRADA, AJUSTE)
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoActionButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoNavButtonStyle}">
+		<Setter Property="Width" Value="112"/>
+		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
+		<Setter Property="Margin" Value="4,0"/>
+		<Setter Property="Background" Value="{StaticResource GradienteBoton}"/>
+	</Style>
+
+	<Style x:Key="FlexoActionButtonSecondaryStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoNavButtonStyle}">
+		<Setter Property="Width" Value="112"/>
+		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
+		<Setter Property="Margin" Value="4,0"/>
+		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 	</Style>
 
 </ResourceDictionary>
