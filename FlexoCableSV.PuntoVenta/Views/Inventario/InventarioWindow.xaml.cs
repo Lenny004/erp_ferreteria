@@ -1,15 +1,11 @@
 using System.Windows;
 
-namespace FlexoCableSV.PuntoVenta.Views.Inventario
+namespace FlexoCableSV.PuntoVenta.Views.Inventario;
+
+public partial class InventarioWindow : Window
 {
-    public partial class InventarioWindow : Window
+    public InventarioWindow()
     {
-        /// <summary>
-        /// Inicializa la ventana de gestión de inventario.
-        /// </summary>
-        public InventarioWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

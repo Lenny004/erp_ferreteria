@@ -5,30 +5,29 @@ using Microsoft.Extensions.DependencyInjection;
 namespace FlexoCableSV.PuntoVenta.Data;
 
 /// <summary>
-/// Registra la conexión a PostgreSQL en el contenedor de DI.
-/// La cadena de conexión se lee desde appsettings.json → "FlexoCableDB".
+/// Método de extensión para registrar el DbContext de FlexoCable
+/// con el proveedor Npgsql (PostgreSQL) usando la cadena de conexión
+/// definida en appsettings.json.
 /// </summary>
 public static class DatabaseConfig
 {
-    private const string ConnectionStringKey = "FlexoCableDB";
-
     /// <summary>
-    /// Registra el contexto de datos de FlexoCable usando PostgreSQL.
+    /// Agrega FlexoDbContext al contenedor DI con PostgreSQL como motor de base de datos.
+    /// La cadena de conexión se lee de la sección ConnectionStrings:FlexoCableDB.
     /// </summary>
-    /// <param name="services">Colección de servicios del contenedor de inyección de dependencias.</param>
-    /// <param name="configuration">Configuración de aplicación desde la que se obtiene la cadena de conexión.</param>
-    /// <returns>La misma colección de servicios para permitir encadenamiento.</returns>
-    /// <exception cref="InvalidOperationException">Se lanza cuando no existe la cadena de conexión requerida.</exception>
+    /// <param name="services">Colección de servicios del contenedor DI.</param>
+    /// <param name="configuration">Interfaz de configuración (appsettings.json, env vars, etc.).</param>
+    /// <returns>La misma colección de servicios para encadenar más configuraciones.</returns>
     public static IServiceCollection AddFlexoDatabase(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString(ConnectionStringKey)
-            ?? throw new InvalidOperationException(
-                $"No se encontró la cadena de conexión '{ConnectionStringKey}' en appsettings.json.");
-
+        // Registra FlexoDbContext como servicio scoped (vida por request HTTP).
+        // Usa Npgsql como proveedor EF Core para conectarse a PostgreSQL.
+        // La cadena de conexión debe estar en appsettings.json bajo ConnectionStrings:FlexoCableDB.
         services.AddDbContext<FlexoDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(
+                configuration.GetConnectionString("FlexoCableDB")));
 
         return services;
     }
