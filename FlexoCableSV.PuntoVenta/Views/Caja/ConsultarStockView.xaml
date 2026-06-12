@@ -1,0 +1,70 @@
+<UserControl x:Class="FlexoCableSV.PuntoVenta.Views.Caja.ConsultarStockView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Styles/FlexoStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="420"/>
+            </Grid.RowDefinitions>
+
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Consultar Stock" Style="{StaticResource FlexoPanelTitleStyle}"/>
+                    <TextBlock Text="Vista rapida del inventario disponible y alertas de stock" Style="{StaticResource FlexoPanelSubtitleStyle}"/>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource FlexoSecondaryWideButtonStyle}">
+                    <TextBlock Text="ACTUALIZAR" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold"/>
+                </Button>
+            </Grid>
+
+            <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Productos activos" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="524" Style="{StaticResource FlexoCardValueStyle}"/></StackPanel></Border>
+                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Stock bajo" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="18" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoWarning}"/></StackPanel></Border>
+                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Agotados" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="7" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoError}"/></StackPanel></Border>
+                <Border Style="{StaticResource FlexoStatCardStyle}"><StackPanel><TextBlock Text="Actualizacion" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="Ahora" Style="{StaticResource FlexoCardValueStyle}" FontSize="{StaticResource FlexoFontSize_LG}"/></StackPanel></Border>
+            </UniformGrid>
+
+            <Grid Grid.Row="2" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="140"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Style="{StaticResource FlexoFieldTextBoxStyle}" Text="Buscar codigo, descripcion o familia" Foreground="{StaticResource FlexoGris}"/>
+                <ComboBox Grid.Column="1" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Todos"/><ComboBoxItem Content="OK"/><ComboBoxItem Content="Bajo"/><ComboBoxItem Content="Agotado"/></ComboBox>
+                <ComboBox Grid.Column="2" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Familia"/><ComboBoxItem Content="Cables"/><ComboBoxItem Content="Boquillas"/></ComboBox>
+                <ComboBox Grid.Column="3" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Medida"/><ComboBoxItem Content="METRO"/><ComboBoxItem Content="PIEZA"/></ComboBox>
+            </Grid>
+
+            <Border Grid.Row="3" Background="{StaticResource FlexoAzulMedio}" BorderBrush="{StaticResource FlexoAzulClaro}" BorderThickness="1" CornerRadius="{StaticResource FlexoRadius_MD}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="40"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Style="{StaticResource FlexoGridHeaderStyle}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="CODIGO" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="1" Text="DESCRIPCION" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="2" Text="FAMILIA" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="3" Text="MEDIDA" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="4" Text="STOCK" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="5" Text="ESTADO" Style="{StaticResource FlexoGridHeaderTextStyle}"/>
+                    </Grid>
+                    <StackPanel Grid.Row="1">
+                        <Border Style="{StaticResource FlexoDataGridRowStyle}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="01-CGA-03" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}"/><TextBlock Grid.Column="1" Text="Cable galvanizado acero #3" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="Cables" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="METRO" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="4" Text="128.50 m" Style="{StaticResource FlexoTableCellStyle}"/><Border Grid.Column="5" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}"><TextBlock Text="OK" Foreground="{StaticResource FlexoSuccess}" FontSize="{StaticResource FlexoFontSize_XS}"/></Border></Grid></Border>
+                        <Border Style="{StaticResource FlexoDataGridRowStyle}" Background="{StaticResource FlexoAzulFilaAlt}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="02-AC-01" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}"/><TextBlock Grid.Column="1" Text="Boquilla acelerador #1" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="Boquillas" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="PIEZA" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="4" Text="8 pz" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoWarning}"/><Border Grid.Column="5" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}"><TextBlock Text="BAJO" Foreground="{StaticResource FlexoWarning}" FontSize="{StaticResource FlexoFontSize_XS}"/></Border></Grid></Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

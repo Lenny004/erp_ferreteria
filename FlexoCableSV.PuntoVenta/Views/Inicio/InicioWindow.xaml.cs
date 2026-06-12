@@ -1,5 +1,5 @@
 using System.Windows;
-using FlexoCableSV.PuntoVenta.Views.Inventario;
+using FlexoCableSV.PuntoVenta.Views.Shell;
 
 namespace FlexoCableSV.PuntoVenta.Views.Inicio;
 
@@ -29,14 +29,15 @@ public partial class InicioWindow : Window
 
     private void OnVentasClick(object sender, RoutedEventArgs e)
     {
-        // Aquí irá la ventana de Ventas (con login por PIN si aplica)
-        MessageBox.Show("Módulo de Ventas", "Ventas");
+        var shell = new MainShellWindow();
+        shell.Show();
+        Close();
     }
 
     private void OnInventarioClick(object sender, RoutedEventArgs e)
     {
-        var inventario = new InventarioWindow();
-        inventario.Show();
+        var shell = new MainShellWindow();
+        shell.Show();
         Close();
     }
 }

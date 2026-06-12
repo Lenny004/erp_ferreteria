@@ -496,4 +496,79 @@
 		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 	</Style>
 
+	<!-- ════════════════════════════════════════════
+         ESTILOS COMPARTIDOS PARA PANELES
+    ════════════════════════════════════════════ -->
+
+	<Style x:Key="FlexoPanelTitleStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XL}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Bold}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoPanelSubtitleStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoGrisClaro}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="Margin" Value="0,4,0,0"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoCardLabelStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoGrisClaro}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoCardValueStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XL}"/>
+		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Bold}"/>
+		<Setter Property="Margin" Value="0,4,0,0"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoFieldTextBoxStyle" TargetType="TextBox">
+		<Setter Property="Height" Value="36"/>
+		<Setter Property="Padding" Value="12,7"/>
+		<Setter Property="Background" Value="{StaticResource FlexoAzulOscuro}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="CaretBrush" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_MD}"/>
+	</Style>
+
+	<Style x:Key="FlexoFieldComboBoxStyle" TargetType="ComboBox">
+		<Setter Property="Height" Value="36"/>
+		<Setter Property="Padding" Value="8,4"/>
+		<Setter Property="Background" Value="{StaticResource FlexoAzulOscuro}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulClaro}"/>
+		<Setter Property="Foreground" Value="{StaticResource FlexoNegro}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_MD}"/>
+	</Style>
+
+	<Style x:Key="FlexoTableCellStyle" TargetType="TextBlock">
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="VerticalAlignment" Value="Center"/>
+		<Setter Property="Margin" Value="14,0"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+	</Style>
+
+	<Style x:Key="FlexoPrimaryWideButtonStyle" TargetType="Button"
+		   BasedOn="{StaticResource FlexoActionButtonStyle}">
+		<Setter Property="Width" Value="170"/>
+		<Setter Property="Height" Value="44"/>
+		<Setter Property="Background" Value="{StaticResource FlexoRojo}"/>
+	</Style>
+
+	<Style x:Key="FlexoSecondaryWideButtonStyle" TargetType="Button"
+		   BasedOn="{StaticResource FlexoActionButtonSecondaryStyle}">
+		<Setter Property="Width" Value="150"/>
+		<Setter Property="Height" Value="40"/>
+	</Style>
+
 </ResourceDictionary>
