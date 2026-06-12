@@ -62,7 +62,7 @@
                 <StackPanel Grid.Row="0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center">
-                    <Image Source="/Resources/Images/logo.png"
+                    <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/logo.png"
                            Width="48" Height="48"
                            Stretch="Uniform"/>
                     <TextBlock Text="FlexoCable SV"
@@ -91,7 +91,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/boxes.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/boxes.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Inventario"
@@ -108,7 +108,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/register-w.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/register-w.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Ventas"
@@ -123,7 +123,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/add-w.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/add-w.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Nueva orden"
@@ -138,7 +138,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/bill.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/bill.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Facturacion"
@@ -159,7 +159,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/rule-w.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/rule-w.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Codigos"
@@ -174,7 +174,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="/Resources/Images/printer-w.png"
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/printer-w.png"
                                        Width="18" Height="18"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Impresoras"
@@ -194,7 +194,7 @@
                             <ColumnDefinition Width="26"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Image Source="/Resources/Images/exit-w.png"
+                        <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/exit-w.png"
                                Width="18" Height="18"/>
                         <TextBlock Grid.Column="1"
                                    Text="Cerrar sesion"
@@ -221,13 +221,13 @@
                             Margin="0,0,8,0">
                     <Button Content="&#x2014;"
                             Style="{StaticResource FlexoWindowButtonStyle}"
-                            x:Name="BtnMinimizar"/>
+                            Click="OnMinimizarClick"/>
                     <Button Content="&#x25A1;"
                             Style="{StaticResource FlexoWindowButtonStyle}"
-                            x:Name="BtnMaximizar"/>
+                            Click="OnMaximizarClick"/>
                     <Button Content="&#x2715;"
                             Style="{StaticResource FlexoHeaderCloseHover}"
-                            x:Name="BtnCerrar"/>
+                            Click="OnCerrarClick"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -249,8 +249,6 @@
                     <RowDefinition Height="Auto"/>
                     <!-- Tabla -->
                     <RowDefinition Height="*"/>
-                    <!-- Stat cards (ahora abajo, como en referencia) -->
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- ── FILA 0: TITULO + BOTONES ACCION ── -->
@@ -273,32 +271,15 @@
 
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal">
-                        <Button Style="{StaticResource FlexoActionButtonStyle}">
-                            <TextBlock Text="Entrada"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                        <Button Style="{StaticResource FlexoActionButtonSecondaryStyle}">
-                            <TextBlock Text="Ajuste"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource FlexoActionButtonStyle}" Width="78">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Image Source="/Resources/Images/add.png"
+                                       Width="14" Height="14" Margin="0,0,6,0"/>
+                                <TextBlock Text="Agregar" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
-
-                <!-- ── FILA 1: TABS (NUEVO — como en referencia) ── -->
-                <StackPanel Grid.Row="1"
-                            Orientation="Horizontal"
-                            Margin="0,0,0,16">
-                    <Button Content="STOCK ACTUAL"
-                            Style="{StaticResource FlexoTabActiveStyle}"/>
-                    <Button Content="ENTRADAS"
-                            Style="{StaticResource FlexoTabInactiveStyle}"/>
-                    <Button Content="MOVIMIENTOS"
-                            Style="{StaticResource FlexoTabInactiveStyle}"/>
-                    <Button Content="ALERTAS"
-                            Style="{StaticResource FlexoTabInactiveStyle}"/>
-                </StackPanel>
 
                 <!-- ── FILA 2: BUSCADOR + FILTROS ── -->
                 <Grid Grid.Row="2" Margin="0,0,0,16">
@@ -318,7 +299,7 @@
                                 <ColumnDefinition Width="26"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Image Source="/Resources/Images/search.png"
+                            <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/search.png"
                                    Width="18" Height="18"
                                    Opacity="0.7"/>
                             <TextBlock Grid.Column="1"
@@ -331,13 +312,14 @@
 
                     <Button Grid.Column="2"
                             Style="{StaticResource FlexoActionButtonSecondaryStyle}"
-                            Margin="0"
-                            Width="130">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image Source="/Resources/Images/search.png"
+                            Margin="39,0,0,0"
+                            Width="NaN">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Width="74" Margin="-24,0,0,0">
+                            <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/search.png"
                                    Width="14" Height="14" Margin="0,0,6,0"/>
                             <TextBlock Text="Filtros"
-                                       VerticalAlignment="Center"/>
+                                       Width="54"
+                                       TextAlignment="Right"/>
                         </StackPanel>
                     </Button>
                 </Grid>
@@ -602,80 +584,6 @@
                         </ScrollViewer>
                     </Grid>
                 </Border>
-
-                <!-- ── FILA 4: STAT CARDS (ABAJO — como en referencia) ── -->
-                <Grid Grid.Row="4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Card 1: Valor Total Stock -->
-                    <Border Style="{StaticResource FlexoStatCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="VALOR TOTAL STOCK"
-                                       Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
-                            <TextBlock Text="$142,500.25"
-                                       Foreground="{StaticResource FlexoBlanco}"
-                                       FontSize="{StaticResource FlexoFontSize_XL}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                                       Margin="0,6,0,0"/>
-                            <TextBlock Text="+2.5% este mes"
-                                       Foreground="{StaticResource FlexoSuccess}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"
-                                       Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Card 2: Items en Alerta -->
-                    <Border Grid.Column="2"
-                            Style="{StaticResource FlexoStatCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="ITEMS EN ALERTA"
-                                       Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
-                            <TextBlock Text="05"
-                                       Foreground="{StaticResource FlexoWarning}"
-                                       FontSize="{StaticResource FlexoFontSize_XL}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                                       Margin="0,6,0,0"/>
-                            <TextBlock Text="Ver productos criticos"
-                                       Foreground="{StaticResource FlexoRojo}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"
-                                       Margin="0,4,0,0"
-                                       TextDecorations="Underline"
-                                       Cursor="Hand"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Card 3: Estado Almacén -->
-                    <Border Grid.Column="4"
-                            Style="{StaticResource FlexoStatCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="ESTADO DE ALMACEN CENTRAL"
-                                       Foreground="{StaticResource FlexoGrisClaro}"
-                                       FontSize="{StaticResource FlexoFontSize_XS}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Medium}"/>
-                            <TextBlock Text="Capacidad ocupada: 82%"
-                                       Foreground="{StaticResource FlexoBlanco}"
-                                       FontSize="{StaticResource FlexoFontSize_LG}"
-                                       FontWeight="{StaticResource FlexoFontWeight_Bold}"
-                                       Margin="0,6,0,0"/>
-                            <ProgressBar Value="82"
-                                         Maximum="100"
-                                         Height="4"
-                                         Margin="0,8,0,0"
-                                         Background="{StaticResource FlexoAzulOscuro}"
-                                         Foreground="{StaticResource FlexoRojo}"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
 
             </Grid>
         </Border>

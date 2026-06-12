@@ -14,9 +14,9 @@ Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta tá
 - [Arquitectura del Sistema](#arquitectura-del-sistema)
 - [App de Escritorio (C# WPF)](#app-de-escritorio-c-wpf)
   - [Flujo de Navegación e Inicio](#flujo-de-navegación-e-inicio)
-  - [Módulo Ventas](#módulo-ventas)
-  - [Módulo Inventario](#módulo-inventario)
-  - [Módulo Impresoras](#módulo-impresoras)
+  - [Módulo Caja](#módulo-caja)
+  - [Módulo Confección](#módulo-confección)
+  - [Módulo Inventario (WebApp)](#módulo-inventario-webapp)
 - [WebApp (Next.js)](#webapp-nextjs)
 - [Base de Datos (PostgreSQL)](#base-de-datos-postgresql)
 - [Facturación Electrónica DTE](#facturación-electrónica-dte)
@@ -57,9 +57,10 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
 │  FlexoCableSV.PuntoVenta │       FlexoCableSV.Web           │
 │                          │                                   │
 │  • Pantalla táctil       │  • Dashboard + KPIs              │
-│  • Ventas + DTE          │  • Planilla mensual              │
-│  • Inventario            │  • Gestión de empleados          │
-│  • Impresión ESC/POS     │  • Reportes y gráficas           │
+│  • Caja + DTE            │  • Inventario completo           │
+│  • Confección            │  • Planilla mensual              │
+│  • Impresión ESC/POS     │  • Gestión de empleados          │
+│                          │  • Reportes y gráficas           │
 │                          │                                   │
 │  Stack: C# 12 + WPF      │  Stack: Next.js 14 + TypeScript  │
 │  + .NET 8 + EF Core      │  + Prisma + Tailwind CSS         │
@@ -99,7 +100,7 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
 
 ### Flujo de Navegación e Inicio
 
-La pantalla de inicio **no es un login tradicional**. Es una pantalla de selección de módulo con dos botones grandes:
+La pantalla de inicio **no es un login tradicional**. Es una pantalla de selección de módulo con dos botones grandes que determinan el rol del usuario:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -108,175 +109,158 @@ La pantalla de inicio **no es un login tradicional**. Es una pantalla de selecci
 │                                         │
 │   ┌──────────────┐  ┌──────────────┐   │
 │   │              │  │              │   │
-│   │   VENTAS     │  │  INVENTARIO  │   │
+│   │     CAJA     │  │ CONFECCIONES │   │
 │   │              │  │              │   │
 │   └──────────────┘  └──────────────┘   │
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
+El sistema se instala igual en todas las PCs. La pantalla de inicio presenta ambos caminos; cada usuario ingresa al módulo que corresponde a su función.
+
 **Reglas de acceso por módulo:**
 
 | Módulo | Acción | PIN requerido |
 |---|---|---|
-| Ventas | Entrar al módulo | ❌ No |
-| Ventas | Crear / confirmar orden | ✅ PIN personal del técnico seleccionado |
-| Inventario | Ver stock | ❌ No |
-| Inventario | Registrar entrada de mercancía | ❌ No |
-| Inventario | Ajuste manual (sumar/restar stock) | ✅ PIN personal del técnico que ajusta |
+| Caja | Ingresar al módulo | ✅ PIN del cajero |
+| Caja | Facturar / emitir DTE | ✅ Mismo PIN del ingreso |
+| Confección | Ingresar al módulo | ❌ No |
+| Confección | Crear órdenes, ver historial, consultar códigos | ❌ No |
 
-**Flujo de autenticación en Ventas:**
+**Flujo de autenticación en Caja:**
 
-El módulo de ventas es accesible directamente. El PIN se solicita en el momento de **confirmar la orden**, no al entrar. El técnico se elige primero en el `Select`; al presionar "FACTURAR" se muestra el modal de PIN correspondiente a ese técnico. Esto evita que los técnicos tengan que autenticarse al inicio del turno y permite que varias personas trabajen desde la misma caja sin fricciones.
-
-```
-[Botón VENTAS] → Tabla de Ventas del Día (sin PIN)
-                        │
-                        ▼
-                "+ NUEVA ORDEN" → Formulario de orden
-                        │
-                  [Elige técnico del Select]
-                        │
-                        ▼
-                 Agrega items a la orden
-                        │
-                        ▼
-                 Presiona "FACTURAR (DTE)"
-                        │
-                        ▼
-              ┌─── Modal PIN ───┐
-              │ Técnico: JUAN   │  ← Nombre del técnico seleccionado
-              │ [_ _ _ _]       │  ← Teclado numérico grande
-              │ [CONFIRMAR]     │
-              └─────────────────┘
-                        │
-              PIN correcto → Continúa a facturación DTE
-              PIN incorrecto → Mensaje de error, reintentar
-```
-
-**Flujo de autenticación en Inventario (ajustes):**
+El módulo de Caja requiere PIN para ingresar. Esto identifica al cajero que opera la máquina y queda registrado en cada factura que emita durante su turno. Al abrir la aplicación por primera vez o al cambiar de turno, se solicita el PIN.
 
 ```
-[Botón INVENTARIO] → Vista de Stock (sin PIN)
+[Botón CAJA] → Modal PIN (empleados con can_cashier)
+                     │
+               PIN correcto → Panel de Caja
+                     │
+                     ├── Facturación → Crear orden + DTE
+                     ├── Historial de Facturas → Consulta y reimpresión
+                     ├── Consultar Stock → Vista rápida de inventario
+                     ├── Nota de Crédito → Devoluciones / anulaciones (DTE-05)
+                     ├── Corte de Caja → Cierre de turno
+                     └── Impresoras → Configuración de impresión
+```
+
+**Flujo de acceso a Confección:**
+
+El módulo de Confección es de acceso directo sin PIN, pues los técnicos de taller no facturan. Pueden crear órdenes de ensamble, consultar el historial y buscar códigos del catálogo.
+
+```
+[Botón CONFECCIONES] → Panel de Confección (sin PIN)
         │
-        ├── "NUEVA ENTRADA" → Formulario de entrada (sin PIN)
-        │
-        └── "AJUSTE MANUAL" → Modal: elegir técnico que ajusta
-                                      │
-                                      ▼
-                              Modal PIN del técnico
-                                      │
-                              PIN correcto → Formulario de ajuste
+        ├── Historial Ventas → Órdenes registradas
+        ├── Órdenes Confección → Nueva orden de ensamble
+        └── Ver Códigos → Catálogo de productos y códigos
 ```
 
-> **Nota de implementación:** `PinWindow.xaml` es un modal reutilizable que recibe el `employee_id` como parámetro, consulta `hr.employees.pin_hash` y valida con bcrypt. Se usa tanto en Ventas como en Inventario.
+> **Nota de implementación:** `PinWindow.xaml` es un modal reutilizable que recibe el `employee_id` como parámetro, consulta `hr.employees.pin_hash` y valida con bcrypt. Se usa en el ingreso a Caja y al facturar.
 
 ---
 
-### Módulo Ventas
+### Módulo Caja
 
-Flujo completo de una venta:
+Módulo protegido con PIN — solo personal autorizado (`can_cashier = true`) puede acceder. Agrupa todas las funciones de facturación y cierre financiero.
 
 ```
-Tabla de Ventas del Día
+Panel de Caja (requiere PIN para entrar)
         │
-        ▼
-"+ NUEVA ORDEN" (botón verde grande)
+        ├── FACTURACIÓN
+        │   ├── Crear orden con productos del catálogo
+        │   ├── Selección de código con auto-detección de medida
+        │   │   • METRO → input decimal (ej: 5.50)
+        │   │   • PIEZA → contador +/- entero
+        │   │   • KIT   → contador +/- entero
+        │   ├── Resumen de orden + total calculado
+        │   ├── Facturación DTE:
+        │   │   ├── Tipo: 01 Consumidor Final / 03 Crédito Fiscal
+        │   │   ├── Forma de pago: Efectivo / Tarjeta / Transferencia
+        │   │   ├── Generar y enviar a MH
+        │   │   └── Si falla → cola de contingencia
+        │   └── Impresión de ticket con QR DTE
         │
-        ▼
-Nueva Orden de Confección
-├── Fecha/hora: automática
-├── Técnico: Select (lista de empleados activos)
-├── Aplicación: Select (VT-01, VT-02, VT-03, RP-01)
-├── Cliente: Input con teclado virtual
-└── "+ AGREGAR CÓDIGO"
+        ├── HISTORIAL DE FACTURAS
+        │   ├── Consulta de DTEs emitidos por fecha/rango
+        │   ├── Reimpresión de tickets
+        │   └── Visualización de facturas en contingencia
         │
-        ▼
-Selección de Código
-├── Input código catálogo (ej: 02-AC-01)
-├── Auto-búsqueda al escribir
-├── Auto-detecta tipo de medida:
-│   • METRO → input decimal (ej: 5.50)
-│   • PIEZA → contador +/- entero
-│   • KIT   → contador +/- entero
-├── Muestra: descripción, stock actual, familia
-└── "AGREGAR A LA ORDEN" (puede repetirse)
+        ├── CONSULTAR STOCK
+        │   ├── Búsqueda rápida de productos
+        │   ├── Indicador visual: 🟢 OK / 🟡 Bajo mínimo / 🔴 Agotado
+        │   └── Stock en tiempo real (solo consulta)
         │
-        ▼
-Resumen de Orden
-├── Lista de items con subtotales
-├── Total calculado automáticamente
-├── "GUARDAR BORRADOR" (gris)
-└── "FACTURAR (DTE)" (rojo grande)
+        ├── NOTA DE CRÉDITO (DTE-05)
+        │   ├── Anulación de facturas emitidas
+        │   └── Devoluciones
         │
-        ▼
-[Modal PIN del técnico seleccionado]
-        │ PIN correcto
-        ▼
-Facturación DTE
-├── Tipo DTE: [01 Consumidor Final / 03 Crédito Fiscal]
-├── Forma de pago: [Efectivo / Tarjeta / Transferencia]
-├── NIT/DUI del cliente (si aplica)
-├── "GENERAR Y ENVIAR DTE"
-├── Spinner → Sello de recepción (éxito)
-└── Si falla → Cola de contingencia, botón reintentar
+        ├── CORTE DE CAJA
+        │   ├── Resumen del turno: ventas, métodos de pago, DTEs
+        │   └── Cierre de turno del cajero
         │
-        ▼
-Impresión de Ticket
-├── Vista previa del ticket
-├── Selector de impresora (configuradas en el sistema)
-├── "IMPRIMIR" / "REIMPRIMIR"
-└── Ticket: Logo, items, totales, QR DTE
-        │
-        ▼
-[Automático] Deducción de inventario
-├── Cable: descuenta METROS
-└── Pieza/Kit: descuenta UNIDADES
-    → Si stock < mínimo: genera alerta
+        └── IMPRESORAS
+            ├── Ver impresoras instaladas en Windows
+            ├── Establecer predeterminada para tickets
+            ├── Configurar ancho de papel (80mm / 58mm)
+            ├── Impresión de prueba
+            └── Configurar Ethernet (IP + puerto)
 ```
 
-**Pantallas del módulo Ventas:**
+**Pantallas del módulo Caja:**
 
 | Ventana | Archivo | Propósito |
 |---|---|---|
-| Tabla diaria | `VentasWindow.xaml` | Lista ventas del día, resumen superior |
-| Nueva orden | `NuevaOrdenWindow.xaml` | Formulario fecha/técnico/aplicación/cliente |
-| Selección código | `SeleccionCodigoWindow.xaml` | Búsqueda y cantidad por tipo de medida |
-| PIN técnico | `PinWindow.xaml` | Modal reutilizable, recibe `employee_id` |
 | Facturación | `FacturarWindow.xaml` | DTE, envío MH, sello, impresión |
+| Historial de Facturas | *(nueva)* | Consulta y reimpresión de DTEs |
+| Consultar Stock | *(nueva, solo lectura)* | Vista rápida de inventario |
+| Nota de Crédito | *(nueva)* | Anulaciones DTE-05 |
+| Corte de Caja | *(nueva)* | Cierre de turno |
+| Impresoras | `ImpresorasWindow.xaml` | Configuración de impresión |
+| PIN | `PinWindow.xaml` | Modal reutilizable (recibe `employee_id`) |
 
 ---
 
-### Módulo Inventario
+### Módulo Confección
 
-Acceso directo sin PIN. Solo los **ajustes manuales** (sumar o restar stock arbitrariamente) requieren PIN del técnico que los realiza. Las entradas de mercancía (recepciones de compras o devoluciones de proveedor) son libres.
+Acceso directo sin PIN. Orientado a los técnicos de taller que fabrican cables custom. No manejan facturación ni efectivo.
 
 ```
-[Botón INVENTARIO] → Vista de Stock
-        ├── Tabla productos con indicador de estado:
-        │   🟢 Verde    → Stock OK (stock > mínimo)
-        │   🟡 Naranja  → Bajo mínimo (stock ≤ mínimo)
-        │   🔴 Rojo     → Agotado (stock = 0)
-        ├── Filtros: Familia, Estado, Búsqueda por código
+Panel de Confección (sin PIN)
         │
-        ├── "NUEVA ENTRADA" (sin PIN)
-        │       ├── Input: código producto
-        │       ├── Muestra: descripción, stock actual
-        │       ├── Cantidad recibida
-        │       ├── Proveedor (select o agregar nuevo)
-        │       ├── Número de factura/documento del proveedor
-        │       ├── Motivo: COMPRA / DEVOLUCIÓN
-        │       └── "GUARDAR ENTRADA"
+        ├── HISTORIAL VENTAS
+        │   ├── Tabla de órdenes registradas
+        │   └── Resumen de ventas del día
         │
-        └── "AJUSTE MANUAL" (requiere PIN)
-                ├── Select: técnico que realiza el ajuste
-                ├── [Modal PIN del técnico seleccionado]
-                ├── Código producto
-                ├── Tipo: SUMAR o RESTAR
-                ├── Cantidad
-                ├── Motivo (obligatorio): DAÑO / PÉRDIDA / INVENTARIO_FISICO / CORRECCIÓN
-                └── "GUARDAR AJUSTE"
+        ├── ÓRDENES CONFECCIÓN
+        │   ├── Nueva orden de ensamble
+        │   │   ├── Fecha/hora: automática
+        │   │   ├── Técnico: Select (empleados activos)
+        │   │   ├── Aplicación: Select (VT-01, VT-02, VT-03, RP-01)
+        │   │   └── Cliente: Input con teclado virtual
+        │   ├── Agregar códigos con cantidades
+        │   └── Guardar borrador
+        │
+        └── VER CÓDIGOS
+            ├── Catálogo completo de productos
+            ├── Búsqueda por código o descripción
+            ├── Auto-detección de tipo de medida
+            └── Stock actual por producto
 ```
+
+**Pantallas del módulo Confección:**
+
+| Ventana | Archivo | Propósito |
+|---|---|---|
+| Historial de Ventas | `VentasWindow.xaml` | Lista de órdenes registradas |
+| Órdenes Confección | `NuevaOrdenWindow.xaml` | Formulario de orden de ensamble |
+| Ver Códigos | `SeleccionCodigoWindow.xaml` | Búsqueda y detalle de productos |
+
+---
+
+### Módulo Inventario (WebApp)
+
+El control completo de inventario se maneja desde la **WebApp** (Next.js). La app de escritorio solo tiene acceso de consulta rápida desde el módulo de Caja (`Consultar Stock`). La gestión de entradas, ajustes, alertas y reportes de inventario se realiza exclusivamente en web. Ver sección [WebApp → Dashboard](#webapp-nextjs) para más detalle.
 
 **Reglas de inventario:**
 
@@ -288,21 +272,7 @@ Acceso directo sin PIN. Solo los **ajustes manuales** (sumar o restar stock arbi
 | R-INV-04 | Stock no puede quedar negativo (validación antes de guardar) |
 | R-INV-05 | Alerta automática cuando stock ≤ mínimo |
 | R-INV-06 | Movimientos son inmutables — no se borran, solo se registran correcciones |
-| R-INV-07 | Ajustes manuales requieren motivo obligatorio + PIN personal |
-
----
-
-### Módulo Impresoras
-
-Módulo dedicado accesible desde el menú de configuración. Permite:
-
-- Ver impresoras instaladas en Windows
-- Establecer impresora predeterminada para tickets
-- Configurar ancho de papel (80mm / 58mm)
-- Imprimir ticket de prueba
-- Configurar conexión Ethernet (IP + puerto para impresoras de red)
-
-No requiere PIN — es configuración técnica que normalmente solo toca el administrador.
+| R-INV-07 | Ajustes manuales requieren motivo obligatorio + PIN personal (vía web)
 
 ---
 
@@ -330,7 +300,14 @@ Aplicación web separada, accesible desde cualquier dispositivo con navegador. C
 - Generación de recibo de pago en PDF
 - Historial por mes/año — planillas cerradas son inmutables
 
-**3. Reportes**
+**3. Inventario**
+- Gestión completa de stock (altas, bajas, ajustes)
+- Entradas de mercancía con proveedor y factura
+- Ajustes manuales con PIN del técnico (vía web)
+- Alertas configurables por producto
+- Reconciliación física
+
+**4. Reportes**
 - Ventas por técnico (comisiones)
 - Comparativo mensual/anual
 - Rotación de inventario
@@ -342,7 +319,7 @@ Aplicación web separada, accesible desde cualquier dispositivo con navegador. C
 - JWT con sesión de 8 horas
 - Roles: Admin, Contador, Dueño (remoto)
 
-> La WebApp también es donde se gestiona la creación de empleados y la asignación de sus PINs para la app de escritorio. El administrador crea al empleado en la WebApp, asigna su PIN inicial, y ese hash queda disponible para la validación en la caja.
+> La WebApp también es donde se gestiona la creación de empleados y la asignación de sus PINs para la app de escritorio. El administrador crea al empleado en la WebApp, asigna su PIN inicial, y ese hash queda disponible para la validación en caja. Los empleados con `can_cashier = true` pueden acceder al módulo de Caja; los que tienen `can_sell = true` operan en Confección.
 
 ---
 
@@ -716,24 +693,24 @@ Desde la WebApp (módulo Empleados):
 
 | Semana | Entregable | Estado |
 |---|---|---|
-| 1–2 | Setup BD, catálogo 500+ productos cargado, pantalla de inicio con dos módulos | 🔲 Pendiente |
-| 3–4 | Módulo Ventas: orden completa, modal PIN por técnico, deducción de stock | 🔲 Pendiente |
-| 5–6 | Integración DTE, impresión ESC/POS, módulo impresoras, pruebas con usuarios | 🔲 Pendiente |
+| 1–2 | Setup BD, catálogo 500+ productos cargado, pantalla de inicio con CAJA / CONFECCIONES | 🔲 Pendiente |
+| 3–4 | Módulo Caja: ingreso con PIN, facturación DTE, historial, consulta stock | 🔲 Pendiente |
+| 5–6 | Módulo Confección: órdenes de ensamble, historial, ver códigos + impresión ESC/POS | 🔲 Pendiente |
 
-### Fase 2 — Inventario Completo (Semanas 7–10)
-
-| Semana | Entregable | Estado |
-|---|---|---|
-| 7–8 | Entradas de mercancía (libre), ajustes manuales con PIN, alertas automáticas | 🔲 Pendiente |
-| 9–10 | Reconciliación física, reportes básicos de inventario | 🔲 Pendiente |
-
-### Fase 3 — WebApp RRHH (Semanas 11–16)
+### Fase 2 — Caja Avanzada (Semanas 7–10)
 
 | Semana | Entregable | Estado |
 |---|---|---|
-| 11–12 | Next.js setup, dashboard con KPIs y gráficas, gestión de empleados y PINs | 🔲 Pendiente |
-| 13–14 | Cálculo automático de planilla con descuentos legales SV | 🔲 Pendiente |
-| 15–16 | Reportes avanzados, testing completo, deploy producción | 🔲 Pendiente |
+| 7–8 | Corte de caja, notas de crédito (DTE-05), reimpresión de tickets | 🔲 Pendiente |
+| 9–10 | Configuración de impresoras, multisesión por PIN, refinamiento UX | 🔲 Pendiente |
+
+### Fase 3 — WebApp Inventario + RRHH (Semanas 11–16)
+
+| Semana | Entregable | Estado |
+|---|---|---|
+| 11–12 | Next.js setup, dashboard con KPIs, gestión de empleados y PINs | 🔲 Pendiente |
+| 13–14 | Inventario completo en web: entradas, ajustes, alertas, reconciliación | 🔲 Pendiente |
+| 15–16 | Cálculo automático de planilla, reportes, testing completo, deploy | 🔲 Pendiente |
 
 ---
 

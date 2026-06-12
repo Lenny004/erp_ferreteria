@@ -85,18 +85,21 @@
                    Fill="{StaticResource FlexoRojo}"
                    Opacity="0.8"/>
 
-        <!-- Botón cerrar ventana -->
-        <Button Content="&#x2715;"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,12,16,0"
-                Width="32" Height="32"
-                FontSize="{StaticResource FlexoFontSize_MD}"
-                Foreground="{StaticResource FlexoGrisClaro}"
-                Background="Transparent"
-                BorderThickness="0"
-                Cursor="Hand"
-                Click="OnCerrarClick"/>
+        <!-- Botones de ventana (minimizar, maximizar, cerrar) -->
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,0,8,0">
+            <Button Content="&#x2014;"
+                    Style="{StaticResource FlexoWindowButtonStyle}"
+                    Click="OnMinimizarClick"/>
+            <Button Content="&#x25A1;"
+                    Style="{StaticResource FlexoWindowButtonStyle}"
+                    Click="OnMaximizarClick"/>
+            <Button Content="&#x2715;"
+                    Style="{StaticResource FlexoHeaderCloseHover}"
+                    Click="OnCerrarClick"/>
+        </StackPanel>
 
         <!-- Contenido centrado -->
         <StackPanel HorizontalAlignment="Center"
@@ -146,7 +149,7 @@
                             Style="{StaticResource EstiloBotonModulo}"
                             Click="OnVentasClick" Height="124">
                         <StackPanel>
-                            <Image Source="/Resources/Images/register.png"
+                            <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/register.png"
                                    Width="48" Height="48"
                                    Margin="0,0,0,8"/>
                             <TextBlock Style="{StaticResource EstiloEtiquetaBoton}"
@@ -166,11 +169,11 @@
                             Style="{StaticResource EstiloBotonModulo}"
                             Click="OnInventarioClick" Height="124">
                         <StackPanel>
-                            <Image Source="/Resources/Images/boxes.png"
+                            <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/boxes.png"
                                    Width="48" Height="48"
                                    Margin="0,0,0,8"/>
                             <TextBlock Style="{StaticResource EstiloEtiquetaBoton}"
-                                       Text="INVENTARIO"/>
+                                       Text="CONFECCION"/>
                         </StackPanel>
                     </Button>
                     <TextBlock Text="Stock y movimientos"

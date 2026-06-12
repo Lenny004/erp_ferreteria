@@ -15,6 +15,11 @@ public partial class App : Application
 
     public App()
     {
+        if (ResourceAssembly is null)
+        {
+            ResourceAssembly = typeof(App).Assembly;
+        }
+
         _host = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration(config =>
             {
