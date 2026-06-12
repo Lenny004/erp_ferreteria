@@ -7,21 +7,21 @@
     ════════════════════════════════════════════ -->
 
 	<!-- Rojos corporativos -->
-	<SolidColorBrush x:Key="FlexoRojo" Color="#cb2431"/>
+    <SolidColorBrush x:Key="FlexoRojo" Color="#D22533"/>
 	<SolidColorBrush x:Key="FlexoRojoDark" Color="#930019"/>
 	<SolidColorBrush x:Key="FlexoRojoHover" Color="#E8293A"/>
 
 	<!-- Neutros -->
 	<SolidColorBrush x:Key="FlexoNegro" Color="#1E1E1E"/>
 	<SolidColorBrush x:Key="FlexoBlanco" Color="#D4E4FA"/>
-	<SolidColorBrush x:Key="FlexoGris" Color="#6E6D6D"/>
-	<SolidColorBrush x:Key="FlexoGrisClaro" Color="#B0B0B0"/>
-	<SolidColorBrush x:Key="FlexoGrisOscuro" Color="#3A3A3A"/>
+    <SolidColorBrush x:Key="FlexoGris" Color="#474746"/>
+    <SolidColorBrush x:Key="FlexoGrisClaro" Color="#AB8886"/>
+    <SolidColorBrush x:Key="FlexoGrisOscuro" Color="#5B403E"/>
 
 	<!-- Estados -->
-	<SolidColorBrush x:Key="FlexoSuccess" Color="#81C784"/>
-	<SolidColorBrush x:Key="FlexoWarning" Color="#FFB74D"/>
-	<SolidColorBrush x:Key="FlexoError" Color="#E57373"/>
+    <SolidColorBrush x:Key="FlexoSuccess" Color="#81c784"/>
+    <SolidColorBrush x:Key="FlexoWarning" Color="#FB923C"/>
+    <SolidColorBrush x:Key="FlexoError" Color="#F87171"/>
 	<SolidColorBrush x:Key="FlexoInfo" Color="#64B5F6"/>
 
 	<!-- Azules de fondo -->
@@ -180,23 +180,19 @@
 	<Style x:Key="FlexoNavButtonStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonBaseStyle}"/>
 
-	<!-- Botón de nav ACTIVO (con indicador rojo lateral) -->
+	<!-- Botón de nav ACTIVO (con indicador rojo lateral superpuesto, sin desplazar contenido) -->
 	<Style x:Key="FlexoNavButtonActiveStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonBaseStyle}">
+		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="Button">
 					<Border x:Name="Root"
-                            Background="{StaticResource FlexoAzulClaro}"
-                            CornerRadius="{StaticResource FlexoRadius_SM}"
-                            Margin="6,1">
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
 						<Grid>
-							<Rectangle Width="3"
-                                       HorizontalAlignment="Left"
-                                       Fill="{StaticResource FlexoRojo}"
-                                       RadiusX="1.5" RadiusY="1.5"
-                                       Margin="0,6,0,6"/>
-							<Grid Margin="12,0,12,0">
+							<!-- Mismo layout que el base — icono y texto en posición idéntica -->
+							<Grid>
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition Width="26"/>
 									<ColumnDefinition Width="*"/>
@@ -208,8 +204,25 @@
                                                   VerticalAlignment="Center"
                                                   Margin="8,0,0,0"/>
 							</Grid>
+							<!-- Indicador rojo superpuesto a la izquierda, no afecta el layout -->
+							<Rectangle Width="3"
+                                       HorizontalAlignment="Left"
+                                       Fill="{StaticResource FlexoRojo}"
+                                       RadiusX="1.5" RadiusY="1.5"
+                                       Margin="0,6,0,6"/>
 						</Grid>
 					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
@@ -322,7 +335,7 @@
     ════════════════════════════════════════════ -->
 
 	<Style x:Key="FlexoNavSectionTitleStyle" TargetType="TextBlock">
-		<Setter Property="Foreground" Value="{StaticResource FlexoGris}"/>
+		<Setter Property="Foreground" Value="{StaticResource FlexoGrisClaro}"/>
 		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_XS}"/>
 		<Setter Property="FontWeight" Value="{StaticResource FlexoFontWeight_Bold}"/>
 		<Setter Property="Margin" Value="16,14,0,6"/>
@@ -469,15 +482,15 @@
 
 	<Style x:Key="FlexoActionButtonStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonStyle}">
-		<Setter Property="Width" Value="112"/>
+		<Setter Property="Width" Value="95"/>
 		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
 		<Setter Property="Margin" Value="4,0"/>
-		<Setter Property="Background" Value="{StaticResource GradienteBoton}"/>
+		<Setter Property="Background" Value="{StaticResource FlexoSuccess}"/>
 	</Style>
 
 	<Style x:Key="FlexoActionButtonSecondaryStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonStyle}">
-		<Setter Property="Width" Value="112"/>
+		<Setter Property="Width" Value="95"/>
 		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
 		<Setter Property="Margin" Value="4,0"/>
 		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>

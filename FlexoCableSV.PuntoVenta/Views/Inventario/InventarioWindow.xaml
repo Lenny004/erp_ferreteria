@@ -18,6 +18,59 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Resources/Styles/FlexoStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="ActionButtonStyle" TargetType="Button" BasedOn="{StaticResource FlexoActionButtonStyle}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource FlexoRadius_SM}">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ActionButtonSecondaryStyle" TargetType="Button" BasedOn="{StaticResource FlexoActionButtonSecondaryStyle}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource FlexoRadius_SM}">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
         </ResourceDictionary>
     </Window.Resources>
 
@@ -80,58 +133,27 @@
                               Margin="0,4,0,0">
                     <StackPanel>
 
-                        <!-- SECCIÓN CAJA -->
+                        <!-- ══════════════════════ SECCIÓN CAJA ══════════════════════ -->
                         <TextBlock Text="CAJA"
                                    Style="{StaticResource FlexoNavSectionTitleStyle}"/>
 
-                        <!-- INVENTARIO — ACTIVO (con indicador rojo) -->
-                        <Button Style="{StaticResource FlexoNavButtonActiveStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="26"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/boxes.png"
-                                       Width="18" Height="18"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="Inventario"
-                                           VerticalAlignment="Center"
-                                           Margin="8,0,0,0"
-                                           Foreground="{StaticResource FlexoBlanco}"
-                                           FontSize="{StaticResource FlexoFontSize_MD}"/>
-                            </Grid>
-                        </Button>
-
+                        <!-- CONSULTAR STOCK -->
                         <Button Style="{StaticResource FlexoNavButtonStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/register-w.png"
-                                       Width="18" Height="18"/>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/existence-w.png"
+                                       Width="20" Height="20"/>
                                 <TextBlock Grid.Column="1"
-                                           Text="Ventas"
+                                           Text="Consultar Stock"
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"/>
                             </Grid>
                         </Button>
 
-                        <Button Style="{StaticResource FlexoNavButtonStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="26"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/add-w.png"
-                                       Width="18" Height="18"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="Nueva orden"
-                                           VerticalAlignment="Center"
-                                           Margin="8,0,0,0"/>
-                            </Grid>
-                        </Button>
-
+                        <!-- FACTURACIÓN -->
                         <Button Style="{StaticResource FlexoNavButtonStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -139,35 +161,31 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/bill.png"
-                                       Width="18" Height="18"/>
+                                       Width="20" Height="20"/>
                                 <TextBlock Grid.Column="1"
-                                           Text="Facturacion"
+                                           Text="Facturación"
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"/>
                             </Grid>
                         </Button>
 
-                        <Rectangle Style="{StaticResource FlexoNavDividerStyle}"/>
-
-                        <!-- SECCIÓN CONFECCIÓN -->
-                        <TextBlock Text="CONFECCION"
-                                   Style="{StaticResource FlexoNavSectionTitleStyle}"/>
-
+                        <!-- HISTORIAL DE FACTURAS -->
                         <Button Style="{StaticResource FlexoNavButtonStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/rule-w.png"
-                                       Width="18" Height="18"/>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/historial_pedido-w.png"
+                                       Width="20" Height="20"/>
                                 <TextBlock Grid.Column="1"
-                                           Text="Codigos"
+                                           Text="Historial Facturas"
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"/>
                             </Grid>
                         </Button>
 
+                        <!-- IMPRESORAS -->
                         <Button Style="{StaticResource FlexoNavButtonStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -175,9 +193,94 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/printer-w.png"
-                                       Width="18" Height="18"/>
+                                       Width="20" Height="20"/>
                                 <TextBlock Grid.Column="1"
                                            Text="Impresoras"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- DEVOLUCIONES -->
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/return-w.png"
+                                       Width="20" Height="20"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Devoluciones"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+                        <!-- CORTE DE CAJA -->
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/cierre_caja-w.png"
+                                       Width="20" Height="20"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Corte de caja"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                        <Rectangle Style="{StaticResource FlexoNavDividerStyle}"/>
+
+                        <!-- ══════════════════════ SECCIÓN CONFECCIÓN ══════════════════════ -->
+                        <TextBlock Text="CONFECCION"
+                                   Style="{StaticResource FlexoNavSectionTitleStyle}"/>
+
+                        <!-- HISTORIAL VENTAS -->
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/comprobante-w.png"
+                                       Width="20" Height="20"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Historial Ventas"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- ÓRDENES CONFECCIÓN -->
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/confecciones.png"
+                                       Width="20" Height="20"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Órdenes Confección"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- VER CÓDIGOS -->
+                        <Button Style="{StaticResource FlexoNavButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/codes-w.png"
+                                       Width="20" Height="20"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="Ver Códigos"
                                            VerticalAlignment="Center"
                                            Margin="8,0,0,0"/>
                             </Grid>
@@ -195,7 +298,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/exit-w.png"
-                               Width="18" Height="18"/>
+                               Width="20" Height="20"/>
                         <TextBlock Grid.Column="1"
                                    Text="Cerrar sesion"
                                    VerticalAlignment="Center"
@@ -271,11 +374,12 @@
 
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal">
-                        <Button Style="{StaticResource FlexoActionButtonStyle}" Width="78">
+                        <Button Style="{StaticResource ActionButtonStyle}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Image Source="/Resources/Images/add.png"
-                                       Width="14" Height="14" Margin="0,0,6,0"/>
-                                <TextBlock Text="Agregar" VerticalAlignment="Center"/>
+                                <Image Source="/Resources/Images/add-blue.png"
+                                       Width="16" Height="16"/>
+                                <TextBlock Text="AGREGAR"
+                                           Foreground="{StaticResource FlexoAzulOscuro}" FontWeight="Bold"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -300,7 +404,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/search.png"
-                                   Width="18" Height="18"
+                                   Width="20" Height="20"
                                    Opacity="0.7"/>
                             <TextBlock Grid.Column="1"
                                        Text="Buscar codigo o descripcion"
@@ -311,15 +415,12 @@
                     </Border>
 
                     <Button Grid.Column="2"
-                            Style="{StaticResource FlexoActionButtonSecondaryStyle}"
-                            Margin="39,0,0,0"
-                            Width="NaN">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Width="74" Margin="-24,0,0,0">
+                            Style="{StaticResource ActionButtonSecondaryStyle}" Margin="30,0,6,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Image Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/search.png"
-                                   Width="14" Height="14" Margin="0,0,6,0"/>
-                            <TextBlock Text="Filtros"
-                                       Width="54"
-                                       TextAlignment="Right"/>
+                                   Width="16" Height="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="FILTROS" VerticalAlignment="Center" FontWeight="Bold"
+                                       Foreground="{StaticResource FlexoBlanco}"/>
                         </StackPanel>
                     </Button>
                 </Grid>
