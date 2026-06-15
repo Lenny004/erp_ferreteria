@@ -1,9 +1,309 @@
-<UserControl x:Class="FlexoCableSV.PuntoVenta.Views.Confeccion.HistorialVentasView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Resources/Styles/FlexoStyles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="420"/></Grid.RowDefinitions>
-        <StackPanel Margin="0,0,0,16"><TextBlock Text="Historial de Ventas" Style="{StaticResource FlexoPanelTitleStyle}"/><TextBlock Text="Ordenes de confeccion registradas y estados de produccion" Style="{StaticResource FlexoPanelSubtitleStyle}"/></StackPanel>
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16"><Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Ordenes hoy" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="14" Style="{StaticResource FlexoCardValueStyle}"/></StackPanel></Border><Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Pendientes" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="4" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoWarning}"/></StackPanel></Border><Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="En proceso" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="6" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoInfo}"/></StackPanel></Border><Border Style="{StaticResource FlexoStatCardStyle}"><StackPanel><TextBlock Text="Finalizadas" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="4" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoSuccess}"/></StackPanel></Border></UniformGrid>
-        <Grid Grid.Row="2" Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/><ColumnDefinition Width="140"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions><TextBox Style="{StaticResource FlexoFieldTextBoxStyle}" Text="Buscar cliente, tecnico, codigo u orden" Foreground="{StaticResource FlexoGris}"/><ComboBox Grid.Column="1" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Fecha"/><ComboBoxItem Content="Hoy"/><ComboBoxItem Content="Semana"/></ComboBox><ComboBox Grid.Column="2" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Tecnico"/><ComboBoxItem Content="Todos"/></ComboBox><ComboBox Grid.Column="3" Style="{StaticResource FlexoFieldComboBoxStyle}" Margin="10,0,0,0" SelectedIndex="0"><ComboBoxItem Content="Estado"/><ComboBoxItem Content="Pendiente"/><ComboBoxItem Content="Proceso"/><ComboBoxItem Content="Finalizada"/></ComboBox></Grid>
-        <Border Grid.Row="3" Background="{StaticResource FlexoAzulMedio}" BorderBrush="{StaticResource FlexoAzulClaro}" BorderThickness="1" CornerRadius="{StaticResource FlexoRadius_MD}"><StackPanel><Grid Height="40" Style="{StaticResource FlexoGridHeaderStyle}"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="110"/><ColumnDefinition Width="80"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock Text="ORDEN" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="1" Text="FECHA" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="2" Text="CLIENTE" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="3" Text="TECNICO" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="4" Text="APLICACION" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="5" Text="TOTAL" Style="{StaticResource FlexoGridHeaderTextStyle}"/><TextBlock Grid.Column="6" Text="ESTADO" Style="{StaticResource FlexoGridHeaderTextStyle}"/></Grid><Border Style="{StaticResource FlexoDataGridRowStyle}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="110"/><ColumnDefinition Width="80"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock Text="#1024" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}"/><TextBlock Grid.Column="1" Text="12/06" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="Carlos Ramos" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="Miguel" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="4" Text="VT-01" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="5" Text="$96" Style="{StaticResource FlexoTableCellStyle}"/><Border Grid.Column="6" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}"><TextBlock Text="PROCESO" Foreground="{StaticResource FlexoInfo}" FontSize="{StaticResource FlexoFontSize_XS}"/></Border></Grid></Border><Border Style="{StaticResource FlexoDataGridRowStyle}" Background="{StaticResource FlexoAzulFilaAlt}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="110"/><ColumnDefinition Width="80"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock Text="#1025" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}"/><TextBlock Grid.Column="1" Text="12/06" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="Ruta Express" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="Ana" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="4" Text="RP-01" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="5" Text="$142" Style="{StaticResource FlexoTableCellStyle}"/><Border Grid.Column="6" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}"><TextBlock Text="FINAL" Foreground="{StaticResource FlexoSuccess}" FontSize="{StaticResource FlexoFontSize_XS}"/></Border></Grid></Border></StackPanel></Border>
-    </Grid></ScrollViewer>
+<UserControl
+    x:Class="FlexoCableSV.PuntoVenta.Views.Confeccion.HistorialVentasView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:FlexoCableSV.PuntoVenta.Helpers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/FlexoStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="420" />
+            </Grid.RowDefinitions>
+            <StackPanel
+                Margin="0,0,0,16">
+                <TextBlock
+                    Text="Historial de Ventas"
+                    Style="{StaticResource FlexoPanelTitleStyle}" />
+                <TextBlock
+                    Text="Ordenes de confeccion registradas y estados de produccion"
+                    Style="{StaticResource FlexoPanelSubtitleStyle}" />
+            </StackPanel>
+            <UniformGrid
+                Grid.Row="1"
+                Columns="4"
+                Margin="0,0,0,16">
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Ordenes hoy"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="14"
+                            Style="{StaticResource FlexoCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Pendientes"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="4"
+                            Style="{StaticResource FlexoCardValueStyle}"
+                            Foreground="{StaticResource FlexoWarning}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="En proceso"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="6"
+                            Style="{StaticResource FlexoCardValueStyle}"
+                            Foreground="{StaticResource FlexoInfo}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Finalizadas"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="4"
+                            Style="{StaticResource FlexoCardValueStyle}"
+                            Foreground="{StaticResource FlexoSuccess}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+            <Grid
+                Grid.Row="2"
+                Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition
+                        Width="*" />
+                    <ColumnDefinition
+                        Width="140" />
+                    <ColumnDefinition
+                        Width="140" />
+                    <ColumnDefinition
+                        Width="140" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    Style="{StaticResource FlexoFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="Buscar cliente, tecnico, codigo u orden" />
+                <ComboBox
+                    Grid.Column="1"
+                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                    Margin="10,0,0,0"
+                    SelectedIndex="0">
+                    <ComboBoxItem
+                        Content="Fecha" />
+                    <ComboBoxItem
+                        Content="Hoy" />
+                    <ComboBoxItem
+                        Content="Semana" />
+                </ComboBox>
+                <ComboBox
+                    Grid.Column="2"
+                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                    Margin="10,0,0,0"
+                    SelectedIndex="0">
+                    <ComboBoxItem
+                        Content="Tecnico" />
+                    <ComboBoxItem
+                        Content="Todos" />
+                </ComboBox>
+                <ComboBox
+                    Grid.Column="3"
+                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                    Margin="10,0,0,0"
+                    SelectedIndex="0">
+                    <ComboBoxItem
+                        Content="Estado" />
+                    <ComboBoxItem
+                        Content="Pendiente" />
+                    <ComboBoxItem
+                        Content="Proceso" />
+                    <ComboBoxItem
+                        Content="Finalizada" />
+                </ComboBox>
+            </Grid>
+            <Border
+                Grid.Row="3"
+                Background="{StaticResource FlexoAzulMedio}"
+                BorderBrush="{StaticResource FlexoAzulClaro}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource FlexoRadius_MD}">
+                <StackPanel>
+                    <Grid
+                        Height="40"
+                        Style="{StaticResource FlexoGridHeaderStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition
+                                Width="100" />
+                            <ColumnDefinition
+                                Width="90" />
+                            <ColumnDefinition
+                                Width="*" />
+                            <ColumnDefinition
+                                Width="120" />
+                            <ColumnDefinition
+                                Width="110" />
+                            <ColumnDefinition
+                                Width="80" />
+                            <ColumnDefinition
+                                Width="110" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            Text="ORDEN"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="FECHA"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="2"
+                            Text="CLIENTE"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="3"
+                            Text="TECNICO"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="4"
+                            Text="APLICACION"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="5"
+                            Text="TOTAL"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock
+                            Grid.Column="6"
+                            Text="ESTADO"
+                            Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                    </Grid>
+                    <Border
+                        Style="{StaticResource FlexoDataGridRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition
+                                    Width="100" />
+                                <ColumnDefinition
+                                    Width="90" />
+                                <ColumnDefinition
+                                    Width="*" />
+                                <ColumnDefinition
+                                    Width="120" />
+                                <ColumnDefinition
+                                    Width="110" />
+                                <ColumnDefinition
+                                    Width="80" />
+                                <ColumnDefinition
+                                    Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                Text="#1024"
+                                Style="{StaticResource FlexoTableCellStyle}"
+                                Foreground="{StaticResource FlexoRojo}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="12/06"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="Carlos Ramos"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="Miguel"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="VT-01"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="5"
+                                Text="$96"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <Border
+                                Grid.Column="6"
+                                Style="{StaticResource FlexoBadgeStyle}"
+                                Background="{StaticResource FlexoAzulClaro}">
+                                <TextBlock
+                                    Text="PROCESO"
+                                    Foreground="{StaticResource FlexoInfo}"
+                                    FontSize="{StaticResource FlexoFontSize_XS}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <Border
+                        Style="{StaticResource FlexoDataGridRowStyle}"
+                        Background="{StaticResource FlexoAzulFilaAlt}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition
+                                    Width="100" />
+                                <ColumnDefinition
+                                    Width="90" />
+                                <ColumnDefinition
+                                    Width="*" />
+                                <ColumnDefinition
+                                    Width="120" />
+                                <ColumnDefinition
+                                    Width="110" />
+                                <ColumnDefinition
+                                    Width="80" />
+                                <ColumnDefinition
+                                    Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                Text="#1025"
+                                Style="{StaticResource FlexoTableCellStyle}"
+                                Foreground="{StaticResource FlexoRojo}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="12/06"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="Ruta Express"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="Ana"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="RP-01"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <TextBlock
+                                Grid.Column="5"
+                                Text="$142"
+                                Style="{StaticResource FlexoTableCellStyle}" />
+                            <Border
+                                Grid.Column="6"
+                                Style="{StaticResource FlexoBadgeStyle}"
+                                Background="{StaticResource FlexoAzulClaro}">
+                                <TextBlock
+                                    Text="FINAL"
+                                    Foreground="{StaticResource FlexoSuccess}"
+                                    FontSize="{StaticResource FlexoFontSize_XS}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

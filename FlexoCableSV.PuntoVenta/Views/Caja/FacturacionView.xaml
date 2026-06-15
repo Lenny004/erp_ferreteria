@@ -1,20 +1,269 @@
-<UserControl x:Class="FlexoCableSV.PuntoVenta.Views.Caja.FacturacionView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Resources/Styles/FlexoStyles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+<UserControl
+    x:Class="FlexoCableSV.PuntoVenta.Views.Caja.FacturacionView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:FlexoCableSV.PuntoVenta.Helpers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/FlexoStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
         <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="500"/></Grid.RowDefinitions>
-            <StackPanel Margin="0,0,0,16"><TextBlock Text="Facturacion" Style="{StaticResource FlexoPanelTitleStyle}"/><TextBlock Text="Crear orden, emitir DTE y preparar impresion de ticket" Style="{StaticResource FlexoPanelSubtitleStyle}"/></StackPanel>
-            <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,16">
-                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Tipo DTE" Style="{StaticResource FlexoCardLabelStyle}"/><ComboBox Style="{StaticResource FlexoFieldComboBoxStyle}" SelectedIndex="0" Margin="0,8,0,0"><ComboBoxItem Content="01 Consumidor Final"/><ComboBoxItem Content="03 Credito Fiscal"/></ComboBox></StackPanel></Border>
-                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Metodo de pago" Style="{StaticResource FlexoCardLabelStyle}"/><ComboBox Style="{StaticResource FlexoFieldComboBoxStyle}" SelectedIndex="0" Margin="0,8,0,0"><ComboBoxItem Content="Efectivo"/><ComboBoxItem Content="Tarjeta"/><ComboBoxItem Content="Transferencia"/></ComboBox></StackPanel></Border>
-                <Border Style="{StaticResource FlexoStatCardStyle}"><StackPanel><TextBlock Text="Total a facturar" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="$ 86.45" Style="{StaticResource FlexoCardValueStyle}" Foreground="{StaticResource FlexoSuccess}"/></StackPanel></Border>
+            <Grid.RowDefinitions>
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="500" />
+            </Grid.RowDefinitions>
+            <StackPanel
+                Margin="0,0,0,16">
+                <TextBlock
+                    Text="Facturacion"
+                    Style="{StaticResource FlexoPanelTitleStyle}" />
+                <TextBlock
+                    Text="Crear orden, emitir DTE y preparar impresion de ticket"
+                    Style="{StaticResource FlexoPanelSubtitleStyle}" />
+            </StackPanel>
+            <UniformGrid
+                Grid.Row="1"
+                Columns="3"
+                Margin="0,0,0,16">
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Tipo DTE"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <ComboBox
+                            Style="{StaticResource FlexoFieldComboBoxStyle}"
+                            SelectedIndex="0"
+                            Margin="0,8,0,0">
+                            <ComboBoxItem
+                                Content="01 Consumidor Final" />
+                            <ComboBoxItem
+                                Content="03 Credito Fiscal" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Metodo de pago"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <ComboBox
+                            Style="{StaticResource FlexoFieldComboBoxStyle}"
+                            SelectedIndex="0"
+                            Margin="0,8,0,0">
+                            <ComboBoxItem
+                                Content="Efectivo" />
+                            <ComboBoxItem
+                                Content="Tarjeta" />
+                            <ComboBoxItem
+                                Content="Transferencia" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Total a facturar"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="$ 86.45"
+                            Style="{StaticResource FlexoCardValueStyle}"
+                            Foreground="{StaticResource FlexoSuccess}" />
+                    </StackPanel>
+                </Border>
             </UniformGrid>
-            <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.4*"/><ColumnDefinition Width="0.9*"/></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Buscar producto" Style="{StaticResource FlexoCardLabelStyle}"/><TextBox Style="{StaticResource FlexoFieldTextBoxStyle}" Text="Codigo o descripcion" Foreground="{StaticResource FlexoGris}" Margin="0,8,0,12"/><Button Style="{StaticResource FlexoActionButtonStyle}" Width="130"><TextBlock Text="AGREGAR" Foreground="{StaticResource FlexoAzulOscuro}" FontWeight="Bold"/></Button><Rectangle Height="1" Fill="{StaticResource FlexoAzulClaro}" Margin="0,16"/><TextBlock Text="Resultados" Style="{StaticResource FlexoCardLabelStyle}"/><TextBlock Text="01-CGA-03  Cable galvanizado" Style="{StaticResource FlexoTableCellStyle}" Margin="0,10,0,0"/><TextBlock Text="02-AC-01  Boquilla acelerador" Style="{StaticResource FlexoTableCellStyle}" Margin="0,8,0,0"/></StackPanel></Border>
-                <Border Grid.Column="1" Style="{StaticResource FlexoStatCardStyle}" Margin="0,0,12,0"><StackPanel><TextBlock Text="Detalle de orden" Style="{StaticResource FlexoCardLabelStyle}"/><Border Style="{StaticResource FlexoDataGridRowStyle}" Margin="0,12,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions><TextBlock Text="Cable galvanizado acero #3" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="1" Text="5.50" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="$12.50" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="$68.75" Style="{StaticResource FlexoTableCellStyle}"/></Grid></Border><Border Style="{StaticResource FlexoDataGridRowStyle}" Background="{StaticResource FlexoAzulFilaAlt}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/><ColumnDefinition Width="80"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions><TextBlock Text="Boquilla acelerador #1" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="1" Text="2" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="2" Text="$7.10" Style="{StaticResource FlexoTableCellStyle}"/><TextBlock Grid.Column="3" Text="$14.20" Style="{StaticResource FlexoTableCellStyle}"/></Grid></Border></StackPanel></Border>
-                <Border Grid.Column="2" Style="{StaticResource FlexoStatCardStyle}"><StackPanel><TextBlock Text="Datos del cliente" Style="{StaticResource FlexoCardLabelStyle}"/><TextBox Style="{StaticResource FlexoFieldTextBoxStyle}" Text="Nombre cliente" Foreground="{StaticResource FlexoGris}" Margin="0,8,0,8"/><TextBox Style="{StaticResource FlexoFieldTextBoxStyle}" Text="NIT / NRC" Foreground="{StaticResource FlexoGris}" Margin="0,0,0,16"/><TextBlock Text="Subtotal: $76.50" Style="{StaticResource FlexoTableCellStyle}" Margin="0,0,0,6"/><TextBlock Text="IVA: $9.95" Style="{StaticResource FlexoTableCellStyle}" Margin="0,0,0,6"/><TextBlock Text="Total: $86.45" Foreground="{StaticResource FlexoSuccess}" FontSize="{StaticResource FlexoFontSize_XL}" FontWeight="Bold" Margin="14,6,0,20"/><Button Style="{StaticResource FlexoPrimaryWideButtonStyle}"><TextBlock Text="FACTURAR DTE" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold"/></Button><Button Style="{StaticResource FlexoSecondaryWideButtonStyle}" Margin="0,10,0,0"><TextBlock Text="BORRADOR" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold"/></Button></StackPanel></Border>
+            <Grid
+                Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition
+                        Width="1.05*" />
+                    <ColumnDefinition
+                        Width="1.4*" />
+                    <ColumnDefinition
+                        Width="0.9*" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Buscar producto"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBox
+                            Style="{StaticResource FlexoFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Codigo o descripcion"
+                            Margin="0,8,0,12" />
+                        <Button
+                            Style="{StaticResource FlexoActionButtonStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="18" />
+                                    <ColumnDefinition
+                                        Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image
+                                    Source="pack://application:,,,/FlexoCableSV.PuntoVenta;component/Resources/Images/add-blue.png"
+                                    Width="14"
+                                    Height="14"
+                                    Stretch="Uniform"
+                                    VerticalAlignment="Center" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="AGREGAR"
+                                    Foreground="{StaticResource FlexoAzulOscuro}"
+                                    FontWeight="Bold"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Button>
+                        <Rectangle
+                            Height="1"
+                            Fill="{StaticResource FlexoAzulClaro}"
+                            Margin="0,16" />
+                        <TextBlock
+                            Text="Resultados"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBlock
+                            Text="01-CGA-03  Cable galvanizado"
+                            Style="{StaticResource FlexoTableCellStyle}"
+                            Margin="0,10,0,0" />
+                        <TextBlock
+                            Text="02-AC-01  Boquilla acelerador"
+                            Style="{StaticResource FlexoTableCellStyle}"
+                            Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Style="{StaticResource FlexoStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Detalle de orden"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <Border
+                            Style="{StaticResource FlexoDataGridRowStyle}"
+                            Margin="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="*" />
+                                    <ColumnDefinition
+                                        Width="70" />
+                                    <ColumnDefinition
+                                        Width="80" />
+                                    <ColumnDefinition
+                                        Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Text="Cable galvanizado acero #3"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="5.50"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="$12.50"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="$68.75"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                            </Grid>
+                        </Border>
+                        <Border
+                            Style="{StaticResource FlexoDataGridRowStyle}"
+                            Background="{StaticResource FlexoAzulFilaAlt}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="*" />
+                                    <ColumnDefinition
+                                        Width="70" />
+                                    <ColumnDefinition
+                                        Width="80" />
+                                    <ColumnDefinition
+                                        Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Text="Boquilla acelerador #1"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="2"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="$7.10"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="$14.20"
+                                    Style="{StaticResource FlexoTableCellStyle}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="2"
+                    Style="{StaticResource FlexoStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Datos del cliente"
+                            Style="{StaticResource FlexoCardLabelStyle}" />
+                        <TextBox
+                            Style="{StaticResource FlexoFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Nombre cliente"
+                            Margin="0,8,0,8" />
+                        <TextBox
+                            Style="{StaticResource FlexoFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="NIT / NRC"
+                            Margin="0,0,0,16" />
+                        <TextBlock
+                            Text="Subtotal: $76.50"
+                            Style="{StaticResource FlexoTableCellStyle}"
+                            Margin="0,0,0,6" />
+                        <TextBlock
+                            Text="IVA: $9.95"
+                            Style="{StaticResource FlexoTableCellStyle}"
+                            Margin="0,0,0,6" />
+                        <TextBlock
+                            Text="Total: $86.45"
+                            Foreground="{StaticResource FlexoSuccess}"
+                            FontSize="{StaticResource FlexoFontSize_XL}"
+                            FontWeight="Bold"
+                            Margin="14,6,0,20" />
+                        <Button
+                            Style="{StaticResource FlexoPrimaryWideButtonStyle}">
+                            <TextBlock
+                                Text="FACTURAR DTE"
+                                Foreground="{StaticResource FlexoBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                        <Button
+                            Style="{StaticResource FlexoSecondaryWideButtonStyle}"
+                            Margin="0,10,0,0">
+                            <TextBlock
+                                Text="BORRADOR"
+                                Foreground="{StaticResource FlexoBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </ScrollViewer>

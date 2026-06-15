@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:helpers="clr-namespace:FlexoCableSV.PuntoVenta.Helpers">
 
 	<!-- ════════════════════════════════════════════
          PALETA OFICIAL FLEXOCABLE SV (OPTIMIZADA)
@@ -129,9 +130,8 @@
 
 	<Style x:Key="FlexoNavButtonBaseStyle" TargetType="Button">
 		<Setter Property="Height" Value="40"/>
-		<Setter Property="Margin" Value="6,1"/>
-		<Setter Property="Padding" Value="10,0"/>
-		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Margin" Value="6,1"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="BorderBrush" Value="Transparent"/>
@@ -145,20 +145,9 @@
 					<Border x:Name="Root"
                             Background="{TemplateBinding Background}"
                             CornerRadius="{StaticResource FlexoRadius_SM}">
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="26"/>
-								<ColumnDefinition Width="*"/>
-							</Grid.ColumnDefinitions>
-							<ContentPresenter x:Name="IconPresenter"
-                                              Grid.Column="0"
-                                              VerticalAlignment="Center"
-                                              HorizontalAlignment="Center"/>
-							<ContentPresenter x:Name="TextPresenter"
-                                              Grid.Column="1"
-                                              VerticalAlignment="Center"
-                                              Margin="8,0,0,0"/>
-						</Grid>
+						<ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center"
+                                          Margin="10,0,0,0"/>
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
@@ -180,52 +169,10 @@
 	<Style x:Key="FlexoNavButtonStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonBaseStyle}"/>
 
-	<!-- Botón de nav ACTIVO (con indicador rojo lateral superpuesto, sin desplazar contenido) -->
+	<!-- Botón de nav ACTIVO (solo cambia el fondo, sin indicador lateral) -->
 	<Style x:Key="FlexoNavButtonActiveStyle" TargetType="Button"
            BasedOn="{StaticResource FlexoNavButtonBaseStyle}">
-		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="Button">
-					<Border x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="{StaticResource FlexoRadius_SM}">
-						<Grid>
-							<!-- Mismo layout que el base — icono y texto en posición idéntica -->
-							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="26"/>
-									<ColumnDefinition Width="*"/>
-								</Grid.ColumnDefinitions>
-								<ContentPresenter Grid.Column="0"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Center"/>
-								<ContentPresenter Grid.Column="1"
-                                                  VerticalAlignment="Center"
-                                                  Margin="8,0,0,0"/>
-							</Grid>
-							<!-- Indicador rojo superpuesto a la izquierda, no afecta el layout -->
-							<Rectangle Width="3"
-                                       HorizontalAlignment="Left"
-                                       Fill="{StaticResource FlexoRojo}"
-                                       RadiusX="1.5" RadiusY="1.5"
-                                       Margin="0,6,0,6"/>
-						</Grid>
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsMouseOver" Value="True">
-							<Setter TargetName="Root" Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
-						</Trigger>
-						<Trigger Property="IsPressed" Value="True">
-							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
-						</Trigger>
-						<Trigger Property="IsEnabled" Value="False">
-							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
-						</Trigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
+		<Setter Property="Background" Value="{StaticResource FlexoRojo}"/>
 	</Style>
 
 	<!-- Botón de logout (hereda del base, cambia colores) -->
@@ -480,19 +427,53 @@
          ESTILOS DE BOTÓN DE ACCIÓN (ENTRADA, AJUSTE)
     ════════════════════════════════════════════ -->
 
-	<Style x:Key="FlexoActionButtonStyle" TargetType="Button"
-           BasedOn="{StaticResource FlexoNavButtonStyle}">
-		<Setter Property="Width" Value="95"/>
+	<Style x:Key="FlexoActionButtonBaseStyle" TargetType="Button">
+		<Setter Property="Width" Value="112"/>
 		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
 		<Setter Property="Margin" Value="4,0"/>
-		<Setter Property="Background" Value="{StaticResource FlexoSuccess}"/>
+		<Setter Property="Padding" Value="12,0"/>
+		<Setter Property="Foreground" Value="{StaticResource FlexoBlanco}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource FlexoAzulOscuro}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Cursor" Value="Hand"/>
+		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
+		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_MD}"/>
+		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource FlexoRadius_SM}">
+						<ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="Root" Property="Opacity" Value="0.9"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Pressed}"/>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter TargetName="Root" Property="Opacity" Value="{StaticResource FlexoOpacity_Disabled}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
 	</Style>
 
+	<Style x:Key="FlexoActionButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource FlexoActionButtonBaseStyle}">
+		<Setter Property="Background" Value="{StaticResource FlexoSuccess}"/>
+    </Style>
+
 	<Style x:Key="FlexoActionButtonSecondaryStyle" TargetType="Button"
-           BasedOn="{StaticResource FlexoNavButtonStyle}">
-		<Setter Property="Width" Value="95"/>
-		<Setter Property="Height" Value="{StaticResource FlexoHeight_Button}"/>
-		<Setter Property="Margin" Value="4,0"/>
+           BasedOn="{StaticResource FlexoActionButtonBaseStyle}">
 		<Setter Property="Background" Value="{StaticResource FlexoAzulClaro}"/>
 	</Style>
 
@@ -538,6 +519,40 @@
 		<Setter Property="CaretBrush" Value="{StaticResource FlexoBlanco}"/>
 		<Setter Property="FontFamily" Value="{StaticResource FlexoFontFamily}"/>
 		<Setter Property="FontSize" Value="{StaticResource FlexoFontSize_MD}"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="TextBox">
+					<Border
+						Background="{TemplateBinding Background}"
+						BorderBrush="{TemplateBinding BorderBrush}"
+						BorderThickness="{TemplateBinding BorderThickness}"
+						CornerRadius="{StaticResource FlexoRadius_SM}">
+						<Grid>
+							<ScrollViewer x:Name="PART_ContentHost"
+										  Padding="{TemplateBinding Padding}" />
+							<TextBlock x:Name="Watermark"
+									   Text="{Binding (helpers:WatermarkService.Watermark), RelativeSource={RelativeSource TemplatedParent}}"
+									   Foreground="{StaticResource FlexoGris}"
+									   FontFamily="{TemplateBinding FontFamily}"
+									   FontSize="{TemplateBinding FontSize}"
+									   Padding="{TemplateBinding Padding}"
+									   VerticalAlignment="Center"
+									   IsHitTestVisible="False"
+									   Visibility="Collapsed" />
+						</Grid>
+					</Border>
+					<ControlTemplate.Triggers>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="Text" Value="" />
+								<Condition Property="IsFocused" Value="False" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="Watermark" Property="Visibility" Value="Visible" />
+						</MultiTrigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
 	</Style>
 
 	<Style x:Key="FlexoFieldComboBoxStyle" TargetType="ComboBox">
@@ -560,8 +575,8 @@
 
 	<Style x:Key="FlexoPrimaryWideButtonStyle" TargetType="Button"
 		   BasedOn="{StaticResource FlexoActionButtonStyle}">
-		<Setter Property="Width" Value="170"/>
-		<Setter Property="Height" Value="44"/>
+		<Setter Property="Width" Value="150"/>
+		<Setter Property="Height" Value="40"/>
 		<Setter Property="Background" Value="{StaticResource FlexoRojo}"/>
 	</Style>
 
