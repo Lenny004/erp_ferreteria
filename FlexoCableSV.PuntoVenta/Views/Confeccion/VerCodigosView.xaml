@@ -10,7 +10,8 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <ScrollViewer
-        VerticalScrollBarVisibility="Auto">
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Auto">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition

@@ -10,7 +10,8 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <ScrollViewer
-        VerticalScrollBarVisibility="Auto">
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Auto">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition
@@ -39,12 +40,15 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition
-                            Width="*" />
+                            Width="1.05*" />
                         <ColumnDefinition
-                            Width="*" />
+                            Width="0.95*" />
                     </Grid.ColumnDefinitions>
                     <Border
-                        Style="{StaticResource FlexoStatCardStyle}" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="403">
+                        Grid.Column="0"
+                        Style="{StaticResource FlexoStatCardStyle}"
+                        MinWidth="360"
+                        Margin="0,0,12,0">
                         <StackPanel>
                             <TextBlock
                             Text="Datos generales"
@@ -135,7 +139,9 @@
                         </StackPanel>
                     </Border>
                     <Border
-                    Style="{StaticResource FlexoStatCardStyle}" HorizontalAlignment="Left" Width="231" Grid.Column="1" Margin="426,0,0,0">
+                        Grid.Column="1"
+                        Style="{StaticResource FlexoStatCardStyle}"
+                        MinWidth="320">
                         <StackPanel>
                             <TextBlock
                             Text="Agregar codigos"
