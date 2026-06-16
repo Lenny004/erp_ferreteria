@@ -137,7 +137,8 @@ static async Task PrintVerificationAsync(NpgsqlConnection connection)
             EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hr' AND table_name = 'EmployeeBankAccounts') AS employee_bank_accounts,
             EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'hr' AND table_name = 'Employees' AND column_name = 'SalaryType') AS employee_salary_type,
             EXISTS (SELECT 1 FROM hr."Banks" WHERE "Code" = 'BAC') AS bank_seed,
-            EXISTS (SELECT 1 FROM hr."IsrBrackets" WHERE "Year" = 2026 AND "PeriodType" = 'QUINCENAL') AS isr_seed;
+            EXISTS (SELECT 1 FROM hr."IsrBrackets" WHERE "Year" = 2026 AND "PeriodType" = 'QUINCENAL') AS isr_seed,
+            EXISTS (SELECT 1 FROM hr."Employees" WHERE "Dui" = '00000001-0' AND "PinHash" IS NOT NULL) AS employee_pin_seed;
         """;
 
     await using var command = new NpgsqlCommand(sql, connection);
@@ -155,6 +156,7 @@ static async Task PrintVerificationAsync(NpgsqlConnection connection)
         Console.WriteLine($"Verificacion Employee.SalaryType: {reader.GetBoolean(7)}");
         Console.WriteLine($"Verificacion seed banco BAC: {reader.GetBoolean(8)}");
         Console.WriteLine($"Verificacion seed ISR quincenal: {reader.GetBoolean(9)}");
+        Console.WriteLine($"Verificacion seed empleado PIN: {reader.GetBoolean(10)}");
     }
 }
 

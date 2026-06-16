@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.Caja;
 using ConfeccionViews = FlexoCableSV.PuntoVenta.Views.Confeccion;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexoCableSV.PuntoVenta.Views.Shell;
 
@@ -57,7 +59,9 @@ public partial class MainShellWindow : Window
 
     private void OnLogoutClick(object sender, RoutedEventArgs e)
     {
-        new InicioWindow().Show();
+        PosSession.Clear();
+        var inicio = App.Services.GetRequiredService<InicioWindow>();
+        inicio.Show();
         Close();
     }
 

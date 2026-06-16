@@ -1237,7 +1237,7 @@ Dotar a FlexoCable de un **sistema de control de planilla** en la WebApp adminis
 | WPF caja | PIN 4 digitos del empleado | `hr.Employees.PinHash` |
 | Admin web | Usuario + password JWT | `system.WebUsers` via API Node |
 
-El modelo `WebUser.cs` en el repo WPF, si existe, es solo mapeo EF temporal del esquema compartido; **debe eliminarse del `FlexoDbContext` WPF** cuando se limpie el alcance de caja, o mantenerse ignorado hasta que EF use UUID.
+El modelo `WebUser.cs` **no existe en el proyecto WPF**; `system.WebUsers` lo consume solo `FlexoCable-backend` (Prisma).
 
 ### 17.4 Ampliacion de `hr."Employees"`
 
@@ -1306,7 +1306,7 @@ Ejecutar en orden; cada paso idempotente donde sea posible:
 - [ ] Seed tipos documento (17.7).
 - [ ] Seed `IsrBrackets` por anio vigente (mensual y quincenal).
 - [ ] Seed feriados nacionales por anio.
-- [ ] Actualizar modelos EF Core: `Employee` ampliado; remover o marcar obsoletos `Payroll`/`PayrollDetail` legacy.
+- [x] Actualizar modelos EF Core: `Employee` ampliado; eliminados `Payroll`/`PayrollDetail` legacy del proyecto WPF.
 - [x] Validar que FKs operativas WPF (`sales.Orders.EmployeeId`, etc.) usan **UUID** y EF Core mapea `Guid`.
 - [ ] `dotnet build` + smoke test conexion BD.
 

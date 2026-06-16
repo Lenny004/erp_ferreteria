@@ -1,5 +1,7 @@
 ﻿using FlexoCableSV.PuntoVenta.Data;
+using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
+using FlexoCableSV.PuntoVenta.Views.PIN;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,8 +12,10 @@ namespace FlexoCableSV.PuntoVenta;
 
 public partial class App : Application
 {
-    // El host de .NET maneja DI, configuración y ciclo de vida
     private readonly IHost _host;
+
+    public static IServiceProvider Services =>
+        ((App)Current)._host.Services;
 
     public App()
     {
@@ -34,7 +38,8 @@ public partial class App : Application
                 // Base de datos — usa el DatabaseConfig que ya hiciste
                 services.AddFlexoDatabase(context.Configuration);
 
-                // Ventanas — se registran para poder inyectar dependencias en ellas
+                services.AddSingleton<PinAuthService>();
+                services.AddTransient<PinWindow>();
                 services.AddTransient<InicioWindow>();
             })
             .Build();
@@ -46,13 +51,12 @@ public partial class App : Application
         {
             await _host.StartAsync();
 
-            // DB validation commented out for UI/UX testing
-            // var dbOk = await VerifyDatabaseConnectionAsync();
-            // if (!dbOk)
-            // {
-            //     Shutdown();
-            //     return;
-            // }
+            var dbOk = await VerifyDatabaseConnectionAsync();
+            if (!dbOk)
+            {
+                Shutdown();
+                return;
+            }
 
             var inicioWindow = _host.Services.GetRequiredService<InicioWindow>();
             inicioWindow.Show();

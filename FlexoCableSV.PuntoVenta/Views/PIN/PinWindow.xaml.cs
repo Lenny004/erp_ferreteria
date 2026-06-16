@@ -3,28 +3,29 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
 using FlexoCableSV.PuntoVenta.Views.Shell;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexoCableSV.PuntoVenta.Views.PIN;
 
 public partial class PinWindow : Window
 {
-    private static readonly Dictionary<string, string> PinesValidos = new()
-    {
-        ["1234"] = "Admin",
-        ["5678"] = "Tecnico 1",
-        ["0000"] = "Caja Demo"
-    };
-
     private const int PinLength = 4;
     private static readonly SolidColorBrush ColorVacio = new(Color.FromRgb(0x47, 0x47, 0x46));
     private static readonly SolidColorBrush ColorRelleno = new(Color.FromRgb(0xD2, 0x25, 0x33));
 
+    private readonly PinAuthService _pinAuth;
+    private readonly IServiceProvider _services;
     private string _pinActual = string.Empty;
+    private bool _validando;
 
-    public PinWindow()
+    public PinWindow(PinAuthService pinAuth, IServiceProvider services)
     {
+        _pinAuth = pinAuth;
+        _services = services;
+
         InitializeComponent();
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
@@ -46,7 +47,7 @@ public partial class PinWindow : Window
 
     private void OnCerrarClick(object sender, RoutedEventArgs e)
     {
-        var inicio = new InicioWindow();
+        var inicio = _services.GetRequiredService<InicioWindow>();
         inicio.Show();
         Close();
     }
@@ -66,7 +67,7 @@ public partial class PinWindow : Window
 
     private void OnConfirmarClick(object sender, RoutedEventArgs e)
     {
-        ValidarPin();
+        _ = ValidarPinAsync();
     }
 
     private void OnTeclaFisica(object sender, KeyEventArgs e)
@@ -85,12 +86,15 @@ public partial class PinWindow : Window
         }
         else if (e.Key == Key.Enter)
         {
-            ValidarPin();
+            _ = ValidarPinAsync();
         }
     }
 
     private void AgregarDigito(string digito)
     {
+        if (_validando)
+            return;
+
         OcultarError();
 
         if (_pinActual.Length >= PinLength || string.IsNullOrEmpty(digito))
@@ -103,12 +107,15 @@ public partial class PinWindow : Window
 
         if (_pinActual.Length == PinLength)
         {
-            ValidarPin();
+            _ = ValidarPinAsync();
         }
     }
 
     private void BorrarUltimoDigito()
     {
+        if (_validando)
+            return;
+
         OcultarError();
 
         if (_pinActual.Length == 0)
@@ -120,25 +127,45 @@ public partial class PinWindow : Window
         ActualizarDots();
     }
 
-    private void ValidarPin()
+    private async Task ValidarPinAsync()
     {
+        if (_validando)
+            return;
+
         if (_pinActual.Length < PinLength)
         {
             MostrarError("Ingresa los 4 digitos completos.");
             return;
         }
 
-        if (PinesValidos.ContainsKey(_pinActual))
+        _validando = true;
+        try
         {
-            var shell = new MainShellWindow("Facturacion");
+            var employee = await _pinAuth.ValidatePinAsync(_pinActual);
+            if (employee is null)
+            {
+                MostrarError("PIN incorrecto. Intente de nuevo.");
+                AnimarError();
+                LimpiarPin();
+                return;
+            }
+
+            PosSession.Set(employee);
+
+            var destino = employee.CanCashier ? "Facturacion" : "HistorialVentas";
+            var shell = new MainShellWindow(destino);
             shell.Show();
             Close();
-            return;
         }
-
-        MostrarError("PIN incorrecto. Intente de nuevo.");
-        AnimarError();
-        LimpiarPin();
+        catch (Exception ex)
+        {
+            MostrarError($"Error al validar PIN: {ex.Message}");
+            LimpiarPin();
+        }
+        finally
+        {
+            _validando = false;
+        }
     }
 
     private void LimpiarPin()

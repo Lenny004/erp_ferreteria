@@ -1,13 +1,17 @@
 using System.Windows;
 using FlexoCableSV.PuntoVenta.Views.PIN;
 using FlexoCableSV.PuntoVenta.Views.Shell;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexoCableSV.PuntoVenta.Views.Inicio;
 
 public partial class InicioWindow : Window
 {
-    public InicioWindow()
+    private readonly IServiceProvider _services;
+
+    public InicioWindow(IServiceProvider services)
     {
+        _services = services;
         InitializeComponent();
     }
 
@@ -30,7 +34,7 @@ public partial class InicioWindow : Window
 
     private void OnVentasClick(object sender, RoutedEventArgs e)
     {
-        var pinWindow = new PinWindow();
+        var pinWindow = _services.GetRequiredService<PinWindow>();
         pinWindow.Show();
         Close();
     }

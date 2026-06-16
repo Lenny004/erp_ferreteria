@@ -321,10 +321,14 @@ CREATE TABLE dte."DteContingency" (
 CREATE TABLE hr."Departments" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Name"        VARCHAR(100) NOT NULL UNIQUE,
+    "ParentId"    UUID REFERENCES hr."Departments"("Id"),
+    "Description" VARCHAR(300),
     "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
     "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     "UpdatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX "IdxDepartmentsParent" ON hr."Departments"("ParentId");
 
 CREATE TRIGGER "TrgDepartmentTimestamp"
 BEFORE UPDATE ON hr."Departments"
@@ -334,6 +338,7 @@ CREATE TABLE hr."Positions" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "DepartmentId"  UUID NOT NULL REFERENCES hr."Departments"("Id"),
     "Name"           VARCHAR(100) NOT NULL,
+    "Description"    VARCHAR(500),
     "IsActive"      BOOLEAN      NOT NULL DEFAULT TRUE,
     "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -344,7 +349,7 @@ CREATE TRIGGER "TrgPositionTimestamp"
 BEFORE UPDATE ON hr."Positions"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
--- Employees (unified with technicians)
+-- Employees (unified with technicians — Beraka-aligned dossier)
 CREATE TABLE hr."Employees" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     -- Identity
@@ -354,19 +359,36 @@ CREATE TABLE hr."Employees" (
     "Nit"             VARCHAR(20)   UNIQUE,
     "IsssNumber"     VARCHAR(20),
     "Nup"             VARCHAR(20),
+    "BirthDate"       DATE,
+    "Gender"          VARCHAR(20),
+    "Nationality"     VARCHAR(20)   DEFAULT 'SALVADOREÑA',
+    "PassportNumber"  VARCHAR(30),
+    "DependentsDescription" TEXT,
     -- Job
-    "PositionId"     UUID REFERENCES hr."Positions"("Id"),
-    "HireDate"       DATE          NOT NULL,
-    "TerminationDate" DATE,
-    "BaseSalary"     NUMERIC(10,2) NOT NULL,
-    "ContractType"   VARCHAR(20)   NOT NULL DEFAULT 'PLANILLA',
-    "Afp"             VARCHAR(50),  -- "CRECER", "CONFIA"
+    "PositionId"          UUID REFERENCES hr."Positions"("Id"),
+    "DepartmentId"        UUID REFERENCES hr."Departments"("Id"),
+    "DirectSupervisorId"  UUID REFERENCES hr."Employees"("Id"),
+    "HireDate"            DATE          NOT NULL,
+    "ContractEndDate"     DATE,
+    "TerminationDate"     DATE,
+    "BaseSalary"          NUMERIC(10,2) NOT NULL,
+    "ContractType"        VARCHAR(20)   NOT NULL DEFAULT 'PLAZO_FIJO',
+    "SalaryType"          VARCHAR(20)   NOT NULL DEFAULT 'MENSUAL',
+    "DefaultBonus"        NUMERIC(10,2) NOT NULL DEFAULT 0,
+    "DefaultViaticos"     NUMERIC(10,2) NOT NULL DEFAULT 0,
+    "Afp"                 VARCHAR(50),
+    "AfpInstitution"      VARCHAR(20),
+    "AfpEnrollmentDate"   DATE,
+    "IsssEnrolled"        BOOLEAN       NOT NULL DEFAULT TRUE,
+    "IsssEnrollmentDate"  DATE,
     -- Contact
     "Phone"           VARCHAR(20),
     "AltPhone"       VARCHAR(20),
     "Email"           VARCHAR(100),
     "Address"         TEXT,
     "Municipality"    VARCHAR(100),
+    "DepartmentSv"    VARCHAR(30),
+    "PaymentChannel"  VARCHAR(30)   DEFAULT 'DEPOSITO_BANCARIO',
     -- Personal
     "MaritalStatus"  VARCHAR(20),
     "AcademicLevel"  VARCHAR(50),
@@ -375,15 +397,40 @@ CREATE TABLE hr."Employees" (
     "EmergencyPhone" VARCHAR(20),
     "EmergencyRelationship" VARCHAR(50),
     -- POS access
-    "PinHash"        TEXT,         -- bcrypt(PIN 4 digits, cost=12). NULL = cannot operate POS
-    "CanSell"        BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can process sales/confection
-    "CanCashier"     BOOLEAN       NOT NULL DEFAULT FALSE,  -- Can operate cashier
+    "PinHash"        TEXT,
+    "PinUpdatedAt"   TIMESTAMPTZ,
+    "AttendanceEnabled" BOOLEAN    NOT NULL DEFAULT TRUE,
+    "CanSell"        BOOLEAN       NOT NULL DEFAULT FALSE,
+    "CanCashier"     BOOLEAN       NOT NULL DEFAULT FALSE,
+    -- Trial period and termination
+    "OnProbation"           BOOLEAN NOT NULL DEFAULT FALSE,
+    "ProbationEndDate"      DATE,
+    "ProbationCompletedAt"  TIMESTAMPTZ,
+    "TerminationReason"     VARCHAR(40),
+    "TerminationNotes"      TEXT,
     -- Status
     "IsActive"       BOOLEAN       NOT NULL DEFAULT TRUE,
     "CreatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     "UpdatedAt"      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT "ContractValid" CHECK ("ContractType" IN ('PLANILLA','HONORARIOS'))
+    CONSTRAINT "ContractValid" CHECK ("ContractType" IN ('TIEMPO_PARCIAL','PLAZO_FIJO','HONORARIOS','PASANTE')),
+    CONSTRAINT "EmployeeGenderValid" CHECK ("Gender" IS NULL OR "Gender" IN ('MASCULINO','FEMENINO','OTRO')),
+    CONSTRAINT "EmployeeNationalityValid" CHECK ("Nationality" IS NULL OR "Nationality" IN ('SALVADOREÑA','EXTRANJERA')),
+    CONSTRAINT "EmployeeMaritalStatusValid" CHECK ("MaritalStatus" IS NULL OR "MaritalStatus" IN ('SOLTERO','CASADO','UNION_DE_HECHO','DIVORCIADO','VIUDO')),
+    CONSTRAINT "EmployeeAcademicLevelValid" CHECK ("AcademicLevel" IS NULL OR "AcademicLevel" IN ('SIN_ESTUDIOS','BASICO','BACHILLER','SUPERIORES')),
+    CONSTRAINT "EmployeeSalaryTypeValid" CHECK ("SalaryType" IN ('MENSUAL','QUINCENAL','SEMANAL')),
+    CONSTRAINT "EmployeeAfpInstitutionValid" CHECK ("AfpInstitution" IS NULL OR "AfpInstitution" IN ('AFP_CONFIA','AFP_CRECER')),
+    CONSTRAINT "EmployeePaymentChannelValid" CHECK ("PaymentChannel" IS NULL OR "PaymentChannel" IN ('DEPOSITO_BANCARIO','EFECTIVO','CHEQUE')),
+    CONSTRAINT "EmployeeTerminationReasonValid" CHECK (
+        "TerminationReason" IS NULL OR "TerminationReason" IN (
+            'RENUNCIA_VOLUNTARIA','DESPIDO_JUSTIFICADO','DESPIDO_INJUSTIFICADO',
+            'MUTUO_ACUERDO','VENCIMIENTO_CONTRATO','FALLECIMIENTO','JUBILACION'
+        )
+    )
 );
+
+CREATE INDEX "IdxEmployeesDepartment" ON hr."Employees"("DepartmentId");
+CREATE INDEX "IdxEmployeesSupervisor" ON hr."Employees"("DirectSupervisorId");
+CREATE INDEX "IdxEmployeesContractType" ON hr."Employees"("ContractType");
 
 CREATE TRIGGER "TrgEmployeeTimestamp"
 BEFORE UPDATE ON hr."Employees"
@@ -488,7 +535,7 @@ CREATE TRIGGER "TrgPrinterTimestamp"
 BEFORE UPDATE ON system."Printers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
--- WebApp users (for future web application)
+-- Admin web users (FlexoCable-backend Node — not used by WPF caja)
 CREATE TABLE system."WebUsers" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Username"       VARCHAR(50)  NOT NULL UNIQUE,
@@ -607,6 +654,46 @@ SELECT "Id", 'Administrador'         FROM hr."Departments" WHERE "Name" = 'Admin
 SELECT "Id", 'Gerente'               FROM hr."Departments" WHERE "Name" = 'Administración'
 ON CONFLICT ("DepartmentId", "Name") DO UPDATE SET
     "IsActive" = TRUE;
+
+-- Demo POS employees (PIN via bcrypt — dev only; change in production)
+INSERT INTO hr."Employees" (
+    "FirstName", "LastName", "Dui", "PositionId", "DepartmentId", "HireDate", "BaseSalary",
+    "ContractType", "SalaryType", "PinHash", "CanSell", "CanCashier"
+)
+SELECT
+    'Administrador', 'Sistema', '00000001-0',
+    p."Id", d."Id", CURRENT_DATE, 800.00,
+    'PLAZO_FIJO', 'MENSUAL', crypt('1234', gen_salt('bf', 12)), FALSE, TRUE
+FROM hr."Positions" p
+JOIN hr."Departments" d ON d."Name" = 'Administración'
+WHERE p."Name" = 'Administrador'
+  AND NOT EXISTS (SELECT 1 FROM hr."Employees" WHERE "Dui" = '00000001-0');
+
+INSERT INTO hr."Employees" (
+    "FirstName", "LastName", "Dui", "PositionId", "DepartmentId", "HireDate", "BaseSalary",
+    "ContractType", "SalaryType", "PinHash", "CanSell", "CanCashier"
+)
+SELECT
+    'Técnico', 'Confección', '00000002-0',
+    p."Id", d."Id", CURRENT_DATE, 500.00,
+    'PLAZO_FIJO', 'QUINCENAL', crypt('5678', gen_salt('bf', 12)), TRUE, FALSE
+FROM hr."Positions" p
+JOIN hr."Departments" d ON d."Name" = 'Producción'
+WHERE p."Name" = 'Técnico de Confección'
+  AND NOT EXISTS (SELECT 1 FROM hr."Employees" WHERE "Dui" = '00000002-0');
+
+INSERT INTO hr."Employees" (
+    "FirstName", "LastName", "Dui", "PositionId", "DepartmentId", "HireDate", "BaseSalary",
+    "ContractType", "SalaryType", "PinHash", "CanSell", "CanCashier"
+)
+SELECT
+    'Caja', 'Demo', '00000003-0',
+    p."Id", d."Id", CURRENT_DATE, 450.00,
+    'TIEMPO_PARCIAL', 'QUINCENAL', crypt('0000', gen_salt('bf', 12)), FALSE, TRUE
+FROM hr."Positions" p
+JOIN hr."Departments" d ON d."Name" = 'Ventas'
+WHERE p."Name" = 'Vendedor'
+  AND NOT EXISTS (SELECT 1 FROM hr."Employees" WHERE "Dui" = '00000003-0');
 
 -- System settings
 INSERT INTO system."Settings" ("Key", "Value", "Description") VALUES
