@@ -68,6 +68,7 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
            │                              │
            └──────────────┬───────────────┘
                           │
+                          │
                ┌──────────▼──────────┐
                │    POSTGRESQL 14+   │
                │                     │

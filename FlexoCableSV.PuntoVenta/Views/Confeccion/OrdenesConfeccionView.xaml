@@ -147,10 +147,45 @@
                             Text="Agregar codigos"
                             Style="{StaticResource FlexoCardLabelStyle}" />
                             <Grid
-                            Margin="0,8,0,14">
-                                <TextBox
-                                Style="{StaticResource FlexoFieldTextBoxStyle}"
-                                helpers:WatermarkService.Watermark="Codigo o descripcion" />
+                                Margin="0,8,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="*" />
+                                    <ColumnDefinition
+                                        Width="96" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox
+                                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                                    SelectedIndex="0">
+                                    <ComboBoxItem
+                                        Content="Codigo" />
+                                    <ComboBoxItem
+                                        Content="01-CGA-03 Cable galvanizado" />
+                                    <ComboBoxItem
+                                        Content="02-AC-01 Boquilla acelerador" />
+                                    <ComboBoxItem
+                                        Content="03-FR-02 Cable freno" />
+                                </ComboBox>
+                                <ComboBox
+                                    Grid.Column="1"
+                                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                                    Margin="8,0,0,0"
+                                    SelectedIndex="0">
+                                    <ComboBoxItem
+                                        Content="Cant." />
+                                    <ComboBoxItem
+                                        Content="1" />
+                                    <ComboBoxItem
+                                        Content="2" />
+                                    <ComboBoxItem
+                                        Content="3" />
+                                    <ComboBoxItem
+                                        Content="4" />
+                                    <ComboBoxItem
+                                        Content="5" />
+                                    <ComboBoxItem
+                                        Content="10" />
+                                </ComboBox>
                             </Grid>
                             <Border
                             Style="{StaticResource FlexoDataGridRowStyle}">

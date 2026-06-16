@@ -10,7 +10,7 @@ public partial class MainShellWindow : Window
 {
     private readonly Dictionary<string, (Button Button, string Title, Func<UserControl> CreateView)> _sections;
 
-    public MainShellWindow()
+    public MainShellWindow(string initialSection = "Stock")
     {
         InitializeComponent();
 
@@ -27,7 +27,7 @@ public partial class MainShellWindow : Window
             ["Codigos"] = (BtnCodigos, "Ver Codigos", () => new ConfeccionViews.VerCodigosView())
         };
 
-        ShowSection("Stock");
+        ShowSection(initialSection);
     }
 
     private void OnNavClick(object sender, RoutedEventArgs e)
