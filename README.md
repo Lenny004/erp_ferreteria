@@ -566,6 +566,14 @@ dotnet run --project tools/FlexoCable.DbApply
 
 `FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto `55432` por defecto).
 
+**Empleados demo (solo desarrollo)** — seeds en `Squema.sql`:
+
+| PIN | Rol |
+|-----|-----|
+| `1234` | Administrador / caja |
+| `5678` | Técnico confección |
+| `0000` | Caja demo |
+
 ### 2. App de Escritorio (WPF)
 
 ```bash
