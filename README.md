@@ -16,8 +16,8 @@ Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta tá
   - [Flujo de Navegación e Inicio](#flujo-de-navegación-e-inicio)
   - [Módulo Caja](#módulo-caja)
   - [Módulo Confección](#módulo-confección)
-  - [Módulo Inventario (WebApp)](#módulo-inventario-webapp)
-- [WebApp (Next.js)](#webapp-nextjs)
+  - [Módulo Inventario (solo administración web)](#módulo-inventario-solo-administración-web)
+- [Administración web (`FlexoCable-adminweb`)](#administración-web-flexocable-adminweb)
 - [Base de Datos (PostgreSQL)](#base-de-datos-postgresql)
 - [Facturación Electrónica DTE](#facturación-electrónica-dte)
 - [UX/UI — Diseño para Personas Mayores](#uxui--diseño-para-personas-mayores)
@@ -49,51 +49,66 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
 
 ## Arquitectura del Sistema
 
+FlexoCable son **tres repositorios** con responsabilidades separadas. La base de datos PostgreSQL es **una sola estructura** (UUID, esquemas `public` / `sales` / `dte` / `hr` / `system`); las diferencias entre caja y administración se resuelven en **código**, no con tablas distintas por tecnología.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│              FLEXOCABLE SV — ARQUITECTURA                   │
-├──────────────────────────┬──────────────────────────────────┤
-│  APP ESCRITORIO (C# WPF) │       WEBAPP (Next.js)           │
-│  FlexoCableSV.PuntoVenta │       FlexoCableSV.Web           │
-│                          │                                   │
-│  • Pantalla táctil       │  • Dashboard + KPIs              │
-│  • Caja + DTE            │  • Inventario completo           │
-│  • Confección            │  • Planilla mensual              │
-│  • Impresión ESC/POS     │  • Gestión de empleados          │
-│                          │  • Reportes y gráficas           │
-│                          │                                   │
-│  Stack: C# 12 + WPF      │  Stack: Next.js 14 + TypeScript  │
-│  + .NET 8 + EF Core      │  + Prisma + Tailwind CSS         │
-└──────────┬───────────────┴──────────────┬────────────────────┘
-           │                              │
-           └──────────────┬───────────────┘
-                          │
-                          │
-               ┌──────────▼──────────┐
-               │    POSTGRESQL 14+   │
-               │                     │
-               │  public/   → Catálogo e inventario
-               │  sales/    → Órdenes y facturas
-               │  dte/      → Facturación electrónica
-               │  hr/       → Empleados y planilla
-               │  system/   → Config y auditoría
-               └──────────┬──────────┘
-                          │
-               ┌──────────▼──────────┐
-               │  MINISTERIO DE      │
-               │  HACIENDA (API DTE) │
-               │  apifactura.mh.gob.sv
-               └─────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     FLEXOCABLE SV — ARQUITECTURA                         │
+├─────────────────────────────┬────────────────────────────────────────────┤
+│  CAJA (C# WPF)              │  ADMINISTRACIÓN (Node + Next.js)          │
+│  FlexoCableSV.PuntoVenta    │  FlexoCable-backend  +  FlexoCable-adminweb│
+│                             │                                            │
+│  • Pantalla táctil          │  • Dashboard, KPIs, reportes               │
+│  • Caja + DTE + impresión   │  • RRHH: empleados, expediente, PINs       │
+│  • Confección (órdenes)     │  • Planilla quincenal/mensual/semanal      │
+│  • PIN de empleado (caja)   │  • Inventario admin (entradas, ajustes)    │
+│  • Consulta stock (lectura) │  • Login admin (system.WebUsers) + JWT     │
+│                             │                                            │
+│  Stack: C# + WPF + EF Core  │  API: Node 22 + Express 5 + Prisma 6       │
+│                             │  UI: Next.js 15 + React 19 + Tailwind 4    │
+└──────────────┬──────────────┴────────────────────┬─────────────────────┘
+               │                                     │
+               │         ┌───────────────────────────┘
+               │         │  adminweb → HTTP → backend (no Prisma en browser)
+               ▼         ▼
+        ┌──────────────────────────────────────┐
+        │         POSTGRESQL (esquema único)    │
+        │  PKs/FKs: UUID (gen_random_uuid())    │
+        │  public/ sales/ dte/ hr/ system/      │
+        └──────────────────┬───────────────────┘
+                           │
+                ┌──────────▼──────────┐
+                │  MINISTERIO DE      │
+                │  HACIENDA (API DTE) │
+                └─────────────────────┘
 ```
+
+### Desarrollo local vs producción
+
+| Entorno | Caja WPF | Admin web | Base de datos |
+|---|---|---|---|
+| **Local (ahora)** | PC de desarrollo | Aún no implementado | PostgreSQL en Docker (`FlexoCable-backend/docker-compose.yml`, puerto `55432`) |
+| **Producción (después)** | PC en sucursal | Navegador → API en servidor | Supabase PostgreSQL (mismo esquema) |
+
+La caja **no** implementa módulos de planilla, RRHH ni inventario administrativo. Eso vive **solo** en `FlexoCable-backend` + `FlexoCable-adminweb` (Node/Next), según `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`.
+
+### Qué va en cada repositorio
+
+| Repositorio | Tecnología | Responsabilidad |
+|---|---|---|
+| `FlexoCable` / `FlexoCableSV.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
+| `FlexoCable-backend` | Node.js, Express, Prisma | API REST: empleados, planilla, inventario admin, reportes, Excel/PDF |
+| `FlexoCable-adminweb` | Next.js | UI administrativa; consume **solo** la API Node |
 
 **Principios arquitectónicos:**
 
 | Principio | Implementación |
 |---|---|
-| Fuente única de verdad | PostgreSQL compartido entre WPF y WebApp |
-| Sin capas innecesarias | WPF conecta directo a PostgreSQL vía EF Core + Npgsql |
-| UX senior-friendly | Botones ≥90×90px, tipografía 16pt+, solo TAP, sin gestos |
-| Escalabilidad futura | WebApp Next.js permite agregar módulos sin tocar la caja |
+| Esquema BD único | Misma estructura PostgreSQL (UUID) para WPF y admin; referencia funcional: `beraka-core-api` |
+| Sin admin en C# | No hay WebApp ni login administrativo en el proyecto WPF |
+| Caja operativa | WPF escribe ventas/DTE/caja; lee catálogo, empleados (PIN) y stock |
+| Admin centralizado | CRUD empleados, planilla, bancos, documentos, ajustes de inventario → **solo Node** |
+| UX senior-friendly | Botones ≥90×90px, tipografía 16pt+, solo TAP en WPF |
 
 ---
 
@@ -259,9 +274,9 @@ Panel de Confección (sin PIN)
 
 ---
 
-### Módulo Inventario (WebApp)
+### Módulo Inventario (solo administración web)
 
-El control completo de inventario se maneja desde la **WebApp** (Next.js). La app de escritorio solo tiene acceso de consulta rápida desde el módulo de Caja (`Consultar Stock`). La gestión de entradas, ajustes, alertas y reportes de inventario se realiza exclusivamente en web. Ver sección [WebApp → Dashboard](#webapp-nextjs) para más detalle.
+El control **completo** de inventario (entradas, ajustes, alertas, reconciliación) se maneja desde **`FlexoCable-adminweb`** vía **`FlexoCable-backend`** (Node.js). La app de escritorio solo tiene **consulta rápida** de stock en Caja (`Consultar Stock`). Ver [Administración web](#administración-web-flexocable-adminweb).
 
 **Reglas de inventario:**
 
@@ -277,66 +292,56 @@ El control completo de inventario se maneja desde la **WebApp** (Next.js). La ap
 
 ---
 
-## WebApp (Next.js)
+## Administración web (`FlexoCable-adminweb`)
 
-Aplicación web separada, accesible desde cualquier dispositivo con navegador. Conecta a la **misma base de datos PostgreSQL** que la app de escritorio, usando Prisma como ORM. No duplica funcionalidad de la caja.
+Aplicación web separada (Next.js) que **no comparte código con WPF**. Se comunica **únicamente** con `FlexoCable-backend` por HTTP (`/api/v1/...`). No usa Prisma directamente desde el frontend.
 
-### Módulos
+> **Importante:** La administración (empleados, planilla, inventario, reportes) **no se desarrolla en C#**. El proyecto WPF no incluye login web ni módulos de RRHH.
 
-**1. Dashboard**
-- KPIs del día: ventas totales, ticket promedio, DTEs enviados, alertas de stock
-- Gráfica de barras: ventas por día (últimos 30 días)
-- Gráfica circular: ventas por familia de producto
-- Top 5 productos más vendidos
-- Alertas activas de stock bajo
+### Módulos (implementación en Node + UI en Next)
 
-**2. Planilla y Nómina**
-- CRUD de empleados (datos personales, puesto, salario base)
-- Cálculo automático mensual con descuentos legales:
-  - ISSS trabajador: 3% | ISSS patronal: 7.5%
-  - AFP trabajador: 7.25% | AFP patronal: 8.75%
-  - ISR según tabla progresiva vigente
-- Registro de horas extras (200% salario base)
-- Bonificaciones y descuentos adicionales
-- Generación de recibo de pago en PDF
-- Historial por mes/año — planillas cerradas son inmutables
+| Módulo | Backend Node | Adminweb |
+|---|---|---|
+| Dashboard y KPIs | `reports/`, agregaciones | `/dashboard` |
+| Empleados y PINs | `employees/` | `/empleados` |
+| Expediente (bancos, documentos, ficha PDF) | `employee-bank-accounts/`, `employee-documents/` | `/empleados/[id]/...` |
+| Planilla (quincenal, mensual, semanal) | `payroll-periods/`, `payroll-runs/` | `/planilla/...` |
+| Aguinaldo, vacaciones, liquidaciones | `aguinaldo/`, `leave-requests/`, `employee-terminations/` | `/planilla/...` |
+| Inventario administrativo | `inventory/` | `/inventario` |
+| Reportes y exportación Excel/PDF | `payroll-exports.service.ts` (portado de Beraka) | `/reportes` |
 
-**3. Inventario**
-- Gestión completa de stock (altas, bajas, ajustes)
-- Entradas de mercancía con proveedor y factura
-- Ajustes manuales con PIN del técnico (vía web)
-- Alertas configurables por producto
-- Reconciliación física
+Referencia funcional del motor de planilla: `beraka-core-api` (módulos `payroll-runs`, `employees`, etc.).
 
-**4. Reportes**
-- Ventas por técnico (comisiones)
-- Comparativo mensual/anual
-- Rotación de inventario
-- Exportación a Excel
+### Autenticación administrativa
 
-### Autenticación WebApp
+| Aspecto | Detalle |
+|---|---|
+| Tabla | `system.WebUsers` (username, email, `PasswordHash` bcrypt, rol) |
+| API | `POST /api/v1/auth/login` en **FlexoCable-backend** |
+| Token | JWT (sesión admin); roles: `ADMIN`, `ACCOUNTANT`, `OWNER` |
+| WPF | **No usa** `WebUsers` — la caja autentica con PIN en `hr.Employees` |
 
-- Usuario + contraseña (no PIN)
-- JWT con sesión de 8 horas
-- Roles: Admin, Contador, Dueño (remoto)
-
-> La WebApp también es donde se gestiona la creación de empleados y la asignación de sus PINs para la app de escritorio. El administrador crea al empleado en la WebApp, asigna su PIN inicial, y ese hash queda disponible para la validación en caja. Los empleados con `can_cashier = true` pueden acceder al módulo de Caja; los que tienen `can_sell = true` operan en Confección.
+> El administrador crea empleados y asigna PINs desde **adminweb** (API Node). El hash queda en `hr.Employees.PinHash` y la caja WPF **solo valida** ese PIN; nunca crea usuarios web ni gestiona planilla.
 
 ---
 
 ## Base de Datos (PostgreSQL)
 
-### Esquemas
+### Esquema único (UUID)
 
-Los identificadores en PostgreSQL y en los modelos C# están en **inglés** (`sales`, `hr`, `system`, etc.). La UI y los datos de negocio siguen en español.
+Todos los identificadores de negocio usan **`UUID`** (`gen_random_uuid()`), alineado a la referencia Beraka. WPF (EF Core) y el backend (Prisma) consumen **el mismo esquema**; cualquier adaptación es en la capa de aplicación (`Guid` en C#, `String @db.Uuid` en Prisma).
 
-| Esquema | Tablas principales | Propósito |
+Los nombres de tablas/columnas en PostgreSQL y modelos C# están en **inglés** (`sales`, `hr`, `system`, etc.). La UI y los datos de negocio siguen en español.
+
+| Esquema | Tablas principales | Quién escribe |
 |---|---|---|
-| `public` | `families`, `subfamilies`, `products`, `measurement_types`, `inventory_movements`, `stock_alerts` | Catálogo e inventario |
-| `sales` | `applications`, `orders`, `order_details` | Operaciones diarias |
-| `dte` | `dte_config`, `dte_issued`, `dte_contingency` | Facturación electrónica |
-| `hr` | `employees`, `positions`, `departments`, `payroll`, `payroll_details` | Recursos humanos |
-| `system` | `printers`, `settings`, `web_users`, `audit_log` | Config, seguridad y logs |
+| `public` | `Products`, `InventoryMovements`, `StockAlerts`, … | Admin: entradas/ajustes (Node). Caja: descuento por venta (WPF) |
+| `sales` | `Orders`, `OrderDetails`, `CashSessions`, `Payments` | WPF (caja) |
+| `dte` | `DteConfig`, `DteIssued`, `DteContingency` | WPF (caja) |
+| `hr` | `Employees`, `PayrollPeriods`, `PayrollRuns`, `PayrollDetails`, … | Admin (Node): RRHH y planilla. WPF: solo lectura de empleado/PIN |
+| `system` | `Settings`, `Printers`, `WebUsers`, `AuditLog` | `WebUsers`: solo admin Node. `Printers`: WPF. Resto según módulo |
+
+Detalle completo de planilla/RRHH: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (sección 17).
 
 ### Catálogo de Productos
 
@@ -367,7 +372,7 @@ Ejemplos:
 
 Los PINs del personal que opera caja se almacenan como hash **bcrypt (12 rounds)** en `hr.employees.pin_hash`. No existe la tabla `tecnicos`: el mismo registro de empleado define permisos con `can_sell` (ventas/confección) y `can_cashier` (caja). Nunca se guarda el PIN en texto plano. La validación ocurre en la app de escritorio mediante `BCrypt.Net-Next`.
 
-Los PINs se asignan y cambian desde la **WebApp** por el administrador. La app de escritorio solo valida — nunca crea ni modifica PINs.
+Los PINs se asignan y cambian desde **`FlexoCable-adminweb`** (API Node). La app WPF **solo valida** — no crea empleados, no gestiona planilla ni usuarios `WebUsers`.
 
 ---
 
@@ -447,32 +452,43 @@ El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitad
 
 ## Stack Tecnológico
 
-### App de Escritorio (Punto de Venta)
+### App de Escritorio — Caja (`FlexoCableSV.PuntoVenta`)
 
 | Tecnología | Versión | Propósito |
 |---|---|---|
-| C# | 12.0 | Lenguaje principal |
-| WPF (.NET 8) | 8.0 LTS | Interfaz gráfica táctil |
-| Entity Framework Core | 8.0 | ORM para PostgreSQL |
-| Npgsql | 8.0 | Driver PostgreSQL para .NET |
-| BCrypt.Net-Next | 4.0 | Hash y validación de PINs |
-| Newtonsoft.Json | 13.0 | Serialización JSON para DTE |
-| QRCoder | 1.4 | Generación de QR en tickets |
-| ESC/POS.NET | 1.0 | Impresión térmica |
+| C# | 12+ | Lenguaje principal |
+| WPF (.NET) | `net10.0-windows` | Interfaz táctil |
+| Entity Framework Core | 10.x | ORM → PostgreSQL (`Guid` / UUID) |
+| Npgsql | 10.x | Driver PostgreSQL |
+| BCrypt.Net-Next | 4.x | Validación de PIN |
+| Newtonsoft.Json | 13.x | JSON DTE |
+| QRCoder | 1.4+ | QR en tickets |
+| ESC/POS.NET | 1.0+ | Impresión térmica |
 
-### WebApp (Gestión y RRHH)
+**Fuera de alcance WPF:** planilla, RRHH CRUD, `WebUsers`, inventario admin, reportes Excel — todo en Node/Next.
+
+### Administración — API (`FlexoCable-backend`)
 
 | Tecnología | Versión | Propósito |
 |---|---|---|
-| Next.js | 14 | Framework React full-stack |
-| Node.js | 20 LTS | Runtime JavaScript |
-| TypeScript | 5.3 | Lenguaje principal |
-| Prisma | 5.0 | ORM para PostgreSQL |
-| Tailwind CSS | 3.4 | Estilos responsive |
-| Recharts | Última | Gráficas y dashboards |
-| NextAuth.js | 4.0 | Autenticación JWT |
-| React Hook Form + Zod | Última | Formularios con validación |
-| bcryptjs | 2.4 | Hash de PINs al crear/editar técnicos |
+| Node.js | 22+ | Runtime |
+| Express | 5 | API REST `/api/v1/` |
+| Prisma | 6 | ORM PostgreSQL (esquema único UUID) |
+| Zod | Última | Validación HTTP |
+| JWT + bcrypt | — | Auth admin (`WebUsers`) |
+| ExcelJS + PDFKit | — | Export planilla (portado de Beraka) |
+
+### Administración — UI (`FlexoCable-adminweb`)
+
+| Tecnología | Versión | Propósito |
+|---|---|---|
+| Next.js | 15 | Framework React |
+| React | 19 | UI |
+| TypeScript | 5.x | Lenguaje |
+| Tailwind CSS | 4 | Estilos |
+| shadcn / Radix | — | Componentes |
+
+El frontend **no** conecta a PostgreSQL; solo llama a `FlexoCable-backend`.
 
 ### Base de Datos e Infraestructura
 
@@ -490,109 +506,28 @@ El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitad
 ## Estructura del Proyecto
 
 ```
-flexocable-sv/
+FlexoCable Sistema/
 │
-├── README.md
-├── LICENSE
-├── .gitignore
+├── FlexoCable/                          ← Repo WPF (caja)
+│   ├── FlexoCableSV.PuntoVenta/       ← App escritorio C#
+│   │   ├── Squema.sql                 ← Esquema base + seeds
+│   │   ├── Views/                     ← Caja, Confección, PIN
+│   │   ├── Models/                    ← EF Core (solo dominio operativo)
+│   │   ├── Services/                  ← DTE, inventario venta, PIN, impresión
+│   │   └── Data/FlexoDbContext.cs
+│   ├── tools/FlexoCable.DbApply/      ← Aplica Squema.sql + migraciones
+│   └── docs/                          ← Plan, estándares, manuales
 │
-├── FlexoCableSV.PuntoVenta/                ← APP ESCRITORIO C# WPF
-│   ├── Squema.sql                          ← Esquema PostgreSQL completo + seed data
-│   ├── FlexoCableSV.PuntoVenta.csproj
-│   ├── App.xaml                            ← Recursos globales, colores, estilos
-│   ├── App.xaml.cs                         ← Inicialización, contexto de BD
-│   │
-│   ├── Views/
-│   │   ├── Inicio/
-│   │   │   └── InicioWindow.xaml           ← 2 botones: VENTAS / INVENTARIO
-│   │   ├── Compartidos/
-│   │   │   └── PinWindow.xaml              ← Modal PIN reutilizable (recibe employee_id)
-│   │   ├── Ventas/
-│   │   │   └── VentasWindow.xaml           ← Tabla diaria de ventas
-│   │   ├── Ordenes/
-│   │   │   └── NuevaOrdenWindow.xaml       ← Formulario de orden
-│   │   ├── Codigos/
-│   │   │   └── SeleccionCodigoWindow.xaml  ← Búsqueda + auto-detección tipo medida
-│   │   ├── Facturacion/
-│   │   │   └── FacturarWindow.xaml         ← DTE, envío MH, sello, impresión
-│   │   ├── Inventario/
-│   │   │   └── InventarioWindow.xaml       ← Stock con estados de color
-│   │   └── Configuracion/
-│   │       └── ImpresorasWindow.xaml       ← Gestión de impresoras
-│   │
-│   ├── Models/                             ← EF Core (namespace Models; carpetas = schema PostgreSQL)
-│   │   ├── Public/                         ← Product, Family, InventoryMovement, StockAlert, …
-│   │   ├── Sales/                          ← Order, OrderDetail, Application
-│   │   ├── Dte/                            ← DteConfig, DteIssued, DteContingency
-│   │   ├── Hr/                             ← Employee (pin_hash, can_sell, can_cashier), Payroll, …
-│   │   └── System/                         ← Setting, Printer, WebUser, AuditLog
-│   │
-│   ├── Data/
-│   │   └── FlexoDbContext.cs               ← DbContext EF Core + Npgsql
-│   │
-│   ├── Services/
-│   │   ├── DTEService.cs                   ← Genera JSON, firma, envía a MH
-│   │   ├── ImpresionService.cs             ← ESC/POS tickets térmicos
-│   │   ├── InventarioService.cs            ← Descuenta stock, valida, alertas
-│   │   ├── PinService.cs                   ← Valida PIN con BCrypt por employee_id
-│   │   └── ConfigService.cs                ← Lee appsettings.json
-│   │
-│   ├── Helpers/
-│   │   └── NumberFormatter.cs              ← Formato moneda SV, decimales
-│   │
-│   ├── Resources/
-│   │   ├── Styles/
-│   │   │   └── FlexoStyles.xaml            ← Estilos reutilizables
-│   │   └── Images/
-│   │       └── logo_flexo.png
-│   │
-│   └── appsettings.json                    ← Cadena de conexión PostgreSQL
+├── FlexoCable-backend/                ← API Node (RRHH, planilla, inventario admin)
+│   ├── database/migrations/           ← SQL versionado (Fase 0 / 0b)
+│   ├── docker-compose.yml             ← PostgreSQL local desarrollo
+│   └── src/                           ← (pendiente) Express + Prisma
 │
-├── FlexoCableSV.Web/                       ← WEBAPP NEXT.JS
-│   ├── package.json
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   │
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx                    ← Dashboard principal
-│   │   │   ├── empleados/
-│   │   │   │   └── page.tsx                ← CRUD empleados + asignación de PINs
-│   │   │   ├── planilla/
-│   │   │   │   └── page.tsx                ← Cálculo planilla mensual
-│   │   │   └── reportes/
-│   │   │       └── page.tsx                ← Reportes y gráficas
-│   │   │
-│   │   ├── components/
-│   │   │   ├── ui/
-│   │   │   ├── charts/
-│   │   │   └── forms/
-│   │   │
-│   │   ├── lib/
-│   │   │   ├── prisma.ts
-│   │   │   └── api.ts
-│   │   │
-│   │   └── types/
-│   │       └── index.ts
-│   │
-│   ├── prisma/
-│   │   └── schema.prisma
-│   │
-│   └── .env.example
-│
-├── docs/
-│   ├── README.md                              # Índice de documentación
-│   ├── FLEXOCABLE_C_CODING_STANDARDS_2026.md  # STD-001 — C#, EF, calidad
-│   ├── FLEXOCABLE_GIT_PR_2026.md              # STD-002 — Git, PR, revisión
-│   ├── manual_usuario.md
-│   ├── manual_admin.md
-│   └── dte_especificacion.md
-│
-└── .cursor/
-    └── skills/
-        └── flexocable-dev/                    # Skill Cursor → apunta a docs/
+└── FlexoCable-adminweb/               ← UI Next.js (pendiente)
+    └── src/app/                       ← Dashboard, empleados, planilla, …
 ```
+
+**Modelos WPF (`Models/`):** dominio de caja — `Sales`, `Dte`, `Public` (lectura catálogo/stock), `Hr.Employee` (PIN y permisos). **No** incluir lógica de `WebUser`, planilla ni CRUD RRHH en vistas o servicios WPF; esas tablas existen en BD para el backend Node.
 
 ---
 
@@ -619,72 +554,57 @@ flexocable-sv/
 
 ---
 
-### 1. Base de Datos PostgreSQL
+### 1. Base de Datos local (desarrollo WPF)
 
 ```bash
-psql -U postgres -c "CREATE DATABASE flexocable;"
-psql -U postgres -c "CREATE USER flexo_user WITH PASSWORD 'tu_password_seguro';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE flexocable TO flexo_user;"
-psql -U flexo_user -d flexocable -f FlexoCableSV.PuntoVenta/Squema.sql
+# Desde FlexoCable-backend/
+docker compose up -d
+
+# Aplicar Squema.sql + migraciones (desde repo FlexoCable/)
+dotnet run --project tools/FlexoCable.DbApply
 ```
+
+`FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto `55432` por defecto).
 
 ### 2. App de Escritorio (WPF)
 
 ```bash
-cd FlexoCableSV.PuntoVenta
+cd FlexoCable/FlexoCableSV.PuntoVenta
 dotnet restore
 dotnet build
 dotnet run
 ```
 
-`appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "FlexoCableDB": "Host=localhost;Database=flexocable;Username=flexo_user;Password=tu_password_seguro"
-  },
-  "App": {
-    "SessionTimeoutMinutes": 30
-  }
-}
-```
-
-> Los PINs de los técnicos se configuran desde la WebApp. La app de escritorio solo los valida.
-
-### 3. WebApp (Next.js)
+### 3. Administración web (cuando exista)
 
 ```bash
-cd FlexoCableSV.Web
+# API
+cd FlexoCable-backend
 npm install
-cp .env.example .env
-npx prisma generate
-npx prisma db push
+npm run db:migrate
+npm run dev
+
+# UI
+cd FlexoCable-adminweb
+npm install
 npm run dev
 ```
 
-`.env`:
-
-```
-DATABASE_URL="postgresql://flexo_user:password@localhost:5432/flexocable"
-NEXTAUTH_SECRET="tu_secreto_seguro"
-NEXTAUTH_URL="http://localhost:3000"
-```
-
-### 4. Configuración DTE
+La adminweb usa `NEXT_PUBLIC_API_URL` hacia el backend Node, **no** una conexión directa a la BD desde el navegador.
 
 1. Obtener NIT emisor y certificado `.p12` del Ministerio de Hacienda
 2. Actualizar tabla `dte.dte_config` con datos reales del emisor
 3. Subir certificado `.p12` al servidor en ruta segura
 4. Probar con ambiente `00` (pruebas) antes de cambiar a `01` (producción)
 
-### 5. Crear empleados con acceso a caja y asignar PINs
+### 5. Empleados y PINs (solo vía admin web — Node)
 
-Desde la WebApp (módulo Empleados):
-1. Crear empleado en `hr.employees` con datos personales y puesto
-2. Activar `can_sell` y/o `can_cashier` según el rol en caja
-3. Asignar PIN de 4 dígitos — se guarda en `pin_hash` (bcrypt)
-4. El empleado queda disponible en el `Select` de la app de escritorio
+Cuando `FlexoCable-adminweb` esté disponible:
+
+1. Crear empleado vía API Node (`employees/`)
+2. Activar `can_sell` / `can_cashier` según rol
+3. Asignar PIN — se guarda en `hr.Employees.PinHash` (bcrypt)
+4. La caja WPF valida ese PIN; **no** hay pantalla de alta de empleados en C#
 
 ---
 
@@ -705,13 +625,16 @@ Desde la WebApp (módulo Empleados):
 | 7–8 | Corte de caja, notas de crédito (DTE-05), reimpresión de tickets | 🔲 Pendiente |
 | 9–10 | Configuración de impresoras, multisesión por PIN, refinamiento UX | 🔲 Pendiente |
 
-### Fase 3 — WebApp Inventario + RRHH (Semanas 11–16)
+### Fase 3 — Administración web Node/Next (después de caja estable)
 
-| Semana | Entregable | Estado |
+| Entregable | Repos | Estado |
 |---|---|---|
-| 11–12 | Next.js setup, dashboard con KPIs, gestión de empleados y PINs | 🔲 Pendiente |
-| 13–14 | Inventario completo en web: entradas, ajustes, alertas, reconciliación | 🔲 Pendiente |
-| 15–16 | Cálculo automático de planilla, reportes, testing completo, deploy | 🔲 Pendiente |
+| API base + auth JWT (`WebUsers`) | `FlexoCable-backend` | Pendiente |
+| CRUD empleados, PINs, expediente | backend + adminweb | Pendiente |
+| Planilla quincenal + exportes Beraka | backend | Pendiente |
+| Inventario admin + reportes | backend + adminweb | Pendiente |
+
+Plan detallado: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (Fases 8–10, sección 17).
 
 ---
 

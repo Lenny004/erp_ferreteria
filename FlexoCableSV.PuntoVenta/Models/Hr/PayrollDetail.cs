@@ -1,13 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
 public class PayrollDetail
 {
     [Key]
-    public long Id { get; set; }
-    public int PayrollId { get; set; }
-    public int EmployeeId { get; set; }
+    public Guid Id { get; set; }
+    public Guid PayrollId { get; set; }
+    public Guid EmployeeId { get; set; }
 
     // Income
     [Column(TypeName = "numeric(10,2)")]

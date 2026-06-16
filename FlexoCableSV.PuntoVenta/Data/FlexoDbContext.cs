@@ -53,6 +53,10 @@ public class FlexoDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     /// <summary>Líneas de detalle de cada orden (productos y cantidades).</summary>
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
+    /// <summary>Turnos de caja por cajero y caja física.</summary>
+    public DbSet<CashSession> CashSessions => Set<CashSession>();
+    /// <summary>Pagos aplicados a órdenes de venta.</summary>
+    public DbSet<Payment> Payments => Set<Payment>();
 
     // ========================================================================
     //  ESQUEMA "dte" — Documento Tributario Electrónico (Hacienda SV)
@@ -77,22 +81,16 @@ public class FlexoDbContext : DbContext
     public DbSet<Position> Positions => Set<Position>();
     /// <summary>Empleados activos e inactivos con datos contractuales.</summary>
     public DbSet<Employee> Employees => Set<Employee>();
-    /// <summary>Nóminas periódicas (quincena/mes).</summary>
-    public DbSet<Payroll> Payrolls => Set<Payroll>();
-    /// <summary>Detalle de cada empleado en una nómina específica.</summary>
-    public DbSet<PayrollDetail> PayrollDetails => Set<PayrollDetail>();
 
     // ========================================================================
     //  ESQUEMA "system" — Configuración y seguridad del sistema
-    //  Parámetros globales, impresoras, usuarios web y auditoría.
+    //  Parámetros globales, impresoras y auditoría (planilla/WebUsers → admin Node).
     // ========================================================================
 
     /// <summary>Parámetros de configuración global del sistema (clave/valor).</summary>
     public DbSet<Setting> Settings => Set<Setting>();
     /// <summary>Impresoras configuradas para tiquets, facturas, etc.</summary>
     public DbSet<Printer> Printers => Set<Printer>();
-    /// <summary>Usuarios del sistema web con roles y acceso.</summary>
-    public DbSet<WebUser> WebUsers => Set<WebUser>();
     /// <summary>Bitácora de auditoría para rastrear cambios importantes en los datos.</summary>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
@@ -309,6 +307,11 @@ public class FlexoDbContext : DbContext
                 .HasForeignKey(o => o.ApplicationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            entity.HasOne(o => o.CashSession)
+                .WithMany(c => c.Orders)
+                .HasForeignKey(o => o.CashSessionId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // Índices para consultas comunes:
             // - por fecha (reportes diarios/mensuales)
             // - por estado (órdenes pendientes, canceladas)
@@ -316,6 +319,10 @@ public class FlexoDbContext : DbContext
             entity.HasIndex(o => o.OrderDate).HasDatabaseName("IdxOrdersDate");
             entity.HasIndex(o => o.Status).HasDatabaseName("IdxOrdersStatus");
             entity.HasIndex(o => o.EmployeeId).HasDatabaseName("IdxOrdersEmployee");
+            entity.HasIndex(o => o.ClientRequestId)
+                .IsUnique()
+                .HasDatabaseName("IdxOrdersClientRequest");
+            entity.HasIndex(o => o.CashSessionId).HasDatabaseName("IdxOrdersCashSession");
         });
 
         // --- OrderDetail ---
@@ -341,6 +348,43 @@ public class FlexoDbContext : DbContext
 
             // Índice para acelerar consultas que traen todo el detalle de una orden.
             entity.HasIndex(od => od.OrderId).HasDatabaseName("IdxDetailOrder");
+        });
+
+        // --- CashSession ---
+        modelBuilder.Entity<CashSession>(entity =>
+        {
+            entity.ToTable("CashSessions", "sales");
+
+            entity.HasOne(c => c.Employee)
+                .WithMany(e => e.CashSessions)
+                .HasForeignKey(c => c.EmployeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(c => new { c.EmployeeId, c.CashRegisterCode })
+                .IsUnique()
+                .HasDatabaseName("IdxCashSessionOpen")
+                .HasFilter("\"Status\" = 'ABIERTA'");
+            entity.HasIndex(c => c.Status).HasDatabaseName("IdxCashSessionStatus");
+            entity.HasIndex(c => c.OpenedAt).HasDatabaseName("IdxCashSessionOpened");
+        });
+
+        // --- Payment ---
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.ToTable("Payments", "sales");
+
+            entity.HasOne(p => p.Order)
+                .WithMany(o => o.Payments)
+                .HasForeignKey(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.CashSession)
+                .WithMany(c => c.Payments)
+                .HasForeignKey(p => p.CashSessionId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(p => p.OrderId).HasDatabaseName("IdxPaymentsOrder");
+            entity.HasIndex(p => p.CashSessionId).HasDatabaseName("IdxPaymentsSession");
         });
 
         // ====================================================================
@@ -372,6 +416,11 @@ public class FlexoDbContext : DbContext
                 .HasForeignKey(d => d.OrderId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            entity.HasOne(d => d.RelatedDte)
+                .WithMany()
+                .HasForeignKey(d => d.RelatedDteId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // El número de control es el identificador único asignado por el sistema de facturación.
             // Tiene un formato definido por MH y debe ser irrepetible.
             entity.HasIndex(d => d.ControlNumber).IsUnique();
@@ -386,6 +435,7 @@ public class FlexoDbContext : DbContext
             entity.HasIndex(d => d.OrderId).HasDatabaseName("IdxDteOrder");
             entity.HasIndex(d => d.MhStatus).HasDatabaseName("IdxDteStatus");
             entity.HasIndex(d => d.CreatedAt).HasDatabaseName("IdxDteDate");
+            entity.HasIndex(d => d.RelatedDteId).HasDatabaseName("IdxDteRelated");
         });
 
         // --- DteContingency ---
@@ -415,8 +465,14 @@ public class FlexoDbContext : DbContext
         {
             entity.ToTable("Departments", "hr");
 
+            entity.HasOne(d => d.Parent)
+                .WithMany(d => d.Children)
+                .HasForeignKey(d => d.ParentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // El nombre del departamento debe ser único.
             entity.HasIndex(d => d.Name).IsUnique();
+            entity.HasIndex(d => d.ParentId).HasDatabaseName("IdxDepartmentsParent");
         });
 
         // --- Position ---
@@ -430,6 +486,8 @@ public class FlexoDbContext : DbContext
                 .WithMany(d => d.Positions)
                 .HasForeignKey(p => p.DepartmentId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(p => new { p.DepartmentId, p.Name }).IsUnique();
         });
 
         // --- Employee ---
@@ -451,47 +509,23 @@ public class FlexoDbContext : DbContext
                 .HasForeignKey(e => e.PositionId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            entity.HasOne(e => e.Department)
+                .WithMany(d => d.Employees)
+                .HasForeignKey(e => e.DepartmentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.DirectSupervisor)
+                .WithMany(e => e.Subordinates)
+                .HasForeignKey(e => e.DirectSupervisorId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // El DUI (Documento Único de Identidad) y NIT (Número de Identificación Tributaria)
             // son documentos oficiales salvadoreños que deben ser únicos por empleado.
             entity.HasIndex(e => e.Dui).IsUnique();
             entity.HasIndex(e => e.Nit).IsUnique();
-        });
-
-        // --- Payroll ---
-        // Nómina: registro de un período de pago (quincena/mes) que agrupa los salarios
-        // y deducciones de todos los empleados para ese período.
-        modelBuilder.Entity<Payroll>(entity =>
-        {
-            entity.ToTable("Payroll", "hr");
-
-            // Índice único compuesto: no puede haber dos nóminas para el mismo mes y año.
-            entity.HasIndex(p => new { p.PeriodMonth, p.PeriodYear }).IsUnique();
-        });
-
-        // --- PayrollDetail ---
-        // Detalle individual de cada empleado en una nómina específica.
-        // Contiene salario base, horas extras, deducciones, ISSS, AFP, ISR, etc.
-        modelBuilder.Entity<PayrollDetail>(entity =>
-        {
-            entity.ToTable("PayrollDetails", "hr");
-
-            // Relación N:1 con Payroll. Cada detalle pertenece a una nómina.
-            // Se usa NoAction para evitar que EF borre detalles accidentalmente
-            // al eliminar una nómina; la BD maneja esta lógica.
-            entity.HasOne(pd => pd.Payroll)
-                .WithMany(p => p.PayrollDetails)
-                .HasForeignKey(pd => pd.PayrollId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            // Relación N:1 con Employee. Cada detalle corresponde a un empleado.
-            entity.HasOne(pd => pd.Employee)
-                .WithMany(e => e.PayrollDetails)
-                .HasForeignKey(pd => pd.EmployeeId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            // Índice único compuesto: un mismo empleado no puede aparecer dos veces
-            // en la misma nómina.
-            entity.HasIndex(pd => new { pd.PayrollId, pd.EmployeeId }).IsUnique();
+            entity.HasIndex(e => e.DepartmentId).HasDatabaseName("IdxEmployeesDepartment");
+            entity.HasIndex(e => e.DirectSupervisorId).HasDatabaseName("IdxEmployeesSupervisor");
+            entity.HasIndex(e => e.ContractType).HasDatabaseName("IdxEmployeesContractType");
         });
 
         // ====================================================================
@@ -518,26 +552,6 @@ public class FlexoDbContext : DbContext
                 .IsUnique()
                 .HasDatabaseName("IdxPrinterDefault")
                 .HasFilter("\"IsDefault\" = TRUE");
-        });
-
-        // --- WebUser ---
-        // Usuarios del sistema con acceso a la interfaz web y roles de seguridad.
-        modelBuilder.Entity<WebUser>(entity =>
-        {
-            entity.ToTable("WebUsers", "system");
-
-            // Relación N:1 con Employee. Cada usuario web está vinculado a un empleado real.
-            // Esto permite que al desactivar un empleado, su usuario también pierda acceso.
-            entity.HasOne(w => w.Employee)
-                .WithMany(e => e.WebUsers)
-                .HasForeignKey(w => w.EmployeeId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            // El nombre de usuario (Username) y el correo electrónico (Email) deben ser
-            // únicos en el sistema para evitar duplicados y garantizar identificadores
-            // de inicio de sesión sin conflictos.
-            entity.HasIndex(w => w.Username).IsUnique();
-            entity.HasIndex(w => w.Email).IsUnique();
         });
 
         // --- AuditLog ---

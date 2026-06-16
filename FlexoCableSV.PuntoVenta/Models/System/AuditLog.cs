@@ -1,11 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class AuditLog
 {
     [Key]
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required, MaxLength(100)]
     public string TableName { get; set; } = string.Empty;

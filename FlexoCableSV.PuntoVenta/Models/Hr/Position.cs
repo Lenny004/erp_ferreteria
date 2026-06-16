@@ -1,15 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class Position
 {
     [Key]
-    public int Id { get; set; }
-    public int DepartmentId { get; set; }
+    public Guid Id { get; set; }
+    public Guid DepartmentId { get; set; }
 
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
     public bool IsActive { get; set; } = true;
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class Subfamily
 {
     [Key]
-    public int Id { get; set; }
-    public int FamilyId { get; set; }
+    public Guid Id { get; set; }
+    public Guid FamilyId { get; set; }
 
     [Required, MaxLength(10)]
     public string Code { get; set; } = string.Empty;

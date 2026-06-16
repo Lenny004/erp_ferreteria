@@ -1,20 +1,20 @@
-ï»¿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class Product
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required, MaxLength(30)]
     public string Code { get; set; } = string.Empty;
 
     [Required, MaxLength(200)]
     public string Description { get; set; } = string.Empty;
-    public int FamilyId { get; set; }
-    public int? SubfamilyId { get; set; }
-    public int MeasurementTypeId { get; set; }
+    public Guid FamilyId { get; set; }
+    public Guid? SubfamilyId { get; set; }
+    public Guid MeasurementTypeId { get; set; }
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal SalePrice { get; set; } = 0;
@@ -27,7 +27,7 @@ public class Product
 
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; } = 0;
-    public int? SupplierId { get; set; }
+    public Guid? SupplierId { get; set; }
     public bool IsActive { get; set; } = true;
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -51,7 +51,7 @@ public class Product
 
     /// <summary>
     /// Detalles de venta asociados al producto.
-    /// Debe mantenerse como colecciÃ³n inicializada (vacÃ­a cuando no hay ventas), y no como <see langword="null" />.
+    /// Debe mantenerse como colección inicializada (vacía cuando no hay ventas), y no como <see langword="null" />.
     /// </summary>
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<StockAlert> StockAlerts { get; set; } = new List<StockAlert>();

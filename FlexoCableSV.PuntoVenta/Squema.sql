@@ -1,13 +1,12 @@
 -- =============================================================================
 -- FLEXOCABLE SV — Updated PostgreSQL Schema (English Structure, Spanish Values)
--- Version: 1.1.0 | Date: May 2026
+-- Version: 2.0.0 | Date: June 2026
 -- Database: flexocable
 -- ORM: Entity Framework Core + Npgsql
 -- =============================================================================
 
 -- Required extensions
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";    -- For bcrypt PIN hashing
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";   -- For DTE UUIDs
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";    -- For bcrypt PIN hashing and gen_random_uuid()
 
 -- =============================================================================
 -- SCHEMAS
@@ -23,7 +22,7 @@ CREATE SCHEMA IF NOT EXISTS system;
 
 -- Measurement types
 CREATE TABLE public."MeasurementTypes" (
-    "Id"            SERIAL      PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Code"          VARCHAR(10) NOT NULL UNIQUE,  -- METRO, PIEZA, KIT, PESO
     "Name"          VARCHAR(50) NOT NULL,
     "UnitLabel"    VARCHAR(20) NOT NULL,          -- "metros", "piezas", "kits", "kg"
@@ -32,7 +31,7 @@ CREATE TABLE public."MeasurementTypes" (
 
 -- Product families
 CREATE TABLE public."Families" (
-    "Id"          SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Code"        VARCHAR(5)   NOT NULL UNIQUE,  -- "01", "02", "FLV"
     "Name"        VARCHAR(100) NOT NULL,
     "Description" TEXT,
@@ -43,8 +42,8 @@ CREATE TABLE public."Families" (
 
 -- Subfamilies
 CREATE TABLE public."Subfamilies" (
-    "Id"          SERIAL       PRIMARY KEY,
-    "FamilyId"   INTEGER      NOT NULL REFERENCES public."Families"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "FamilyId"   UUID NOT NULL REFERENCES public."Families"("Id"),
     "Code"        VARCHAR(10)  NOT NULL,
     "Name"        VARCHAR(100) NOT NULL,
     "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
@@ -55,7 +54,7 @@ CREATE TABLE public."Subfamilies" (
 
 -- Suppliers
 CREATE TABLE public."Suppliers" (
-    "Id"          SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Name"        VARCHAR(150) NOT NULL,
     "Contact"     VARCHAR(100),
     "Phone"       VARCHAR(20),
@@ -67,17 +66,17 @@ CREATE TABLE public."Suppliers" (
 
 -- Product catalog
 CREATE TABLE public."Products" (
-    "Id"              SERIAL         PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Code"            VARCHAR(30)    NOT NULL UNIQUE,
     "Description"     VARCHAR(200)   NOT NULL,
-    "FamilyId"       INTEGER        NOT NULL REFERENCES public."Families"("Id"),
-    "SubfamilyId"    INTEGER        REFERENCES public."Subfamilies"("Id"),
-    "MeasurementTypeId" INTEGER    NOT NULL REFERENCES public."MeasurementTypes"("Id"),
+    "FamilyId"       UUID NOT NULL REFERENCES public."Families"("Id"),
+    "SubfamilyId"    UUID REFERENCES public."Subfamilies"("Id"),
+    "MeasurementTypeId" UUID NOT NULL REFERENCES public."MeasurementTypes"("Id"),
     "SalePrice"      NUMERIC(12,2)  NOT NULL DEFAULT 0,
     "CostPrice"      NUMERIC(12,2)  NOT NULL DEFAULT 0,
     "CurrentStock"   NUMERIC(12,3)  NOT NULL DEFAULT 0,
     "MinStock"       NUMERIC(12,3)  NOT NULL DEFAULT 0,
-    "SupplierId"     INTEGER        REFERENCES public."Suppliers"("Id"),
+    "SupplierId"     UUID REFERENCES public."Suppliers"("Id"),
     "IsActive"       BOOLEAN        NOT NULL DEFAULT TRUE,
     "CreatedAt"      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     "UpdatedAt"      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
@@ -90,8 +89,8 @@ CREATE INDEX "IdxProductsActive"  ON public."Products"("IsActive");
 
 -- Inventory movements (immutable)
 CREATE TABLE public."InventoryMovements" (
-    "Id"               BIGSERIAL      PRIMARY KEY,
-    "ProductId"       INTEGER        NOT NULL REFERENCES public."Products"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "ProductId"       UUID NOT NULL REFERENCES public."Products"("Id"),
     "MovementType"    VARCHAR(20)    NOT NULL,
     -- ENTRADA_COMPRA, ENTRADA_DEVOLUCION, SALIDA_VENTA,
     -- AJUSTE_SUMA, AJUSTE_RESTA
@@ -102,8 +101,8 @@ CREATE TABLE public."InventoryMovements" (
     -- For AJUSTE: DAÑO, PÉRDIDA, INVENTARIO_FISICO, CORRECCIÓN
     -- For ENTRADA: COMPRA, DEVOLUCIÓN
     "DocumentRef"     VARCHAR(50),   -- Invoice number, order ID, etc.
-    "SupplierId"      INTEGER        REFERENCES public."Suppliers"("Id"),
-    "EmployeeId"      INTEGER        REFERENCES hr."Employees"("Id"), -- Who authorized adjustment
+    "SupplierId"      UUID REFERENCES public."Suppliers"("Id"),
+    "EmployeeId" UUID,       -- FK added after hr."Employees" exists
     "CreatedAt"       TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     CONSTRAINT "MovementTypeValid" CHECK (
         "MovementType" IN (
@@ -120,8 +119,8 @@ CREATE INDEX "IdxInvDate"      ON public."InventoryMovements"("CreatedAt");
 
 -- Low stock alerts (generated by trigger)
 CREATE TABLE public."StockAlerts" (
-    "Id"            BIGSERIAL      PRIMARY KEY,
-    "ProductId"    INTEGER        NOT NULL REFERENCES public."Products"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "ProductId"    UUID NOT NULL REFERENCES public."Products"("Id"),
     "CurrentStock" NUMERIC(12,3)  NOT NULL,
     "MinStock"     NUMERIC(12,3)  NOT NULL,
     "IsResolved"   BOOLEAN        NOT NULL DEFAULT FALSE,
@@ -186,7 +185,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Applications (transaction types)
 CREATE TABLE sales."Applications" (
-    "Id"          SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Code"        VARCHAR(10)  NOT NULL UNIQUE,  -- VT-01, VT-02, VT-03, RP-01
     "Name"        VARCHAR(100) NOT NULL,
     "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
@@ -200,12 +199,13 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Confection orders (header) — Simplified statuses
 CREATE TABLE sales."Orders" (
-    "Id"              BIGSERIAL     PRIMARY KEY,
-    "EmployeeId"     INTEGER       NOT NULL REFERENCES hr."Employees"("Id"),
-    "ApplicationId"  INTEGER       NOT NULL REFERENCES sales."Applications"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "EmployeeId"     UUID NOT NULL, -- FK added after hr."Employees" exists
+    "ApplicationId"  UUID NOT NULL REFERENCES sales."Applications"("Id"),
     "CustomerName"   VARCHAR(150),
     "OrderDate"      DATE          NOT NULL DEFAULT CURRENT_DATE,
     "OrderTime"      TIME          NOT NULL DEFAULT CURRENT_TIME,
+    "ClientRequestId" UUID         NOT NULL DEFAULT gen_random_uuid(),
     "Status"          VARCHAR(20)   NOT NULL DEFAULT 'PENDIENTE',
     -- PENDIENTE → COMPLETADA | CANCELADA
     "Subtotal"      NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -222,6 +222,7 @@ CREATE TABLE sales."Orders" (
 CREATE INDEX "IdxOrdersDate"      ON sales."Orders"("OrderDate");
 CREATE INDEX "IdxOrdersStatus"    ON sales."Orders"("Status");
 CREATE INDEX "IdxOrdersEmployee"  ON sales."Orders"("EmployeeId");
+CREATE UNIQUE INDEX "IdxOrdersClientRequest" ON sales."Orders"("ClientRequestId");
 
 CREATE TRIGGER "TrgOrderTimestamp"
 BEFORE UPDATE ON sales."Orders"
@@ -229,9 +230,9 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Order details (items)
 CREATE TABLE sales."OrderDetails" (
-    "Id"              BIGSERIAL     PRIMARY KEY,
-    "OrderId"        BIGINT        NOT NULL REFERENCES sales."Orders"("Id") ON DELETE CASCADE,
-    "ProductId"      INTEGER       NOT NULL REFERENCES public."Products"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "OrderId"        UUID NOT NULL REFERENCES sales."Orders"("Id") ON DELETE CASCADE,
+    "ProductId"      UUID NOT NULL REFERENCES public."Products"("Id"),
     "Quantity"        NUMERIC(12,3) NOT NULL,
     "UnitPrice"      NUMERIC(12,2) NOT NULL,
     "Subtotal"      NUMERIC(12,2) NOT NULL,
@@ -248,7 +249,7 @@ CREATE INDEX "IdxDetailOrder" ON sales."OrderDetails"("OrderId");
 
 -- DTE issuer configuration
 CREATE TABLE dte."DteConfig" (
-    "Id"                    SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Environment"         CHAR(2)      NOT NULL,  -- '00' test, '01' production
     "ApiUrl"               VARCHAR(200) NOT NULL,
     "IssuerNit"            VARCHAR(20)  NOT NULL,
@@ -273,11 +274,12 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Issued DTEs
 CREATE TABLE dte."DteIssued" (
-    "Id"                BIGSERIAL    PRIMARY KEY,
-    "OrderId"          BIGINT       NOT NULL REFERENCES sales."Orders"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "OrderId"          UUID NOT NULL REFERENCES sales."Orders"("Id"),
     "DteType"          CHAR(2)      NOT NULL,  -- '01','03','05','06'
     "ControlNumber"    VARCHAR(50)  NOT NULL UNIQUE,
-    "GenerationCode"   UUID         NOT NULL UNIQUE DEFAULT "UuidGenerateV4"(),
+    "GenerationCode"   UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    "RelatedDteId"     UUID REFERENCES dte."DteIssued"("Id"),
     "ReceptionStamp"   VARCHAR(100),
     "MhStatus"         VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE',
     -- PENDIENTE → PROCESADO | RECHAZADO | CONTINGENCIA
@@ -297,11 +299,12 @@ CREATE TABLE dte."DteIssued" (
 CREATE INDEX "IdxDteOrder"   ON dte."DteIssued"("OrderId");
 CREATE INDEX "IdxDteStatus"  ON dte."DteIssued"("MhStatus");
 CREATE INDEX "IdxDteDate"    ON dte."DteIssued"("CreatedAt");
+CREATE INDEX "IdxDteRelated" ON dte."DteIssued"("RelatedDteId");
 
 -- Contingency queue for automatic resend (every 15 min)
 CREATE TABLE dte."DteContingency" (
-    "Id"              BIGSERIAL   PRIMARY KEY,
-    "DteId"          BIGINT      NOT NULL REFERENCES dte."DteIssued"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "DteId"          UUID NOT NULL REFERENCES dte."DteIssued"("Id"),
     "Attempts"        SMALLINT    NOT NULL DEFAULT 0,
     "LastError"      TEXT,
     "NextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -316,7 +319,7 @@ CREATE TABLE dte."DteContingency" (
 -- =============================================================================
 
 CREATE TABLE hr."Departments" (
-    "Id"          SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Name"        VARCHAR(100) NOT NULL UNIQUE,
     "IsActive"   BOOLEAN      NOT NULL DEFAULT TRUE,
     "CreatedAt"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -328,12 +331,13 @@ BEFORE UPDATE ON hr."Departments"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 CREATE TABLE hr."Positions" (
-    "Id"             SERIAL       PRIMARY KEY,
-    "DepartmentId"  INTEGER      NOT NULL REFERENCES hr."Departments"("Id"),
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "DepartmentId"  UUID NOT NULL REFERENCES hr."Departments"("Id"),
     "Name"           VARCHAR(100) NOT NULL,
     "IsActive"      BOOLEAN      NOT NULL DEFAULT TRUE,
     "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE ("DepartmentId", "Name")
 );
 
 CREATE TRIGGER "TrgPositionTimestamp"
@@ -342,7 +346,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Employees (unified with technicians)
 CREATE TABLE hr."Employees" (
-    "Id"              SERIAL        PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     -- Identity
     "FirstName"      VARCHAR(100)  NOT NULL,
     "LastName"       VARCHAR(100)  NOT NULL,
@@ -351,7 +355,7 @@ CREATE TABLE hr."Employees" (
     "IsssNumber"     VARCHAR(20),
     "Nup"             VARCHAR(20),
     -- Job
-    "PositionId"     INTEGER       REFERENCES hr."Positions"("Id"),
+    "PositionId"     UUID REFERENCES hr."Positions"("Id"),
     "HireDate"       DATE          NOT NULL,
     "TerminationDate" DATE,
     "BaseSalary"     NUMERIC(10,2) NOT NULL,
@@ -385,60 +389,69 @@ CREATE TRIGGER "TrgEmployeeTimestamp"
 BEFORE UPDATE ON hr."Employees"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
--- Monthly payroll (header)
-CREATE TABLE hr."Payroll" (
-    "Id"                    SERIAL        PRIMARY KEY,
-    "PeriodMonth"          SMALLINT      NOT NULL,
-    "PeriodYear"           SMALLINT      NOT NULL,
-    "Status"                VARCHAR(20)   NOT NULL DEFAULT 'BORRADOR',
-    -- BORRADOR → APROBADA → PAGADA (immutable once PAGADA)
-    "TotalSalaries"        NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalIsssEmployee"   NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalAfpEmployee"    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalIsr"             NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalDeductions"      NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalNet"             NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalIsssEmployer"   NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "TotalAfpEmployer"    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    "CreatedAt"            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    "UpdatedAt"            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    "ApprovedAt"           TIMESTAMPTZ,
-    "PaidAt"               TIMESTAMPTZ,
-    UNIQUE ("PeriodMonth", "PeriodYear"),
-    CONSTRAINT "PayrollStatusValid" CHECK ("Status" IN ('BORRADOR','APROBADA','PAGADA')),
-    CONSTRAINT "MonthValid" CHECK ("PeriodMonth" BETWEEN 1 AND 12)
+ALTER TABLE public."InventoryMovements"
+    ADD CONSTRAINT "FKInventoryMovementsEmployee"
+    FOREIGN KEY ("EmployeeId") REFERENCES hr."Employees"("Id");
+
+ALTER TABLE sales."Orders"
+    ADD CONSTRAINT "FKOrdersEmployee"
+    FOREIGN KEY ("EmployeeId") REFERENCES hr."Employees"("Id");
+
+-- Cash sessions and payments for cashier shifts, closings and payment reconciliation.
+CREATE TABLE sales."CashSessions" (
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "EmployeeId"             UUID NOT NULL REFERENCES hr."Employees"("Id"),
+    "CashRegisterCode"       VARCHAR(50)   NOT NULL DEFAULT 'CAJA-01',
+    "OpenedAt"               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "ClosedAt"               TIMESTAMPTZ,
+    "OpeningAmount"          NUMERIC(12,2) NOT NULL DEFAULT 0,
+    "ClosingDeclaredAmount"  NUMERIC(12,2),
+    "ClosingExpectedAmount"  NUMERIC(12,2),
+    "Difference"             NUMERIC(12,2),
+    "Status"                 VARCHAR(20)   NOT NULL DEFAULT 'ABIERTA',
+    "Notes"                  TEXT,
+    "CreatedAt"              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    "UpdatedAt"              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT "CashSessionStatusValid" CHECK ("Status" IN ('ABIERTA','CERRADA','CANCELADA')),
+    CONSTRAINT "CashSessionAmountsValid" CHECK (
+        "OpeningAmount" >= 0
+        AND ("ClosingDeclaredAmount" IS NULL OR "ClosingDeclaredAmount" >= 0)
+        AND ("ClosingExpectedAmount" IS NULL OR "ClosingExpectedAmount" >= 0)
+    )
 );
 
-CREATE TRIGGER "TrgPayrollTimestamp"
-BEFORE UPDATE ON hr."Payroll"
+CREATE UNIQUE INDEX "IdxCashSessionOpen"
+    ON sales."CashSessions"("EmployeeId", "CashRegisterCode")
+    WHERE "Status" = 'ABIERTA';
+
+CREATE INDEX "IdxCashSessionStatus" ON sales."CashSessions"("Status");
+CREATE INDEX "IdxCashSessionOpened" ON sales."CashSessions"("OpenedAt");
+
+CREATE TRIGGER "TrgCashSessionTimestamp"
+BEFORE UPDATE ON sales."CashSessions"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
--- Payroll detail per employee
-CREATE TABLE hr."PayrollDetails" (
-    "Id"                   BIGSERIAL     PRIMARY KEY,
-    "PayrollId"           INTEGER       NOT NULL REFERENCES hr."Payroll"("Id"),
-    "EmployeeId"          INTEGER       NOT NULL REFERENCES hr."Employees"("Id"),
-    -- Income
-    "BaseSalary"          NUMERIC(10,2) NOT NULL,
-    "OvertimeHours"       NUMERIC(5,2)  NOT NULL DEFAULT 0,
-    "OvertimeAmount"      NUMERIC(10,2) NOT NULL DEFAULT 0,  -- hours × ("HourlyRate" × 2)
-    "Bonuses"            NUMERIC(10,2) NOT NULL DEFAULT 0,
-    "TotalIncome"         NUMERIC(10,2) NOT NULL,
-    -- Employee deductions
-    "IsssEmployee"        NUMERIC(10,2) NOT NULL,  -- 3% of "TotalIncome"
-    "AfpEmployee"         NUMERIC(10,2) NOT NULL,  -- 7.25% of "TotalIncome"
-    "Isr"                NUMERIC(10,2) NOT NULL DEFAULT 0,
-    "OtherDeductions"     NUMERIC(10,2) NOT NULL DEFAULT 0,
-    "TotalDeductions"     NUMERIC(10,2) NOT NULL,
-    -- Net pay
-    "NetSalary"           NUMERIC(10,2) NOT NULL,
-    -- Employer cost (not deducted from employee)
-    "IsssEmployer"        NUMERIC(10,2) NOT NULL,  -- 7.5%
-    "AfpEmployer"         NUMERIC(10,2) NOT NULL,  -- 8.75%
-    "CreatedAt"           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    UNIQUE ("PayrollId", "EmployeeId")
+ALTER TABLE sales."Orders"
+    ADD COLUMN "CashSessionId" UUID REFERENCES sales."CashSessions"("Id");
+
+CREATE INDEX "IdxOrdersCashSession" ON sales."Orders"("CashSessionId");
+
+CREATE TABLE sales."Payments" (
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "OrderId"       UUID NOT NULL REFERENCES sales."Orders"("Id") ON DELETE CASCADE,
+    "CashSessionId" UUID REFERENCES sales."CashSessions"("Id"),
+    "Method"        VARCHAR(20)   NOT NULL,
+    "Amount"        NUMERIC(12,2) NOT NULL,
+    "Reference"     VARCHAR(100),
+    "CreatedAt"     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT "PaymentMethodValid" CHECK ("Method" IN ('EFECTIVO','TARJETA','TRANSFERENCIA','OTRO')),
+    CONSTRAINT "PaymentAmountPositive" CHECK ("Amount" > 0)
 );
 
+CREATE INDEX "IdxPaymentsOrder" ON sales."Payments"("OrderId");
+CREATE INDEX "IdxPaymentsSession" ON sales."Payments"("CashSessionId");
+
+-- Legacy payroll removed in v2.0.0 — use hr."PayrollPeriods" / hr."PayrollRuns" (migration 0002).
 
 -- =============================================================================
 -- SYSTEM SCHEMA — Settings, Printers & Audit
@@ -454,7 +467,7 @@ CREATE TABLE system."Settings" (
 
 -- Printers configuration
 CREATE TABLE system."Printers" (
-    "Id"              SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Name"            VARCHAR(200) NOT NULL,  -- Windows device "Name"
     "ConnectionType" VARCHAR(10)  NOT NULL DEFAULT 'USB',  -- USB, ETHERNET
     "IpAddress"      VARCHAR(15),   -- Only for ETHERNET
@@ -477,13 +490,13 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- WebApp users (for future web application)
 CREATE TABLE system."WebUsers" (
-    "Id"             SERIAL       PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Username"       VARCHAR(50)  NOT NULL UNIQUE,
     "Email"          VARCHAR(100) NOT NULL UNIQUE,
     "PasswordHash"  TEXT         NOT NULL,  -- bcrypt(12 rounds)
     "Role"           VARCHAR(20)  NOT NULL DEFAULT 'ADMIN',
     -- ADMIN, ACCOUNTANT, OWNER
-    "EmployeeId"    INTEGER      REFERENCES hr."Employees"("Id"),  -- Link to HR employee
+    "EmployeeId"    UUID REFERENCES hr."Employees"("Id"),  -- Link to HR employee
     "IsActive"      BOOLEAN      NOT NULL DEFAULT TRUE,
     "LastLoginAt"  TIMESTAMPTZ,
     "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -497,7 +510,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
 -- Action audit log
 CREATE TABLE system."AuditLog" (
-    "Id"                BIGSERIAL    PRIMARY KEY,
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "TableName"        VARCHAR(100) NOT NULL,
     "RecordId"         VARCHAR(50),
     "Action"          VARCHAR(10)  NOT NULL,  -- INSERT, UPDATE, DELETE
@@ -521,7 +534,11 @@ INSERT INTO public."MeasurementTypes" ("Code", "Name", "UnitLabel", "Decimals") 
     ('METRO', 'Metros lineales',     'metros', 2),
     ('PIEZA', 'Piezas / unidades',   'piezas', 0),
     ('KIT',   'Kits pre-armados',    'kits',   0),
-    ('PESO',  'Kilogramos a granel', 'kg',     3);
+    ('PESO',  'Kilogramos a granel', 'kg',     3)
+ON CONFLICT ("Code") DO UPDATE SET
+    "Name" = EXCLUDED."Name",
+    "UnitLabel" = EXCLUDED."UnitLabel",
+    "Decimals" = EXCLUDED."Decimals";
 
 -- 17 product families
 INSERT INTO public."Families" ("Code", "Name", "Description") VALUES
@@ -541,61 +558,84 @@ INSERT INTO public."Families" ("Code", "Name", "Description") VALUES
     ('FLV', 'Flexoindustrial VLD', 'Very Light Duty - trabajo muy liviano'),
     ('FLL', 'Flexoindustrial LD',  'Light Duty - trabajo liviano'),
     ('FLM', 'Flexoindustrial MD',  'Medium Duty - trabajo medio'),
-    ('FLH', 'Flexoindustrial HD',  'Heavy Duty - trabajo pesado');
+    ('FLH', 'Flexoindustrial HD',  'Heavy Duty - trabajo pesado')
+ON CONFLICT ("Code") DO UPDATE SET
+    "Name" = EXCLUDED."Name",
+    "Description" = EXCLUDED."Description",
+    "IsActive" = TRUE;
 
 -- Subfamilies of Boquillas (family 02)
 INSERT INTO public."Subfamilies" ("FamilyId", "Code", "Name")
 SELECT "Id", 'AC', 'Acelerador' FROM public."Families" WHERE "Code" = '02' UNION ALL
 SELECT "Id", 'CC', 'Cambios'    FROM public."Families" WHERE "Code" = '02' UNION ALL
 SELECT "Id", 'EM', 'Embrague'   FROM public."Families" WHERE "Code" = '02' UNION ALL
-SELECT "Id", 'FR', 'Freno'      FROM public."Families" WHERE "Code" = '02';
+SELECT "Id", 'FR', 'Freno'      FROM public."Families" WHERE "Code" = '02'
+ON CONFLICT ("FamilyId", "Code") DO UPDATE SET
+    "Name" = EXCLUDED."Name",
+    "IsActive" = TRUE;
 
 -- Subfamilies of Steel Cables (family 01)
 INSERT INTO public."Subfamilies" ("FamilyId", "Code", "Name")
 SELECT "Id", 'Cga', 'Cable galvanizado acero' FROM public."Families" WHERE "Code" = '01' UNION ALL
 SELECT "Id", 'Cin', 'Cable inoxidable'        FROM public."Families" WHERE "Code" = '01' UNION ALL
-SELECT "Id", 'Cre', 'Cable recubierto PVC'    FROM public."Families" WHERE "Code" = '01';
+SELECT "Id", 'Cre', 'Cable recubierto PVC'    FROM public."Families" WHERE "Code" = '01'
+ON CONFLICT ("FamilyId", "Code") DO UPDATE SET
+    "Name" = EXCLUDED."Name",
+    "IsActive" = TRUE;
 
 -- Sales applications
 INSERT INTO sales."Applications" ("Code", "Name") VALUES
     ('VT-01', 'Venta Nueva'),
     ('VT-02', 'Reparación'),
     ('VT-03', 'Garantía'),
-    ('RP-01', 'Reposición');
+    ('RP-01', 'Reposición')
+ON CONFLICT ("Code") DO UPDATE SET
+    "Name" = EXCLUDED."Name",
+    "IsActive" = TRUE;
 
 -- Departments and positions
 INSERT INTO hr."Departments" ("Name") VALUES
-    ('Producción'), ('Ventas'), ('Bodega'), ('Administración');
+    ('Producción'), ('Ventas'), ('Bodega'), ('Administración')
+ON CONFLICT ("Name") DO UPDATE SET
+    "IsActive" = TRUE;
 
 INSERT INTO hr."Positions" ("DepartmentId", "Name")
 SELECT "Id", 'Técnico de Confección' FROM hr."Departments" WHERE "Name" = 'Producción' UNION ALL
 SELECT "Id", 'Vendedor'              FROM hr."Departments" WHERE "Name" = 'Ventas'     UNION ALL
 SELECT "Id", 'Bodeguero'             FROM hr."Departments" WHERE "Name" = 'Bodega'     UNION ALL
 SELECT "Id", 'Administrador'         FROM hr."Departments" WHERE "Name" = 'Administración' UNION ALL
-SELECT "Id", 'Gerente'               FROM hr."Departments" WHERE "Name" = 'Administración';
+SELECT "Id", 'Gerente'               FROM hr."Departments" WHERE "Name" = 'Administración'
+ON CONFLICT ("DepartmentId", "Name") DO UPDATE SET
+    "IsActive" = TRUE;
 
 -- System settings
 INSERT INTO system."Settings" ("Key", "Value", "Description") VALUES
-    ('"IvaPercentage"',           '13',                          'IVA vigente en El Salvador (%)'),
-    ('currency',                 'USD',                         'Moneda operativa'),
-    ('"SessionTimeoutMinutes"',  '30',                          'Minutos de inactividad antes de cerrar sesión'),
-    ('"BusinessName"',            'FlexoCable El Salvador',      'Nombre para impresión en tickets'),
-    ('"BusinessNit"',             '',                            'NIT del emisor para DTE — configurar antes de producción'),
-    ('"BusinessNrc"',             '',                            'NRC del emisor para DTE'),
-    ('"BusinessAddress"',         'San Salvador, El Salvador',   'Dirección para tickets'),
-    ('"BusinessPhone"',           '',                            'Teléfono para tickets'),
-    ('"TicketFooterMessage"',    'Gracias por su compra.',      'Mensaje al pie del ticket'),
-    ('"ButtonMinSizePx"',       '90',                          'Tamaño mínimo de botones táctiles'),
-    ('"FontBaseSizePt"',        '16',                          'Tamaño base de fuente en puntos');
+    ('IvaPercentage',           '13',                          'IVA vigente en El Salvador (%)'),
+    ('Currency',                'USD',                         'Moneda operativa'),
+    ('SessionTimeoutMinutes',   '30',                          'Minutos de inactividad antes de cerrar sesión'),
+    ('BusinessName',            'FlexoCable El Salvador',      'Nombre para impresión en tickets'),
+    ('BusinessNit',             '',                            'NIT del emisor para DTE — configurar antes de producción'),
+    ('BusinessNrc',             '',                            'NRC del emisor para DTE'),
+    ('BusinessAddress',         'San Salvador, El Salvador',   'Dirección para tickets'),
+    ('BusinessPhone',           '',                            'Teléfono para tickets'),
+    ('TicketFooterMessage',     'Gracias por su compra.',      'Mensaje al pie del ticket'),
+    ('ButtonMinSizePx',         '90',                          'Tamaño mínimo de botones táctiles'),
+    ('FontBaseSizePt',          '16',                          'Tamaño base de fuente en puntos')
+ON CONFLICT ("Key") DO UPDATE SET
+    "Value" = EXCLUDED."Value",
+    "Description" = EXCLUDED."Description",
+    "UpdatedAt" = NOW();
 
 -- Initial DTE configuration (test environment)
 INSERT INTO dte."DteConfig" ("Environment", "ApiUrl", "IssuerNit", "IssuerName", "IsActive")
-VALUES (
+SELECT
     '00',
     'https://apifacturatest.mh.gob.sv',
     '0000-000000-000-0',
     'FlexoCable El Salvador, S.A. de C.V.',
     TRUE
+WHERE NOT EXISTS (
+    SELECT 1 FROM dte."DteConfig" WHERE "Environment" = '00' AND "IsActive" = TRUE
 );
 
 -- Initial web user (admin)
@@ -606,7 +646,8 @@ VALUES (
     'admin@flexocable.com.sv',
     crypt('FlexoAdmin2026!', gen_salt('bf', 12)),
     'ADMIN'
-);
+)
+ON CONFLICT ("Username") DO NOTHING;
 
 
 -- =============================================================================
@@ -691,20 +732,25 @@ WHERE o."OrderDate" = CURRENT_DATE
 -- PERMISSIONS
 -- =============================================================================
 
-GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA public  TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public  TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA sales   TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA sales   TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA dte     TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA dte     TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA hr      TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA hr      TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA system  TO flexo_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA system  TO flexo_user;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'flexo_user') THEN
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA public TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA sales  TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA sales  TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA dte    TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA dte    TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA hr     TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA hr     TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA system TO flexo_user';
+        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA system TO flexo_user';
+    END IF;
+END $$;
 
 
 -- =============================================================================
--- END OF SCHEMA — FlexoCable SV v1.1.0
+-- END OF SCHEMA — FlexoCable SV v2.0.0
 -- =============================================================================
 -- Production Checklist:
 --   [ ] Update "BusinessNit" and "BusinessNrc" in system."Settings"

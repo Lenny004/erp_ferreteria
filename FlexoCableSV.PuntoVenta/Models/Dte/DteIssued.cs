@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class DteIssued
 {
     [Key]
-    public long Id { get; set; }
-    public long OrderId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrderId { get; set; }
 
     [Required, MaxLength(2)]
     public string DteType { get; set; } = string.Empty;
@@ -14,6 +14,7 @@ public class DteIssued
     [Required, MaxLength(50)]
     public string ControlNumber { get; set; } = string.Empty;
     public Guid GenerationCode { get; set; } = Guid.NewGuid();
+    public Guid? RelatedDteId { get; set; }
 
     [MaxLength(100)]
     public string? ReceptionStamp { get; set; }
@@ -48,5 +49,9 @@ public class DteIssued
     // Navigation
     [ForeignKey(nameof(OrderId))]
     public Order Order { get; set; } = null!;
+
+    [ForeignKey(nameof(RelatedDteId))]
+    public DteIssued? RelatedDte { get; set; }
+
     public DteContingency? Contingency { get; set; }
 }

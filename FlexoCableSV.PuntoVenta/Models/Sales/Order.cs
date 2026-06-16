@@ -1,18 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class Order
 {
     [Key]
-    public long Id { get; set; }
-    public int EmployeeId { get; set; }
-    public int ApplicationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid ApplicationId { get; set; }
+    public Guid? CashSessionId { get; set; }
 
     [MaxLength(150)]
     public string? CustomerName { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.UtcNow.Date;
     public TimeSpan OrderTime { get; set; } = DateTime.UtcNow.TimeOfDay;
+    public Guid ClientRequestId { get; set; } = Guid.NewGuid();
 
     [Required, MaxLength(20)]
     public string Status { get; set; } = "PENDIENTE";
@@ -38,6 +40,10 @@ public class Order
     [ForeignKey(nameof(ApplicationId))]
     public Application Application { get; set; } = null!;
 
+    [ForeignKey(nameof(CashSessionId))]
+    public CashSession? CashSession { get; set; }
+
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<DteIssued> DteIssued { get; set; } = new List<DteIssued>();
+    public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

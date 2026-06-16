@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class DteContingency
 {
     [Key]
-    public long Id { get; set; }
-    public long DteId { get; set; }
+    public Guid Id { get; set; }
+    public Guid DteId { get; set; }
     public short Attempts { get; set; } = 0;
     public string? LastError { get; set; }
     [Column(TypeName = "timestamptz")]

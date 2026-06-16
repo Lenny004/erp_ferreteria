@@ -1,10 +1,10 @@
 # FlexoCable SV - Plan Validado de Finalizacion de la Aplicacion
 
 > **Documento:** FLEXO-PLAN-001  
-> **Version:** 2.2  
+> **Version:** 2.4  
 > **Fecha:** Junio 2026  
-> **Estado:** Auditado QA v2.2 — stack administrativo Node/Next actualizado
-> **Base revisada:** `README.md`, `Squema.sql`, vistas WPF existentes, modelos EF Core y estandares `FLEXOCABLE_C_CODING_STANDARDS_2026.md`.
+> **Estado:** Auditado QA v2.4 — esquema BD unificado UUID; admin Node/Next separado de WPF  
+> **Base revisada:** `README.md`, `Squema.sql`, vistas WPF existentes, modelos EF Core, estandares `FLEXOCABLE_C_CODING_STANDARDS_2026.md` y modulo empleados/planilla de `beraka-core-api` (referencia funcional).
 
 ---
 
@@ -22,8 +22,9 @@ Las correcciones principales son:
 - No debe asumirse que una app WPF instalada en caja puede usar credenciales privilegiadas directas a Supabase en produccion.
 - Las vistas WPF existen, pero casi todas estan solo como UI/shell. Falta integracion real con servicios, validaciones y persistencia.
 - El DTE requiere una fase especifica de certificacion, validacion de JSON, firma, token MH, contingencia, QR y pruebas contra el ambiente oficial.
+- El esquema `hr` actual **no soporta planilla quincenal ni expediente completo**; requiere refactorizacion Fase 0b antes del modulo administrativo (seccion 17).
 
-Resultado recomendado: primero cerrar la arquitectura de datos y seguridad, luego implementar inventario y ventas de forma transaccional, despues DTE, impresion y corte de caja, y finalmente crear la WebApp administrativa.
+Resultado recomendado: primero cerrar la arquitectura de datos y seguridad (**incluyendo RRHH/planilla**), luego implementar inventario y ventas de forma transaccional, despues DTE, impresion y corte de caja, y finalmente crear la WebApp administrativa con planilla portada desde Beraka.
 
 ### 1.1 Decisiones confirmadas por el equipo
 
@@ -35,6 +36,11 @@ Resultado recomendado: primero cerrar la arquitectura de datos y seguridad, lueg
 | Repos administracion | `FlexoCable-backend` (API) + `FlexoCable-adminweb` (frontend) |
 | Integracion Excel | Bidireccional: importar catalogo y entradas; exportar reportes/planilla |
 | Modo offline | **MVP robusto:** cache de catalogo + cola local de operaciones desde Fase 1 (seccion 13) |
+| Planilla RRHH | **Quincenal como operacion principal** + soporte mensual y semanal; honorarios con retencion 10%; aguinaldo, vacaciones y liquidaciones en primera fase administrativa |
+| Modelo de planilla | Reemplazar `hr."Payroll"` simplificado por **Periodo + Corrida** (referencia Beraka); motor de calculo y exportes Excel/PDF portados desde `payroll-exports.service.ts` |
+| IDs en BD | **UUID (`gen_random_uuid()`) en todas las tablas de negocio**, misma estructura que Beraka; sin esquemas distintos por app. WPF adapta en EF Core (`Guid`); Prisma en backend Node |
+| Bancos | Catalogo **editable** desde adminweb (CRUD), con seed inicial de bancos SV como en Beraka |
+| Documentos empleado | Mismos tipos requeridos que Beraka (seed idempotente); modulo administrable |
 
 ---
 
@@ -119,6 +125,31 @@ Esto confirma que el proyecto esta en buen estado estructural, pero no valida qu
 | Falta contingencia robusta | Ventas pueden quedar inconsistentes | Cola con reintentos, errores y resolucion |
 | Falta QR segun formato oficial | Ticket no cumple consulta publica | Generar QR con ambiente, codigo generacion y fecha |
 
+### 3.4 Brechas de RRHH y Planilla (nueva — v2.3)
+
+El esquema actual `hr` cubre empleados basicos y una planilla mensual simplificada, pero **no soporta** el control de planilla que FlexoCable requiere en `FlexoCable-adminweb`. Comparado con la referencia `beraka-core-api`:
+
+| Brecha | Estado actual (`Squema.sql`) | Impacto | Accion requerida |
+|---|---|---|---|
+| Modelo planilla | `hr."Payroll"` (mes/anio) + `hr."PayrollDetails"` plano | No hay periodos con fechas, corridas multiples ni revision/aprobacion | Reemplazar por `PayrollPeriods` + `PayrollRuns` + detalle ampliado (seccion 17.5) |
+| Calculo legal incorrecto | Comentarios SQL calculan ISSS/AFP sobre `TotalIncome` | Montos legales incorrectos vs normativa SV | Motor tipo `payroll.calculator.ts`: AFP/ISSS solo sobre salario ordinario; tope ISSS; ISR progresivo |
+| Tipos de periodo | Solo mensual implicito | No soporta quincenal ni semanal | `PeriodType`: MENSUAL, QUINCENAL, SEMANAL |
+| Honorarios | `ContractType` = `HONORARIOS` sin logica | Sin retencion 10% ni exporte separado | Flujo `buildHonorariosDetail` + retencion ISR honorarios |
+| Cuentas bancarias | No existe | No se puede generar lote de transferencias ni comprobantes con banco | `Banks` + `EmployeeBankAccounts` |
+| Documentos empleado | No existe | Sin expediente ni control de vencimientos | `RequiredDocumentTypes` + `EmployeeDocuments` |
+| Historial salarial | No existe | Sin trazabilidad de aumentos | `SalaryHistory` |
+| Lineas de devengo/deduccion | Columnas fijas en detalle | No desglosa rubros ni auditoria por concepto | `PayrollEarningLines` + `PayrollDeductionLines` |
+| Tabla ISR | No existe | ISR no versionable por anio/periodo | `IsrBrackets` |
+| Aguinaldo | No existe | Requerido en primera fase | `AguinaldoRuns` + `AguinaldoDetails` |
+| Vacaciones | No existe | Requerido en primera fase | `LeaveTypes`, `LeaveRequests`, `VacationBalances` |
+| Liquidaciones | No existe | Requerido en primera fase | `EmployeeTerminations` |
+| Feriados | No existe | Horas extra feriadas y dias no laborables | `Holidays` |
+| Ficha / comprobantes PDF | No existe | Entregable operativo para RRHH | Servicios PDF (ficha empleado + boleta + Excel planilla) |
+| Empleado incompleto | ~25 campos basicos | Faltan datos legales, pago, prueba, supervisor | Ampliar `hr."Employees"` (seccion 17.4) |
+| Backend / adminweb | Repos vacios | Cero implementacion RRHH | Planeacion en secciones 7, 8, 10 y 17 (sin codigo aun) |
+
+**Nota:** esta refactorizacion de BD debe ejecutarse en **Fase 0** (migracion `20260616_0002` o posterior), antes de implementar modulos de planilla en backend. No eliminar tablas antiguas sin migracion de datos si ya hubiera registros en staging.
+
 ---
 
 ## 4. Principios de Desarrollo Obligatorios
@@ -201,8 +232,9 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 - Agregar relacion de notas de credito con DTE original.
 - Revisar constraints de DTE segun tipos realmente soportados: `01`, `03`, `05`.
 - Agregar campos necesarios para numero de control, codigo generacion, sello, ambiente, version DTE y lote/contingencia si aplica.
-
----
+- **Refactorizar esquema `hr` para planilla completa** (seccion 17): reemplazar `hr."Payroll"`/`hr."PayrollDetails"` por modelo Periodo + Corrida; ampliar `hr."Employees"`; agregar bancos, documentos, ISR, aguinaldo, vacaciones y liquidaciones.
+- Seed idempotente de bancos SV, tipos de documento requeridos, brackets ISR por anio y feriados nacionales.
+- Actualizar modelos EF Core WPF (`Employee`, eliminar/deprecar `Payroll`/`PayrollDetail` antiguos) en la misma migracion o commit posterior documentado.
 
 ## 6. Modulos y Orden Correcto de Implementacion
 
@@ -235,6 +267,17 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 - Conexion a DB validada al arrancar.
 - Migracion probada en ambiente limpio.
 - Decision Supabase documentada.
+- Esquema `hr` refactorizado y validado contra checklist de seccion 17.6 (tablas creadas, seeds, UUID en PKs/FKs).
+
+**Subfase 0b — Refactorizacion RRHH/Planilla (critica para adminweb):**
+
+| Entregable | Descripcion |
+|---|---|
+| Migracion SQL `hr` v2 | Nuevas tablas + alter `Employees` + deprecacion `Payroll` legacy |
+| Seeds RRHH | Bancos, documentos, ISR, feriados, puestos/departamentos FlexoCable |
+| Prisma schema | `multiSchema` con `@@map` PascalCase en `FlexoCable-backend` |
+| EF Core | Modelos C# con `Guid` para PKs/FKs; WPF solo consulta/escribe datos operativos de caja (ver 17.12) |
+| Documentacion | Mapeo Beraka → FlexoCable en seccion 17.5 |
 
 ---
 
@@ -521,6 +564,10 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 - Asignacion/cambio de PIN.
 - CRUD catalogo basico.
 - Gestion de usuarios web.
+- **Planeacion RRHH (sin implementar en esta fase):** estructura de modulos backend y rutas adminweb para expediente completo del empleado (seccion 17.8–17.9).
+- CRUD catalogo **bancos** (editable; seed inicial SV).
+- CRUD **tipos de documento requerido** (editable; seed inicial Beraka).
+- Ficha empleado: datos personales, laborales, bancarios y documentos (UI shell; logica en Fase 10).
 
 **Validaciones:**
 
@@ -576,34 +623,75 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 
 ### Fase 10 - Planilla, Reportes y Operacion
 
-**Prioridad:** Media  
-**Esfuerzo:** Alto  
-**Objetivo:** Completar administracion financiera y operativa.
+**Prioridad:** Media-Alta (elevada por requerimiento RRHH confirmado v2.3)  
+**Esfuerzo:** Muy alto  
+**Objetivo:** Completar administracion financiera y operativa, con **modulo de planilla equivalente a Beraka** para control quincenal/mensual/semanal, honorarios, aguinaldo, vacaciones y liquidaciones.
+
+**Referencia funcional obligatoria:** `beraka-core-api` — en especial:
+
+| Artefacto Beraka | Uso en FlexoCable |
+|---|---|
+| `src/modules/payroll-runs/payroll.calculator.ts` | Motor legal SV (AFP, ISSS, ISR, horas extra) |
+| `src/modules/payroll-runs/payroll.builder.ts` | Armado de lineas planilla vs honorarios |
+| `src/modules/payroll-runs/payroll-runs.service.ts` | Generar, editar, aprobar y pagar corridas |
+| `src/modules/payroll-runs/payroll-exports.service.ts` | **Excel de planilla + comprobantes PDF** (funcion principal de exporte) |
+| `src/modules/payroll-periods/` | CRUD periodos con fechas y cierre |
+| `src/modules/employees/employee-ficha-pdf.service.ts` | PDF ficha del empleado |
+| `src/modules/aguinaldo/` | Corrida anual de aguinaldo |
+| `src/modules/employee-terminations/` | Liquidaciones |
+| `prisma/schema/leaves.prisma` | Vacaciones y permisos ligados a planilla |
 
 **Implementar:**
 
-- Planilla mensual.
-- ISSS, AFP, ISR y horas extra.
-- Recibos PDF.
+- Planilla **quincenal** (operacion principal FlexoCable) + soporte **mensual** y **semanal**.
+- Periodos de planilla (`PayrollPeriods`) con `startDate`, `endDate`, `paymentDate`, tipo y cierre.
+- Corridas de planilla (`PayrollRuns`) con estados `EN_REVISION` → `APROBADA` → `PAGADA` → `ANULADA`.
+- Generacion automatica de detalle por empleado activo en el periodo.
+- Honorarios con **retencion ISR 10%** (`buildHonorariosDetail`).
+- ISSS, AFP, ISR progresivo (`IsrBrackets` por anio y tipo de periodo).
+- Horas extra: diurnas (×2), nocturnas (×2.5), feriadas (×2).
+- Lineas de devengo y deduccion desglosadas (`PayrollEarningLines`, `PayrollDeductionLines`).
+- **Aguinaldo:** corrida anual con calculo proporcional y retencion ISR si aplica.
+- **Vacaciones:** saldos, solicitudes aprobadas, impacto en dias trabajados y pago en planilla.
+- **Liquidaciones:** finiquito al terminar relacion laboral (`EmployeeTerminations`).
+- Cuentas bancarias por empleado para lote de transferencias.
+- **Ficha empleado PDF** y **comprobante de pago PDF** por linea de planilla.
+- **Exportacion Excel de planilla** — portar logica de `payroll-exports.service.ts` (hojas: resumen, detalle, transferencias bancarias, honorarios).
 - Reportes de ventas, inventario, DTE y tecnicos.
-- Exportacion Excel.
+- Exportacion Excel general (otros reportes).
 - Backups.
 - Auditoria completa.
 - Manuales de operacion.
 
 **Validaciones:**
 
-- Planilla cerrada es inmutable.
-- Parametros legales versionados.
+- Planilla cerrada (`PAGADA`) es inmutable.
+- Parametros legales versionados (`IsrBrackets`, tasas AFP/ISSS en constantes o `system.Settings`).
+- AFP e ISSS calculados **solo sobre salario ordinario devengado**, no sobre bonos ni horas extra.
+- Tope ISSS mensual $1,000 prorrateado por dias del periodo.
 - Reportes coinciden con queries auditables.
 - Backup puede restaurarse.
+- Excel generado coincide con totales de corrida en BD (misma fuente que PDF).
+- Honorarios no mezclan deducciones de planilla regular en la misma linea.
 
 **Criterios de cierre:**
 
-- Planilla se calcula y cierra.
+- Planilla quincenal se calcula, revisa, aprueba y cierra.
+- Comprobantes PDF y Excel exportan correctamente por corrida.
+- Aguinaldo anual calculable y exportable.
+- Vacaciones aprobadas impactan planilla del periodo correspondiente.
+- Liquidacion genera detalle de finiquito vinculado a empleado inactivo.
 - Reportes exportan correctamente.
 - Backup diario probado.
 - Caja puede operar un dia completo sin intervencion tecnica.
+
+**Alcance MVP planilla (primera entrega operativa):**
+
+1. Periodos + corridas + calculo automatico.
+2. Edicion manual de lineas antes de aprobar.
+3. Excel + PDF comprobante (via `payroll-exports` portado).
+4. Ficha empleado PDF.
+5. Aguinaldo, vacaciones y liquidaciones en la misma fase (pueden liberarse en sub-entregas 10a/10b/10c si el equipo lo prefiere, pero **deben estar planificadas desde Fase 0** en BD).
 
 ---
 
@@ -634,11 +722,24 @@ FlexoCable-backend/
 |   +-- config/                      # Env, Supabase/PostgreSQL, JWT
 |   +-- modules/
 |   |   +-- auth/                    # Login admin JWT, refresh si aplica
-|   |   +-- employees/               # CRUD empleados + PIN hash
+|   |   +-- employees/               # CRUD empleados + PIN hash + ficha PDF
+|   |   +-- employee-bank-accounts/  # Cuentas bancarias por empleado
+|   |   +-- employee-documents/      # Expediente y archivos
+|   |   +-- banks/                   # Catalogo editable de bancos
+|   |   +-- required-document-types/ # Tipos de documento requerido (CRUD)
+|   |   +-- salary-history/          # Historial de salarios
+|   |   +-- payroll-periods/         # Periodos de planilla
+|   |   +-- payroll-runs/            # Corridas, calculo, aprobacion, exportes
+|   |   +-- aguinaldo/               # Corrida anual aguinaldo
+|   |   +-- employee-terminations/   # Liquidaciones / finiquitos
+|   |   +-- leave-requests/          # Permisos y vacaciones
+|   |   +-- vacation-balances/       # Saldos vacacionales
+|   |   +-- holidays/                # Feriados nacionales
+|   |   +-- isr-declarations/        # Declaraciones ISR (opcional fase 10+)
 |   |   +-- products/                # Catalogo
 |   |   +-- inventory/               # Entradas, ajustes, movimientos
 |   |   +-- imports/                 # Excel import/export
-|   |   +-- payroll/                 # Planilla
+|   |   +-- payroll/                 # Planilla (periodos, corridas, exportes)
 |   |   +-- reports/                 # KPIs y exportaciones
 |   |   +-- dte/                     # Consulta/configuracion DTE sin exponer secretos
 |   +-- middleware/                  # JWT, roles, rate limit, errores
@@ -652,7 +753,7 @@ FlexoCable-backend/
 
 **Stack backend:** Node.js 22+, Express 5, Prisma 6, PostgreSQL/Supabase, JWT, bcrypt, Zod.
 
-**Modulos API v1:** auth, empleados, productos, inventario, importacion/exportacion Excel, planilla, reportes, dashboard KPIs, consulta DTE.
+**Modulos API v1:** auth, empleados, bancos, documentos, historial salarial, periodos planilla, corridas planilla, aguinaldo, vacaciones, liquidaciones, feriados, productos, inventario, importacion/exportacion Excel, reportes, dashboard KPIs, consulta DTE.
 
 **Validaciones backend obligatorias:**
 
@@ -677,9 +778,21 @@ FlexoCable-adminweb/
 |   |   +-- login/
 |   |   +-- dashboard/
 |   |   +-- empleados/
+|   |   |   +-- [id]/ficha/          # Vista expediente + descarga PDF
+|   |   |   +-- [id]/bancos/
+|   |   |   +-- [id]/documentos/
+|   |   +-- rrhh/
+|   |   |   +-- bancos/              # Catalogo editable
+|   |   |   +-- tipos-documento/
+|   |   |   +-- feriados/
+|   |   +-- planilla/
+|   |   |   +-- periodos/
+|   |   |   +-- corridas/
+|   |   |   +-- aguinaldo/
+|   |   |   +-- liquidaciones/
+|   |   |   +-- vacaciones/
 |   |   +-- inventario/
 |   |   +-- importaciones/       # Carga Excel catalogo y entradas
-|   |   +-- planilla/
 |   |   +-- reportes/            # Exportacion Excel
 |   +-- components/
 |   |   +-- ui/                  # shadcn/Radix
@@ -745,6 +858,7 @@ Regla: si un commit toca dos categorias, dividirlo. Si no es posible, usar el em
 |---|---|---|
 | 1 | `📝 Se actualiza el plan de finalizacion con validaciones Supabase, DTE y roadmap por fases.` | Solo documentacion del plan |
 | 2 | `🗃️ Se sanea Squema.sql para compatibilidad PostgreSQL y Supabase.` | UUID, settings, estados, seeds idempotentes |
+| 2b | `🗃️ Se refactoriza esquema hr para planilla Periodo+Corrida y expediente empleado.` | Migracion Fase 0b — seccion 17 |
 | 3 | `🗃️ Se agregan tablas de turnos, pagos y relaciones de notas de credito.` | Migracion caja/DTE |
 | 4 | `🔐 Se implementa PinService con bcrypt y sesion de cajero.` | Seguridad WPF |
 | 5 | `♻️ Se conecta la navegacion WPF a servicios mediante inyeccion de dependencias.` | DI, session, service registration |
@@ -764,7 +878,9 @@ Regla: si un commit toca dos categorias, dividirlo. Si no es posible, usar el em
 | 19 | `💄 Se crea layout administrativo con Tailwind CSS 4 y shadcn/Radix.` | UI base admin |
 | 20 | `✨ Se implementa gestion de empleados y PINs desde WebApp.` | CRUD empleados |
 | 21 | `✨ Se implementa inventario administrativo Web.` | Entradas, ajustes, proveedores |
-| 22 | `✨ Se implementan reportes, planilla y exportaciones Excel.` | Reportes + ExcelJS o SheetJS/xlsx en backend Node |
+| 22 | `✨ Se implementan reportes y exportaciones Excel generales.` | Reportes + ExcelJS |
+| 22b | `✨ Se implementa modulo planilla con calculo legal y exportes Beraka.` | payroll-runs + payroll-exports portados |
+| 22c | `✨ Se implementan aguinaldo, vacaciones y liquidaciones.` | Sub-fases 10b/10c |
 | 23 | `✨ Se implementa importacion bidireccional Excel (catalogo y entradas).` | Endpoints import + plantillas |
 | 24 | `⚡ Se agrega resiliencia de conexion y cola local de operaciones pendientes.` | Offline parcial |
 | 25 | `✅ Se agregan pruebas unitarias e integracion para inventario, ventas y DTE.` | Tests criticos |
@@ -795,6 +911,14 @@ Reglas de granularidad:
 | Backend admin | JWT, roles por middleware, Zod por endpoint, Prisma transaccional, no exposicion de secretos |
 | WebApp | rol por ruta, formularios Zod, JWT seguro, shadcn accesible, no log de datos sensibles |
 | Supabase | RLS, roles, migrations, extensions, backups, secrets protegidos |
+| Planilla | periodo unico por fechas; corrida unica por empleado; estados validos; inmutable si PAGADA |
+| Calculo planilla | AFP/ISSS solo ordinario; tope ISSS; ISR por bracket; HE diurna/nocturna/feriada |
+| Honorarios | retencion 10%; sin AFP/ISSS; exporte separado en Excel |
+| Empleado RRHH | DUI/NIT/NUP/ISSS unicos si presentes; cuenta bancaria primaria; documentos obligatorios |
+| Bancos | codigo unico si presente; no borrar banco con cuentas activas |
+| Aguinaldo | un run por anio; proporcional por meses trabajados |
+| Liquidacion | empleado con fecha baja; totales finiquito auditables |
+| Vacaciones | solicitud aprobada antes de impactar planilla; saldo no negativo |
 
 ---
 
@@ -812,7 +936,10 @@ Reglas de granularidad:
 | Divergencia reglas WPF vs backend | Alta | Tests compartidos + paquete compartido de contratos/validadores si aplica |
 | Certificado DTE mal protegido | Alta | Secret storage y permisos restringidos |
 | Tablas PascalCase dificultan Prisma/PostgREST | Media | Mapear con Prisma o migrar naming antes de WebApp |
-| Planilla legal desactualizada | Media | Parametros versionados por vigencia |
+| Planilla legal desactualizada | Media | Parametros versionados por vigencia (`IsrBrackets`, constantes en `payroll.constants`) |
+| Divergencia calculo Excel vs BD | Media | Un solo motor (`payroll.calculator`) alimenta persistencia y `payroll-exports.service` |
+| Esquema `hr` legacy vs nuevo | Alta | Migracion Fase 0b a UUID unificado; deprecar `hr."Payroll"` legacy |
+| Complejidad modulo RRHH | Alta | Portar modulos probados de Beraka; no reimplementar desde cero |
 
 ---
 
@@ -827,6 +954,9 @@ Reglas de granularidad:
 | — | .NET | `net10.0-windows` |
 | — | Repos web | `FlexoCable-backend` + `FlexoCable-adminweb` |
 | — | Excel | Bidireccional (import + export) |
+| — | Planilla RRHH | Quincenal + mensual + semanal; honorarios 10%; aguinaldo/vacaciones/liquidaciones fase 1 |
+| — | Modelo planilla | Periodo + Corrida (Beraka); export Excel/PDF via `payroll-exports.service.ts` |
+| — | IDs en BD | **UUID unificado** en todo el dominio (Beraka); sin INTEGER especial para WPF |
 
 ### Aun por confirmar (no bloquean Fase 0)
 
@@ -859,6 +989,8 @@ Esta seccion resume lo que el plan v2.0 cubria parcialmente o no cubria. **No se
 | QA-02 | **Sin seed de productos ni empleados** | Fases 1–3 no son probables | Fase 0: seed dev + import Excel |
 | QA-03 | **Contradiccion estados orden** (corregida en v2.1) | Migraciones fallarian o UI mostraria estados invalidos | Fase 3 alineada a SQL |
 | QA-04 | **Sin tabla `CashSessions`/`Payments`** | Corte y pagos mixtos no persisten | Fase 0 migracion |
+| QA-18 | **Esquema planilla simplificado** | No cumple requerimiento RRHH FlexoCable | Fase 0b + seccion 17 |
+| QA-19 | **Sin tablas bancos/documentos/ISR** | No hay expediente ni lote transferencias | Fase 0b |
 | QA-05 | **Sin `.sln` ni tests** | Build CI y regresion imposibles | Fase 0: crear solucion + proyecto tests |
 | QA-06 | **Sin `DteRetryBackgroundService`** | Contingencia DTE no se reintenta sola | Fase 4 |
 | QA-07 | **Sin `IConnectivityService`** | UI no puede avisar "sin conexion" al cajero | Fase 1 |
@@ -889,6 +1021,7 @@ Esta seccion resume lo que el plan v2.0 cubria parcialmente o no cubria. **No se
 | Dos cajeros, mismo producto ultima unidad | — | Uno gana (transaccion); otro recibe error de stock |
 | Excel con filas invalidas | — | Import parcial rechazado con reporte de errores por fila |
 | Planilla Excel legacy del cliente | — | Migracion unica via import; luego solo sistema |
+| Excel planilla distinto a totales BD | — | Un motor de calculo; export lee BD ya calculada |
 
 ### 12.4 Estrategia de pruebas (faltaba en plan)
 
@@ -896,6 +1029,7 @@ Esta seccion resume lo que el plan v2.0 cubria parcialmente o no cubria. **No se
 |---|---|---|
 | Unitarias | Servicios: PIN, inventario, totales, redondeo IVA | Cada fase de servicio |
 | Integracion | EF + PostgreSQL/Supabase staging, transacciones stock | Fase 2–4 |
+| Planilla | Redondeo, ISR brackets, tope ISSS, honorarios 10%, quincenal vs mensual | Fase 10 |
 | DTE | Ambiente MH `00`, casos 01/03/05, rechazo, contingencia | Fase 4 |
 | E2E manual | Dia completo caja: PIN → venta → DTE → ticket → corte | Fase 10 |
 | Excel | Import 500 filas, filas con error, export reportes | Fase 9–10 |
@@ -957,7 +1091,12 @@ Alcance confirmado: importar catalogo y entradas de inventario; exportar reporte
 | Inventario actual | `.xlsx` | Fase 9 |
 | Movimientos por rango | `.xlsx` | Fase 9 |
 | Ventas por fecha/cajero | `.xlsx` | Fase 10 |
-| Planilla mensual | `.xlsx` + PDF recibo | Fase 10 |
+| Planilla quincenal/mensual/semanal | `.xlsx` + PDF comprobante | Fase 10 — portar `payroll-exports.service.ts` |
+| Planilla honorarios | `.xlsx` hoja separada + PDF retencion | Fase 10 |
+| Lote transferencias bancarias | `.xlsx` agrupado por banco | Fase 10 |
+| Ficha empleado | `.pdf` | Fase 10 |
+| Aguinaldo | `.xlsx` + PDF | Fase 10 |
+| Liquidacion / finiquito | `.pdf` | Fase 10 |
 | DTEs emitidos/contingencia | `.xlsx` | Fase 10 |
 
 ### 14.3 Extensibilidad futura
@@ -970,6 +1109,27 @@ Alcance confirmado: importar catalogo y entradas de inventario; exportar reporte
 
 **Fase 9b — Import/Export Excel (Media-Alta):** implementar plantillas, endpoints y UI de importacion en adminweb; usar para carga inicial de 500+ productos.
 
+### 14.5 Exportacion planilla (referencia Beraka — v2.3)
+
+La exportacion Excel/PDF de planilla **no se rediseña desde cero**. Se porta la logica probada de:
+
+`beraka-core-api/src/modules/payroll-runs/payroll-exports.service.ts`
+
+**Entregables de ese modulo (a replicar en FlexoCable-backend):**
+
+| Funcion / salida | Formato | Contenido |
+|---|---|---|
+| `generatePayrollExcel(runId)` | `.xlsx` multi-hoja | Resumen corrida, detalle por empleado, transferencias bancarias agrupadas, honorarios |
+| Boleta individual | `.pdf` | Comprobante de pago con devengos, deducciones y neto |
+| Lote PDF | `.pdf` | Multiples comprobantes por corrida |
+| Retencion honorarios | `.pdf` / hoja Excel | Prestadores con retencion 10% |
+
+**Regla:** el Excel y el PDF leen los mismos totales ya persistidos en `PayrollDetails` tras `payroll.calculator` — no recalculan en el exportador salvo validacion de consistencia.
+
+**Librerias:** ExcelJS + PDFKit (mismas que Beraka).
+
+> La especificacion completa de BD, seeds, modulos y sub-fases RRHH esta en la **seccion 17** (final del documento).
+
 ---
 
 ## 15. Plan Inmediato de Ejecucion
@@ -978,24 +1138,280 @@ Orden recomendado para empezar sin bloquearse:
 
 1. Confirmar modo offline MVP (seccion 13): bloqueo total vs cola local.
 2. Crear migracion de saneamiento SQL + seed dev + plantillas Excel.
-3. Crear `.sln` y proyecto de tests.
-4. Ejecutar schema en PostgreSQL local y Supabase staging.
-5. Activar validacion de conexion al iniciar WPF + `IConnectivityService`.
-6. Implementar `PinService` y sesion real.
-7. Implementar `InventoryService` con transacciones.
-8. Implementar `OrderService` y estados alineados al SQL.
-9. Conectar vistas WPF existentes a servicios.
-10. Implementar DTE tipo `01` en ambiente test.
-11. Agregar DTE tipo `03` y `05` + reintentos background.
-12. Implementar impresion y corte.
-13. Crear `FlexoCable-backend` (Node.js 22 + Express 5 + Prisma 6) y `FlexoCable-adminweb` (Next.js 15 + React 19).
-14. Implementar import/export Excel bidireccional.
-15. Completar planilla, reportes, backups, resiliencia offline produccion y auditoria.
+3. **Ejecutar Fase 0b:** refactorizacion esquema `hr` segun seccion 17 (antes de backend RRHH).
+4. Crear `.sln` y proyecto de tests.
+5. Ejecutar schema en PostgreSQL local y Supabase staging.
+6. Activar validacion de conexion al iniciar WPF + `IConnectivityService`.
+7. Implementar `PinService` y sesion real.
+8. Implementar `InventoryService` con transacciones.
+9. Implementar `OrderService` y estados alineados al SQL.
+10. Conectar vistas WPF existentes a servicios.
+11. Implementar DTE tipo `01` en ambiente test.
+12. Agregar DTE tipo `03` y `05` + reintentos background.
+13. Implementar impresion y corte.
+14. Crear `FlexoCable-backend` (Node.js 22 + Express 5 + Prisma 6) y `FlexoCable-adminweb` (Next.js 15 + React 19).
+15. Implementar import/export Excel bidireccional.
+16. **Fase 10a:** planilla ordinaria (portar calculo + `payroll-exports.service.ts`).
+17. **Fase 10b:** aguinaldo y vacaciones.
+18. **Fase 10c:** liquidaciones (+ ISR declaraciones si aplica).
+19. Reportes, backups, resiliencia offline produccion y auditoria.
 
 ---
 
 ## 16. Conclusion
 
-El plan v2.2 incorpora auditoria QA, estrategia offline (MVP robusto confirmado), integracion Excel bidireccional, Gitmoji estandarizado y stack administrativo Node/Next. **Listo para iniciar Fase 0** y continuar a Fase 1 con cache + cola local.
+El plan v2.3 incorpora auditoria QA, estrategia offline (MVP robusto confirmado), integracion Excel bidireccional, Gitmoji estandarizado, stack administrativo Node/Next y **especificacion completa del modulo RRHH/planilla** alineada a `beraka-core-api` (seccion 17). La refactorizacion del esquema `hr` en **Fase 0b** es prerequisito para el control de planilla quincenal, honorarios, aguinaldo, vacaciones y liquidaciones en `FlexoCable-adminweb`.
 
-Veredicto QA: el plan es solido en modulos y orden. Las secciones 12–14 cierran brechas de desconexion total, pruebas, Excel e importacion. Quedan preguntas menores (pagos mixtos, contingencia imprimible) que no bloquean el inicio.
+**Listo para iniciar Fase 0** (saneamiento + Fase 0b RRHH) y continuar a Fase 1 con cache + cola local.
+
+Veredicto QA: el plan es solido en modulos y orden. Las secciones 12–14 y **17** cierran brechas de desconexion total, pruebas, Excel, importacion y planilla. Quedan preguntas menores (pagos mixtos, contingencia imprimible) que no bloquean el inicio. La politica de IDs queda resuelta: **UUID unificado en PostgreSQL**; las diferencias entre WPF y admin web se resuelven en codigo de cada stack, no en el esquema.
+
+---
+
+## 17. Modulo RRHH y Planilla — Especificacion (v2.3)
+
+> **Estado:** Planeacion confirmada por el equipo. **No incluye implementacion de codigo** en esta revision; define refactorizacion de BD, alcance funcional y referencia para `FlexoCable-backend` + `FlexoCable-adminweb`.
+>
+> **Referencia funcional:** `C:\Users\progr\Documents\BerakaAtaco\CODIGO\beraka-core-api` — modulos `employees`, `payroll-runs`, `payroll-periods`, `banks`, `employee-documents`, `aguinaldo`, `employee-terminations`, `leave-requests`.
+
+### 17.1 Objetivo
+
+Dotar a FlexoCable de un **sistema de control de planilla** en la WebApp administrativa, equivalente en capacidades al modulo empleados/planilla de `beraka-core-api`, sin afectar la operacion WPF de caja (PIN, ventas, sesiones de cajero).
+
+**Entregables de negocio:**
+
+- Expediente completo del empleado (datos, bancos, documentos, historial salarial).
+- Periodos y corridas de planilla (quincenal como operacion principal; tambien mensual y semanal).
+- Calculo automatico legal SV + honorarios con retencion 10%.
+- Aguinaldo, vacaciones y liquidaciones en primera fase administrativa.
+- Ficha empleado PDF, comprobantes de pago PDF y Excel de planilla (via `payroll-exports.service.ts`).
+
+### 17.2 Decisiones confirmadas
+
+| Tema | Decision |
+|---|---|
+| Frecuencia planilla | **Quincenal** (principal) + **mensual** + **semanal** |
+| Honorarios | Si, con **retencion ISR 10%** |
+| Aguinaldo | Si, primera fase |
+| Vacaciones | Si, primera fase (saldos + solicitudes + impacto en planilla) |
+| Liquidaciones | Si, primera fase (`EmployeeTerminations`) |
+| Modelo datos planilla | **Periodo + Corrida** (Beraka); reemplazar `hr."Payroll"` legacy |
+| Contratos | Todos los tipos Beraka: `TIEMPO_PARCIAL`, `PLAZO_FIJO`, `HONORARIOS`, `PASANTE` |
+| Campos empleado | Incluir **todos** los de Beraka aunque algunos queden opcionales en UI |
+| Documentos | Mismos tipos seed que Beraka; modulo CRUD administrable |
+| Bancos | Catalogo **editable** (CRUD admin) + seed inicial de bancos SV |
+| Export Excel planilla | Portar `payroll-exports.service.ts` |
+| Implementacion codigo | **Fuera de alcance inmediato** — solo planeacion en este documento |
+
+### 17.3 Estrategia de identificadores (IDs)
+
+**Regla unica:** la base de datos tiene **una sola estructura**, alineada a la referencia Beraka. **No** se mantienen tablas o tipos distintos segun si consume WPF o el admin web.
+
+| Regla | Detalle |
+|---|---|
+| Tipo de PK/FK | `UUID` con `DEFAULT gen_random_uuid()` en tablas de negocio (`hr`, `sales`, `public`, `dte`, `system`) |
+| Convencion SQL | Esquemas con tablas PascalCase entre comillas (`hr."Employees"`, etc.) — igual filosofia que hoy, pero IDs en UUID |
+| Prisma (backend Node) | `String @id @default(uuid()) @db.Uuid` — igual que Beraka |
+| EF Core (WPF) | Propiedades `Guid` en modelos; Npgsql mapea `uuid` nativamente |
+| Migracion Fase 0b | `Squema.sql` v2.0.0, migraciones `0001` y `0002`, y modelos EF Core WPF usan **UUID** en PKs/FKs |
+
+**Lo que NO se hace:**
+
+- No dejar `SERIAL` en empleados “por WPF” mientras el admin usa UUID.
+- No duplicar entidades (una tabla para caja, otra para web).
+
+**Lo que SI se hace en codigo:**
+
+| Capa | Responsabilidad |
+|---|---|
+| `FlexoCable-backend` (Node) | CRUD completo RRHH, planilla, inventario admin, `system.WebUsers`, reportes |
+| `FlexoCable-adminweb` (Next) | UI que consume **solo** la API Node (`/api/v1/...`) |
+| `FlexoCableSV.PuntoVenta` (WPF) | Lectura/escritura **operativa**: ordenes, DTE, caja, PIN, stock en venta. **No** implementa login web, planilla ni CRUD de empleados |
+
+### 17.3.1 `system.WebUsers` — solo administracion web (Node)
+
+`WebUsers` es la tabla de **usuarios del panel administrativo** (login email/password + JWT en `FlexoCable-backend`). **No pertenece al proyecto WPF en C#** y no se implementara alli.
+
+| Sistema | Autenticacion | Tabla / campo |
+|---|---|---|
+| WPF caja | PIN 4 digitos del empleado | `hr.Employees.PinHash` |
+| Admin web | Usuario + password JWT | `system.WebUsers` via API Node |
+
+El modelo `WebUser.cs` en el repo WPF, si existe, es solo mapeo EF temporal del esquema compartido; **debe eliminarse del `FlexoDbContext` WPF** cuando se limpie el alcance de caja, o mantenerse ignorado hasta que EF use UUID.
+
+### 17.4 Ampliacion de `hr."Employees"`
+
+Ademas de campos actuales (`FirstName`, `LastName`, `Dui`, `Nit`, `IsssNumber`, `Nup`, `PositionId`, `HireDate`, `BaseSalary`, `ContractType`, `Afp`, contacto, emergencia, `PinHash`, `CanSell`, `CanCashier`), **agregar** (nombres SQL sugeridos en PascalCase):
+
+| Grupo | Campos nuevos | Notas |
+|---|---|---|
+| Personales | `BirthDate`, `Gender`, `Nationality`, `PassportNumber`, `DependentsDescription` | Enums como VARCHAR con CHECK o tipo ENUM PG |
+| Ubicacion | `DepartmentSv` | Departamento de El Salvador (enum SV) |
+| Organizacion | `DepartmentId`, `DirectSupervisorId` | FK a `Departments` y self-FK empleado |
+| Contrato | `ContractEndDate`, `SalaryType`, `DefaultBonus`, `DefaultViaticos` | `SalaryType`: MENSUAL, QUINCENAL, SEMANAL |
+| Prevision | `AfpInstitution`, `AfpEnrollmentDate`, `IsssEnrolled`, `IsssEnrollmentDate` | AFP: CONFIA, CRECER |
+| Pago | `PaymentChannel` | DEPOSITO_BANCARIO, EFECTIVO, CHEQUE |
+| Prueba laboral | `OnProbation`, `ProbationEndDate`, `ProbationCompletedAt` | Art. 30 Codigo de Trabajo SV |
+| Baja | `TerminationReason`, `TerminationNotes` | Enum `TerminationReason` Beraka |
+| Asistencia (futuro) | `PinUpdatedAt`, `AttendanceEnabled` | PIN ya existe; asistencia opcional post-MVP |
+| Estado civil / estudio | Normalizar `MaritalStatus`, `AcademicLevel` a enums Beraka | Reemplazar VARCHAR libre |
+
+**Constraint `ContractType`:** ampliar CHECK de `('PLANILLA','HONORARIOS')` a `('TIEMPO_PARCIAL','PLAZO_FIJO','HONORARIOS','PASANTE')`. Migrar valor legacy `PLANILLA` → `PLAZO_FIJO` si aplica.
+
+**WPF (caja):** solo lee/escribe campos operativos del empleado (`PinHash`, `CanSell`, `CanCashier`, `IsActive`, nombre para UI). Expediente, bancos, documentos y planilla se administran **exclusivamente** en `FlexoCable-backend` + `FlexoCable-adminweb`.
+
+### 17.5 Mapeo de tablas: Beraka → FlexoCable (`hr`)
+
+Convencion FlexoCable: esquema `hr`, tablas PascalCase entre comillas, columnas PascalCase.
+
+| Beraka (Prisma) | FlexoCable (SQL propuesto) | Accion |
+|---|---|---|
+| `Department` | `hr."Departments"` | **Ampliar:** `ParentId`, `Description` |
+| `Position` | `hr."Positions"` | **Ampliar:** `Description`; `DepartmentId` opcional si Beraka no lo exige en Position |
+| `Employee` | `hr."Employees"` | **Alter** segun 17.4 |
+| `Bank` | `hr."Banks"` | **Crear** |
+| `EmployeeBankAccount` | `hr."EmployeeBankAccounts"` | **Crear** |
+| `RequiredDocumentType` | `hr."RequiredDocumentTypes"` | **Crear** |
+| `EmployeeDocument` | `hr."EmployeeDocuments"` | **Crear** |
+| `SalaryHistory` | `hr."SalaryHistory"` | **Crear** |
+| `HealthConditionRecord` | `hr."HealthConditionRecords"` | **Crear** (opcional UI fase 1; incluir en BD) |
+| `PayrollPeriod` | `hr."PayrollPeriods"` | **Crear** — reemplaza concepto mes/anio |
+| `PayrollRun` | `hr."PayrollRuns"` | **Crear** |
+| `PayrollDetail` | `hr."PayrollDetails"` | **Reemplazar** tabla legacy (mismo nombre, estructura nueva) |
+| `PayrollEarningLine` | `hr."PayrollEarningLines"` | **Crear** |
+| `PayrollDeductionLine` | `hr."PayrollDeductionLines"` | **Crear** |
+| `IsrBracket` | `hr."IsrBrackets"` | **Crear** |
+| `Holiday` | `hr."Holidays"` | **Crear** |
+| `AguinaldoRun` / `AguinaldoDetail` | `hr."AguinaldoRuns"` / `hr."AguinaldoDetails"` | **Crear** |
+| `EmployeeTermination` | `hr."EmployeeTerminations"` | **Crear** |
+| `LeaveType` / `LeaveRequest` / `VacationBalance` | `hr."LeaveTypes"` / `hr."LeaveRequests"` / `hr."VacationBalances"` | **Crear** |
+| `IsrDeclaration` | `hr."IsrDeclarations"` | **Crear** (reportes MH; puede ser sub-entrega 10c) |
+| `Payroll` (legacy) | `hr."Payroll"` | **Deprecar** — renombrar a `hr."PayrollLegacy"` o eliminar tras migracion vacia |
+
+**Flujo de estados corrida (`PayrollRuns.Status`):** `EN_REVISION` → `APROBADA` → `PAGADA` | `ANULADA`.
+
+**Flujo periodo:** `IsClosed` + `ClosedAt` + `ClosedBy` (FK `system.WebUsers`).
+
+### 17.6 Checklist migracion SQL (Fase 0b)
+
+Ejecutar en orden; cada paso idempotente donde sea posible:
+
+- [ ] Backup staging antes de migrar.
+- [x] **Migrar todas las PKs/FKs a UUID** (empleados, ordenes, sesiones caja, etc.) — alinear con Beraka; Fase 0b esquema base cerrada en repo.
+- [ ] Renombrar o archivar `hr."Payroll"` y `hr."PayrollDetails"` legacy si existen datos.
+- [ ] Crear tablas nuevas segun 17.5 (ver scripts de referencia en `beraka-core-api/prisma/schema/payroll.prisma`, `hr.prisma`, `employees.prisma`, `leaves.prisma`).
+- [ ] `ALTER TABLE hr."Employees"` con columnas 17.4 y nuevo CHECK `ContractType`.
+- [ ] Crear indices: `(PayrollRunId, EmployeeId)` UNIQUE en detalle; indices por `Status`, `PeriodId`, `EmployeeId`.
+- [ ] Seed bancos SV (17.7).
+- [ ] Seed tipos documento (17.7).
+- [ ] Seed `IsrBrackets` por anio vigente (mensual y quincenal).
+- [ ] Seed feriados nacionales por anio.
+- [ ] Actualizar modelos EF Core: `Employee` ampliado; remover o marcar obsoletos `Payroll`/`PayrollDetail` legacy.
+- [x] Validar que FKs operativas WPF (`sales.Orders.EmployeeId`, etc.) usan **UUID** y EF Core mapea `Guid`.
+- [ ] `dotnet build` + smoke test conexion BD.
+
+### 17.7 Seeds iniciales (referencia Beraka)
+
+**Bancos** (`seedBanks` en `beraka-core-api/prisma/seed.ts`) — 16 entradas incluyendo BAC, Agricola, Cuscatlan, Davivienda, Promerica, Industrial, Hipotecario, Azul, Citibank, Procredit, cooperativas y `Efectivo / No aplica`. El adminweb debe permitir **alta, edicion y baja logica** via modulo `banks/` (como Beraka `banks.controller.ts` — catalogo editable, no solo lectura).
+
+**Tipos de documento requerido** (`seedDocumentTypes`):
+
+| Nombre | Obligatorio | Vencimiento |
+|---|---|---|
+| DUI | Si | No |
+| NIT | Si | No |
+| ISSS | Si | No |
+| AFP | Si | No |
+| Antecedentes Penales | Si | Si |
+| Certificado de Salud | Si | Si |
+| Manipulacion de Alimentos | Si | Si |
+| Licencia de Conducir | No | Si |
+
+Modulo `required-document-types/` editable desde adminweb.
+
+### 17.8 Motor de calculo (reglas legales SV)
+
+Portar desde Beraka (`payroll.constants.ts`, `payroll.calculator.ts`, `payroll.builder.ts`):
+
+| Concepto | Regla |
+|---|---|
+| AFP empleado | 7.25% sobre **salario ordinario** del periodo |
+| AFP patronal | 7.75% sobre salario ordinario |
+| ISSS empleado | 3% sobre salario ordinario, tope **$1,000/mes** prorrateado |
+| ISSS patronal | 7.5% sobre misma base ISSS |
+| ISR | Tabla progresiva `IsrBrackets` por anio y tipo periodo |
+| Horas extra diurnas / feriadas | ×2.0 del valor hora ordinaria |
+| Horas extra nocturnas | ×2.5 |
+| Honorarios | Retencion **10%** ISR; sin AFP/ISSS |
+| Dias base | MENSUAL=30, QUINCENAL=15, SEMANAL=7 (ajustable por calendario del periodo) |
+| Bonos / viaticos | Incluidos en bruto; excluidos de base ISR segun politica Beraka |
+
+**Correccion critica vs SQL actual:** eliminar la suposicion de que ISSS/AFP aplican sobre `TotalIncome` con bonos y extras.
+
+### 17.9 Planeacion backend (`FlexoCable-backend`) — sin implementar
+
+Modulos a crear (estructura espejo Beraka, rutas bajo `/api/v1/`):
+
+```text
+modules/
+  employees/                  # CRUD + getEmployeeFicha + ficha PDF
+  employee-bank-accounts/
+  employee-documents/
+  banks/                      # CRUD catalogo editable
+  required-document-types/
+  salary-history/
+  payroll-periods/
+  payroll-runs/               # generate, update detail, approve, pay, delete
+    payroll.calculator.ts     # portado
+    payroll.builder.ts
+    payroll.exports.service.ts  # Excel + PDF — funcion principal exporte
+  aguinaldo/
+  employee-terminations/
+  leave-requests/
+  vacation-balances/
+  holidays/
+  isr-declarations/           # opcional sub-fase
+```
+
+**Roles sugeridos:** `ADMIN` y `ACCOUNTANT` con acceso planilla; `OWNER` lectura reportes; permisos granulares futuros tipo Beraka (`module` + `action`).
+
+### 17.10 Planeacion adminweb (`FlexoCable-adminweb`) — sin implementar
+
+| Ruta | Funcionalidad |
+|---|---|
+| `/empleados` | Listado, alta, edicion, asignacion PIN |
+| `/empleados/[id]/ficha` | Vista expediente + descarga PDF |
+| `/empleados/[id]/bancos` | Cuentas bancarias del empleado |
+| `/empleados/[id]/documentos` | Expediente documental |
+| `/rrhh/bancos` | Catalogo editable de bancos |
+| `/rrhh/tipos-documento` | Tipos de documento requerido |
+| `/rrhh/feriados` | Calendario feriados |
+| `/planilla/periodos` | CRUD periodos; cerrar periodo |
+| `/planilla/corridas` | Generar, revisar lineas, aprobar, marcar pagada |
+| `/planilla/corridas/[id]/export` | Descarga Excel + PDF lote |
+| `/planilla/aguinaldo` | Corrida anual |
+| `/planilla/liquidaciones` | Finiquitos |
+| `/planilla/vacaciones` | Saldos y solicitudes |
+
+### 17.11 Sub-fases sugeridas dentro de Fase 10
+
+| Sub-fase | Alcance | Dependencia |
+|---|---|---|
+| **10a — Planilla ordinaria** | Periodos, corridas, calculo, Excel/PDF, ficha empleado | Fase 0b + Fase 8 scaffold |
+| **10b — Aguinaldo y vacaciones** | Corridas aguinaldo; leave requests; impacto en planilla | 10a |
+| **10c — Liquidaciones e ISR** | `EmployeeTerminations`; declaraciones ISR opcionales | 10a |
+
+Todas deben tener **tablas creadas en Fase 0b** aunque la UI se entregue incrementalmente.
+
+### 17.12 Alcance WPF vs administracion web
+
+| Funcionalidad | Donde vive | WPF |
+|---|---|---|
+| Login PIN caja | WPF + `hr.Employees` | Si |
+| Ventas, DTE, corte, impresion | WPF | Si |
+| Consulta stock en caja | WPF (solo lectura) | Si |
+| CRUD empleados, PINs, expediente | `FlexoCable-backend` + adminweb | No — solo consume PIN ya hasheado |
+| Planilla, aguinaldo, liquidaciones | `FlexoCable-backend` | No |
+| Inventario admin (entradas, ajustes) | `FlexoCable-backend` | No |
+| Login admin (`WebUsers`) | `FlexoCable-backend` JWT | No — **no hay admin web en C#** |
+| IDs en BD | UUID en todas las tablas | EF Core usa `Guid`; misma BD que Node |

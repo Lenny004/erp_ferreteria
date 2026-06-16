@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 public class InventoryMovement
 {
     [Key]
-    public long Id { get; set; }
-    public int ProductId { get; set; }
+    public Guid Id { get; set; }
+    public Guid ProductId { get; set; }
 
     [Required, MaxLength(20)]
     public string MovementType { get; set; } = string.Empty;
@@ -25,8 +25,8 @@ public class InventoryMovement
 
     [MaxLength(50)]
     public string? DocumentRef { get; set; }
-    public int? SupplierId { get; set; }
-    public int? EmployeeId { get; set; }
+    public Guid? SupplierId { get; set; }
+    public Guid? EmployeeId { get; set; }
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

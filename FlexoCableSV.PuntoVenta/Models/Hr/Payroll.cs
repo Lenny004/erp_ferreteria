@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
 public class Payroll
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public short PeriodMonth { get; set; }
     public short PeriodYear { get; set; }
 
