@@ -53,6 +53,7 @@ public partial class App : Application
                 services.AddTransient<MainShellWindow>();
                 services.AddTransient<FacturacionView>();
                 services.AddTransient<ConsultarStockView>();
+                services.AddTransient<HistorialVentasView>();
                 services.AddTransient<OrdenesConfeccionView>();
                 services.AddTransient<VerCodigosView>();
             })

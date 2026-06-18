@@ -41,7 +41,7 @@ public partial class MainShellWindow : Window
             ["Impresoras"] = (BtnImpresoras, "Impresoras", () => new ImpresorasView()),
             ["Devoluciones"] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
             ["CorteCaja"] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
-            ["HistorialVentas"] = (BtnHistorialVentas, "Historial de Ventas", () => new ConfeccionViews.HistorialVentasView()),
+            ["HistorialVentas"] = (BtnHistorialVentas, "Historial de Ventas", () => _serviceProvider.GetRequiredService<ConfeccionViews.HistorialVentasView>()),
             ["Ordenes"] = (BtnOrdenes, "Ordenes de Confeccion", () => _serviceProvider.GetRequiredService<ConfeccionViews.OrdenesConfeccionView>()),
             ["Codigos"] = (BtnCodigos, "Ver Codigos", () => _serviceProvider.GetRequiredService<ConfeccionViews.VerCodigosView>())
         };

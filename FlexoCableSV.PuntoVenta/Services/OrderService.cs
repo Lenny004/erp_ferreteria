@@ -215,6 +215,178 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return new WorkOrderResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
     }
 
+    public async Task<IReadOnlyList<ConfectionOrderSummary>> GetConfectionOrdersAsync(
+        string? status,
+        string? searchText,
+        int take = 100,
+        CancellationToken cancellationToken = default)
+    {
+        take = Math.Clamp(take, 1, 500);
+
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
+
+        var query = dbContext.Orders
+            .AsNoTracking()
+            .Include(o => o.Employee)
+            .Include(o => o.OrderDetails)
+            .Where(o => o.OrderType == "ORDEN_CONFECCION");
+
+        if (!string.IsNullOrWhiteSpace(status) && status != "TODOS")
+        {
+            query = query.Where(o => o.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var search = searchText.Trim().TrimStart('#');
+            var pattern = $"%{search}%";
+            query = Guid.TryParse(search, out var orderId)
+                ? query.Where(o => o.Id == orderId)
+                : query.Where(o =>
+                    (o.Notes != null && EF.Functions.ILike(o.Notes, pattern)) ||
+                    EF.Functions.ILike(o.Employee.FirstName, pattern) ||
+                    EF.Functions.ILike(o.Employee.LastName, pattern));
+        }
+
+        var orders = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(take)
+            .Select(o => new
+            {
+                o.Id,
+                o.CreatedAt,
+                o.Notes,
+                o.Status,
+                o.Total,
+                EmployeeName = o.Employee.FirstName + " " + o.Employee.LastName,
+                ItemCount = o.OrderDetails.Count
+            })
+            .ToListAsync(cancellationToken);
+
+        return orders
+            .Select(o => new ConfectionOrderSummary(
+                o.Id,
+                o.CreatedAt,
+                ExtractCustomerName(o.Notes),
+                o.EmployeeName,
+                "Taller",
+                o.Status,
+                o.ItemCount,
+                o.Total))
+            .ToList();
+    }
+
+    public async Task<CashSaleResult> CompleteConfectionOrderAsync(
+        CompleteConfectionOrderRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.EmployeeId == Guid.Empty)
+        {
+            throw new InvalidOrderException("La facturacion requiere empleado autenticado.");
+        }
+
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+
+        var order = await dbContext.Orders
+            .Include(o => o.OrderDetails)
+            .ThenInclude(d => d.Product)
+            .ThenInclude(p => p.MeasurementType)
+            .Include(o => o.InventoryMovements)
+            .Include(o => o.Payments)
+            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+
+        if (order is null)
+        {
+            throw new InvalidOrderException("Orden no encontrada.");
+        }
+
+        if (order.OrderType != "ORDEN_CONFECCION")
+        {
+            throw new InvalidOrderException("La orden no es de confeccion.");
+        }
+
+        if (order.Status != "PENDIENTE")
+        {
+            throw new InvalidOrderException("Solo se pueden facturar ordenes pendientes.");
+        }
+
+        ValidatePayments(request.Payments, order.Total);
+
+        foreach (var detail in order.OrderDetails)
+        {
+            var product = detail.Product;
+            ValidateQuantity(detail.Quantity, product.MeasurementType.Decimals);
+
+            var stockBefore = product.CurrentStock;
+            if (stockBefore < detail.Quantity)
+            {
+                throw new InsufficientStockException(product.Code, detail.Quantity, stockBefore);
+            }
+
+            var stockAfter = stockBefore - detail.Quantity;
+            product.CurrentStock = stockAfter;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            order.InventoryMovements.Add(new InventoryMovement
+            {
+                Id = Guid.NewGuid(),
+                ProductId = product.Id,
+                MovementType = "SALIDA_VENTA",
+                Quantity = detail.Quantity,
+                UnitCost = product.CostPrice,
+                TotalCost = product.CostPrice * detail.Quantity,
+                StockBefore = stockBefore,
+                StockAfter = stockAfter,
+                EmployeeId = request.EmployeeId,
+                Reason = "Facturacion de orden de confeccion",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        foreach (var payment in request.Payments)
+        {
+            order.Payments.Add(new Payment
+            {
+                Id = Guid.NewGuid(),
+                CashSessionId = request.CashSessionId,
+                Method = payment.Method.Trim().ToUpperInvariant(),
+                Amount = payment.Amount,
+                Reference = payment.Reference,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        order.Status = "COMPLETADA";
+        order.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return new CashSaleResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
+    }
+
+    private static string ExtractCustomerName(string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return "Consumidor Final";
+        }
+
+        const string prefix = "Cliente: ";
+        var customerPart = notes.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(p => p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
+        return customerPart is null
+            ? "Consumidor Final"
+            : customerPart[prefix.Length..].Trim();
+    }
+
     private static string? BuildConfectionNotes(CreateConfectionOrderRequest request)
     {
         var parts = new[]

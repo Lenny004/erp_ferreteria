@@ -1,26 +1,167 @@
 # FlexoCable SV — Git, Pull Requests y Revisión
 
 > **Documento:** FLEXO-DEV-STD-002  
-> **Versión:** 1.0  
-> **Fecha:** Mayo 2026  
+> **Versión:** 1.1  
+> **Fecha:** Junio 2026  
 > **Complementa:** [FLEXOCABLE_C_CODING_STANDARDS_2026.md](FLEXOCABLE_C_CODING_STANDARDS_2026.md)
 
 ---
 
 ## Índice
 
-1. [Cuándo commitear](#cuándo-commitear)
-2. [Protocolo git](#protocolo-git)
-3. [Mensajes de commit](#mensajes-de-commit)
-4. [Pull requests](#pull-requests)
-5. [Revisión de código](#revisión-de-código)
-6. [Checklist pre-commit (código)](#checklist-pre-commit-código)
+1. [Cuándo commitear y hacer push](#cuándo-commitear-y-hacer-push)
+2. [Ciclo diario FlexoCable (add → commit → push)](#ciclo-diario-flexocable-add--commit--push)
+3. [Referencia rápida de comandos Git](#referencia-rápida-de-comandos-git)
+4. [Protocolo git](#protocolo-git)
+5. [Mensajes de commit](#mensajes-de-commit)
+6. [Pull requests](#pull-requests)
+7. [Revisión de código](#revisión-de-código)
+8. [Checklist pre-commit (código)](#checklist-pre-commit-código)
 
 ---
 
-## Cuándo commitear
+## Cuándo commitear y hacer push
 
-Solo crear commits cuando el desarrollador (o el agente, con petición explícita) lo solicite. Si no está claro, preguntar antes.
+**Práctica del equipo:** al terminar una tarea lógica (feature, fix, doc, migración, etc.), crear **un commit** y **un push** al remoto. No acumular muchos cambios sin subir.
+
+| Momento | Acción |
+|---------|--------|
+| Terminaste una tarea acotada | `git add` → `git commit` → `git push` |
+| Cambio solo local / experimental | Puedes commitear en rama sin push hasta que esté listo |
+| Trabajo con agente (Cursor) | Pedir explícitamente *"haz commit y push"* si quieres que el agente lo ejecute |
+| No está claro si commitear | Preguntar antes |
+
+**Repos del monorepo / workspace:**
+
+| Carpeta | Uso |
+|---------|-----|
+| `FlexoCable/` | WPF Punto de Venta, docs, herramientas |
+| `FlexoCable-backend/` | Prisma, seed, Docker PostgreSQL |
+
+Cada carpeta puede ser su propio repositorio Git. Entra a la carpeta correcta antes de `git status`, `commit` o `push`.
+
+---
+
+## Ciclo diario FlexoCable (add → commit → push)
+
+Flujo mínimo cada vez que completes algo y quieras dejarlo guardado en GitHub:
+
+```powershell
+# 1. Ir al repo correcto
+cd "C:\Users\progr\Documents\FlexoCable Sistema\FlexoCable"
+# o: cd "...\FlexoCable-backend"
+
+# 2. Ver qué cambió
+git status
+git diff
+
+# 3. Agregar archivos (solo lo relevante; evitar binarios y secretos)
+git add .
+# o: git add docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md
+
+# 4. Commit con mensaje claro (ver sección Mensajes de commit)
+git commit -m "📝 Documentar flujo de confección y cliente Consumidor Final en el plan"
+
+# 5. Subir al remoto
+git push origin main
+# Si es la primera vez en una rama nueva:
+# git push -u origin nombre-de-rama
+```
+
+**Ramas (recomendado para features):**
+
+```powershell
+git switch -c feature/ordenes-confeccion
+# ... trabajar, commit, push ...
+git push -u origin feature/ordenes-confeccion
+# Luego abrir PR hacia main (sección Pull requests)
+```
+
+**Antes de cada commit, revisar:**
+
+- [ ] No hay `.env`, passwords ni `appsettings` con secretos reales
+- [ ] `git status` muestra solo lo que quieres incluir
+- [ ] El mensaje describe el **por qué**, no solo el qué
+
+---
+
+## Referencia rápida de comandos Git
+
+### Configuración inicial (una sola vez por máquina)
+
+```bash
+git config --global user.name "Lenny004"
+git config --global user.email "tu-email@ejemplo.com"
+```
+
+Comprobar:
+
+```bash
+git config --global --list
+```
+
+### Inicio de proyecto
+
+```bash
+git init                    # Inicializar repo en la carpeta actual
+git clone URL               # Clonar repo existente
+```
+
+### Ciclo diario (add → commit → push)
+
+```bash
+git status                  # Ver qué cambió
+git add archivo.cs          # Agregar un archivo al staging
+git add .                   # Agregar todo al staging (revisar antes)
+git commit -m "mensaje"     # Guardar checkpoint local
+git push origin main        # Subir a GitHub (rama main)
+```
+
+### Historial
+
+```bash
+git log                     # Ver todos los commits
+git log --oneline           # Ver commits en una línea
+git diff                    # Ver cambios sin staging
+git diff --staged           # Ver cambios ya en staging
+```
+
+### Deshacer cosas
+
+```bash
+git restore archivo.cs              # Descartar cambios locales del archivo
+git restore --staged archivo.cs     # Sacar del staging sin borrar cambios
+git revert HASH                     # Crear commit que deshace un commit anterior
+git reset --soft HEAD~1             # Deshacer último commit; cambios quedan en staging
+```
+
+Usar `reset --hard` solo si sabes que perderás cambios locales. No usar en commits ya pusheados sin acuerdo del equipo.
+
+### Ramas
+
+```bash
+git branch                          # Ver ramas
+git branch nueva-feature            # Crear rama
+git switch nueva-feature            # Cambiar a rama (Git 2.23+)
+git checkout nueva-feature          # Alternativa clásica
+git merge nueva-feature             # Fusionar rama en la actual
+git branch -d nueva-feature         # Eliminar rama local (ya fusionada)
+```
+
+### Remoto (GitHub)
+
+```bash
+git remote add origin URL           # Conectar carpeta local con GitHub
+git remote -v                       # Ver remotos configurados
+git pull origin main                # Traer cambios del remoto y fusionar
+git fetch origin                    # Traer cambios sin fusionar
+```
+
+Crear repo en GitHub desde la carpeta actual (requiere [GitHub CLI](https://cli.github.com/) — `gh`):
+
+```bash
+gh repo create nombre-repo --private --source=. --remote=origin --push
+```
 
 ---
 
