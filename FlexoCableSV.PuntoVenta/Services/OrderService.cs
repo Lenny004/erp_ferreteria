@@ -1,20 +1,23 @@
 using System.Data;
 using FlexoCableSV.PuntoVenta.Data;
 using FlexoCableSV.PuntoVenta.Models;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlexoCableSV.PuntoVenta.Services;
 
+/// <summary>
+/// Implementación transaccional de ventas y órdenes de confección.
+/// Usa aislamiento <see cref="IsolationLevel.Serializable"/> en operaciones que modifican stock.
+/// </summary>
 public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderService
 {
-    private const decimal IvaRate = 0.13m;
-
     public async Task<CashSaleResult> CreateCashSaleAsync(
         CreateCashSaleRequest request,
         CancellationToken cancellationToken = default)
     {
-        ValidateRequest(request);
+        ValidateCashSaleRequest(request);
 
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
@@ -24,18 +27,10 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             IsolationLevel.Serializable,
             cancellationToken);
 
-        var existingOrder = await dbContext.Orders
-            .AsNoTracking()
-            .FirstOrDefaultAsync(o => o.ClientRequestId == clientRequestId, cancellationToken);
-
+        var existingOrder = await FindOrderByClientRequestIdAsync(dbContext, clientRequestId, cancellationToken);
         if (existingOrder is not null)
         {
-            return new CashSaleResult(
-                existingOrder.Id,
-                existingOrder.ClientRequestId,
-                existingOrder.Subtotal,
-                existingOrder.TaxAmount,
-                existingOrder.Total);
+            return MapToCashSaleResult(existingOrder);
         }
 
         var order = new Order
@@ -45,8 +40,8 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             CashSessionId = request.CashSessionId,
             CustomerId = request.CustomerId,
             ClientRequestId = clientRequestId,
-            OrderType = "VENTA_CAJA",
-            Status = "COMPLETADA",
+            OrderType = SalesDomainConstants.OrderTypes.CashRegisterSale,
+            Status = SalesDomainConstants.OrderStatuses.Completed,
             Notes = request.Notes,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -54,94 +49,31 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
 
         foreach (var line in request.Lines)
         {
-            var product = await dbContext.Products
-                .Include(p => p.MeasurementType)
-                .FirstOrDefaultAsync(p => p.Id == line.ProductId && p.IsActive, cancellationToken);
-
-            if (product is null)
-            {
-                throw new ProductNotFoundException(line.ProductId);
-            }
-
-            ValidateQuantity(line.Quantity, product.MeasurementType.Decimals);
-
-            var stockBefore = product.CurrentStock;
-            if (stockBefore < line.Quantity)
-            {
-                throw new InsufficientStockException(product.Code, line.Quantity, stockBefore);
-            }
-
-            var lineSubtotal = Math.Round(product.SalePrice * line.Quantity, 2, MidpointRounding.AwayFromZero);
-            order.Subtotal += lineSubtotal;
-
-            order.OrderDetails.Add(new OrderDetail
-            {
-                Id = Guid.NewGuid(),
-                ProductId = product.Id,
-                Quantity = line.Quantity,
-                UnitPrice = product.SalePrice,
-                UnitCost = product.CostPrice,
-                Subtotal = lineSubtotal,
-                Notes = line.Notes
-            });
-
-            var stockAfter = stockBefore - line.Quantity;
-            product.CurrentStock = stockAfter;
-            product.UpdatedAt = DateTime.UtcNow;
-
-            order.InventoryMovements.Add(new InventoryMovement
-            {
-                Id = Guid.NewGuid(),
-                ProductId = product.Id,
-                MovementType = "SALIDA_VENTA",
-                Quantity = line.Quantity,
-                UnitCost = product.CostPrice,
-                TotalCost = product.CostPrice * line.Quantity,
-                StockBefore = stockBefore,
-                StockAfter = stockAfter,
-                EmployeeId = request.EmployeeId,
-                Reason = "Venta de caja",
-                CreatedAt = DateTime.UtcNow
-            });
+            await AddSaleLineAsync(
+                dbContext,
+                order,
+                line,
+                request.EmployeeId,
+                inventoryReason: "Venta de caja",
+                cancellationToken);
         }
 
-        order.TaxAmount = Math.Round(order.Subtotal * IvaRate, 2, MidpointRounding.AwayFromZero);
-        order.Total = order.Subtotal + order.TaxAmount;
-        ValidatePayments(request.Payments, order.Total);
-
-        foreach (var payment in request.Payments)
-        {
-            order.Payments.Add(new Payment
-            {
-                Id = Guid.NewGuid(),
-                CashSessionId = request.CashSessionId,
-                Method = payment.Method.Trim().ToUpperInvariant(),
-                Amount = payment.Amount,
-                Reference = payment.Reference,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
+        ApplyTaxTotals(order);
+        ValidatePaymentTotals(request.Payments, order.Total);
+        AddPayments(order, request.Payments, request.CashSessionId);
 
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return new CashSaleResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
+        return MapToCashSaleResult(order);
     }
 
     public async Task<WorkOrderResult> CreateConfectionOrderAsync(
         CreateConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request.EmployeeId == Guid.Empty)
-        {
-            throw new InvalidOrderException("La orden requiere empleado autenticado.");
-        }
-
-        if (request.Lines.Count == 0)
-        {
-            throw new InvalidOrderException("La orden debe tener al menos un producto.");
-        }
+        ValidateConfectionOrderRequest(request);
 
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
@@ -151,18 +83,10 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             IsolationLevel.Serializable,
             cancellationToken);
 
-        var existingOrder = await dbContext.Orders
-            .AsNoTracking()
-            .FirstOrDefaultAsync(o => o.ClientRequestId == clientRequestId, cancellationToken);
-
+        var existingOrder = await FindOrderByClientRequestIdAsync(dbContext, clientRequestId, cancellationToken);
         if (existingOrder is not null)
         {
-            return new WorkOrderResult(
-                existingOrder.Id,
-                existingOrder.ClientRequestId,
-                existingOrder.Subtotal,
-                existingOrder.TaxAmount,
-                existingOrder.Total);
+            return MapToWorkOrderResult(existingOrder);
         }
 
         var order = new Order
@@ -171,48 +95,28 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             EmployeeId = request.EmployeeId,
             CustomerId = request.CustomerId,
             ClientRequestId = clientRequestId,
-            OrderType = "ORDEN_CONFECCION",
-            Status = "PENDIENTE",
-            Notes = BuildConfectionNotes(request),
+            OrderType = SalesDomainConstants.OrderTypes.ConfectionWorkOrder,
+            Status = SalesDomainConstants.OrderStatuses.Pending,
+            Notes = OrderNotesFormatter.BuildConfectionOrderNotes(
+                request.CustomerName,
+                request.CustomerPhone,
+                request.Notes),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
         foreach (var line in request.Lines)
         {
-            var product = await dbContext.Products
-                .Include(p => p.MeasurementType)
-                .FirstOrDefaultAsync(p => p.Id == line.ProductId && p.IsActive, cancellationToken);
-
-            if (product is null)
-            {
-                throw new ProductNotFoundException(line.ProductId);
-            }
-
-            ValidateQuantity(line.Quantity, product.MeasurementType.Decimals);
-
-            var lineSubtotal = Math.Round(product.SalePrice * line.Quantity, 2, MidpointRounding.AwayFromZero);
-            order.Subtotal += lineSubtotal;
-            order.OrderDetails.Add(new OrderDetail
-            {
-                Id = Guid.NewGuid(),
-                ProductId = product.Id,
-                Quantity = line.Quantity,
-                UnitPrice = product.SalePrice,
-                UnitCost = product.CostPrice,
-                Subtotal = lineSubtotal,
-                Notes = line.Notes
-            });
+            await AddPendingWorkOrderLineAsync(dbContext, order, line, cancellationToken);
         }
 
-        order.TaxAmount = Math.Round(order.Subtotal * IvaRate, 2, MidpointRounding.AwayFromZero);
-        order.Total = order.Subtotal + order.TaxAmount;
+        ApplyTaxTotals(order);
 
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return new WorkOrderResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
+        return MapToWorkOrderResult(order);
     }
 
     public async Task<IReadOnlyList<ConfectionOrderSummary>> GetConfectionOrdersAsync(
@@ -226,54 +130,44 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
 
-        var query = dbContext.Orders
+        var ordersQuery = dbContext.Orders
             .AsNoTracking()
-            .Include(o => o.Employee)
-            .Include(o => o.OrderDetails)
-            .Where(o => o.OrderType == "ORDEN_CONFECCION");
+            .Include(order => order.Employee)
+            .Include(order => order.OrderDetails)
+            .Where(order => order.OrderType == SalesDomainConstants.OrderTypes.ConfectionWorkOrder);
 
-        if (!string.IsNullOrWhiteSpace(status) && status != "TODOS")
+        if (!string.IsNullOrWhiteSpace(status) && status != SalesDomainConstants.OrderStatuses.All)
         {
-            query = query.Where(o => o.Status == status);
+            ordersQuery = ordersQuery.Where(order => order.Status == status);
         }
 
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            var search = searchText.Trim().TrimStart('#');
-            var pattern = $"%{search}%";
-            query = Guid.TryParse(search, out var orderId)
-                ? query.Where(o => o.Id == orderId)
-                : query.Where(o =>
-                    (o.Notes != null && EF.Functions.ILike(o.Notes, pattern)) ||
-                    EF.Functions.ILike(o.Employee.FirstName, pattern) ||
-                    EF.Functions.ILike(o.Employee.LastName, pattern));
-        }
+        ordersQuery = ordersQuery.ApplySearchTextFilter(searchText);
 
-        var orders = await query
-            .OrderByDescending(o => o.CreatedAt)
+        var orders = await ordersQuery
+            .OrderByDescending(order => order.CreatedAt)
             .Take(take)
-            .Select(o => new
+            .Select(order => new
             {
-                o.Id,
-                o.CreatedAt,
-                o.Notes,
-                o.Status,
-                o.Total,
-                EmployeeName = o.Employee.FirstName + " " + o.Employee.LastName,
-                ItemCount = o.OrderDetails.Count
+                order.Id,
+                order.CreatedAt,
+                order.Notes,
+                order.Status,
+                order.Total,
+                EmployeeDisplayName = order.Employee.FirstName + " " + order.Employee.LastName,
+                ItemCount = order.OrderDetails.Count
             })
             .ToListAsync(cancellationToken);
 
         return orders
-            .Select(o => new ConfectionOrderSummary(
-                o.Id,
-                o.CreatedAt,
-                ExtractCustomerName(o.Notes),
-                o.EmployeeName,
-                "Taller",
-                o.Status,
-                o.ItemCount,
-                o.Total))
+            .Select(order => new ConfectionOrderSummary(
+                order.Id,
+                order.CreatedAt,
+                OrderNotesFormatter.ExtractCustomerDisplayName(order.Notes),
+                order.EmployeeDisplayName,
+                SalesDomainConstants.OrderChannelLabels.WorkshopApplication,
+                order.Status,
+                order.ItemCount,
+                order.Total))
             .ToList();
     }
 
@@ -294,81 +188,48 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             cancellationToken);
 
         var order = await dbContext.Orders
-            .Include(o => o.OrderDetails)
-            .ThenInclude(d => d.Product)
-            .ThenInclude(p => p.MeasurementType)
-            .Include(o => o.InventoryMovements)
-            .Include(o => o.Payments)
-            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+            .Include(order => order.OrderDetails)
+            .ThenInclude(detail => detail.Product)
+            .ThenInclude(product => product.MeasurementType)
+            .Include(order => order.InventoryMovements)
+            .Include(order => order.Payments)
+            .FirstOrDefaultAsync(order => order.Id == request.OrderId, cancellationToken);
 
         if (order is null)
         {
             throw new InvalidOrderException("Orden no encontrada.");
         }
 
-        if (order.OrderType != "ORDEN_CONFECCION")
+        if (order.OrderType != SalesDomainConstants.OrderTypes.ConfectionWorkOrder)
         {
             throw new InvalidOrderException("La orden no es de confeccion.");
         }
 
-        if (order.Status != "PENDIENTE")
+        if (order.Status != SalesDomainConstants.OrderStatuses.Pending)
         {
             throw new InvalidOrderException("Solo se pueden facturar ordenes pendientes.");
         }
 
-        ValidatePayments(request.Payments, order.Total);
+        ValidatePaymentTotals(request.Payments, order.Total);
 
         foreach (var detail in order.OrderDetails)
         {
-            var product = detail.Product;
-            ValidateQuantity(detail.Quantity, product.MeasurementType.Decimals);
-
-            var stockBefore = product.CurrentStock;
-            if (stockBefore < detail.Quantity)
-            {
-                throw new InsufficientStockException(product.Code, detail.Quantity, stockBefore);
-            }
-
-            var stockAfter = stockBefore - detail.Quantity;
-            product.CurrentStock = stockAfter;
-            product.UpdatedAt = DateTime.UtcNow;
-
-            order.InventoryMovements.Add(new InventoryMovement
-            {
-                Id = Guid.NewGuid(),
-                ProductId = product.Id,
-                MovementType = "SALIDA_VENTA",
-                Quantity = detail.Quantity,
-                UnitCost = product.CostPrice,
-                TotalCost = product.CostPrice * detail.Quantity,
-                StockBefore = stockBefore,
-                StockAfter = stockAfter,
-                EmployeeId = request.EmployeeId,
-                Reason = "Facturacion de orden de confeccion",
-                CreatedAt = DateTime.UtcNow
-            });
+            DeductInventoryForCompletedSale(
+                order,
+                detail.Product,
+                detail.Quantity,
+                request.EmployeeId,
+                inventoryReason: "Facturacion de orden de confeccion");
         }
 
-        foreach (var payment in request.Payments)
-        {
-            order.Payments.Add(new Payment
-            {
-                Id = Guid.NewGuid(),
-                CashSessionId = request.CashSessionId,
-                Method = payment.Method.Trim().ToUpperInvariant(),
-                Amount = payment.Amount,
-                Reference = payment.Reference,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
-
-        order.Status = "COMPLETADA";
+        AddPayments(order, request.Payments, request.CashSessionId);
+        order.Status = SalesDomainConstants.OrderStatuses.Completed;
         order.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return new CashSaleResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
+        return MapToCashSaleResult(order);
     }
 
     public async Task<IReadOnlyList<SalesOrderSummary>> GetCompletedSalesAsync(
@@ -381,84 +242,205 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
 
-        var query = dbContext.Orders
+        var ordersQuery = dbContext.Orders
             .AsNoTracking()
-            .Include(o => o.Employee)
-            .Include(o => o.Payments)
-            .Where(o => o.Status == "COMPLETADA");
+            .Include(order => order.Employee)
+            .Include(order => order.Payments)
+            .Where(order => order.Status == SalesDomainConstants.OrderStatuses.Completed)
+            .ApplySearchTextFilter(searchText);
 
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            var search = searchText.Trim().TrimStart('#');
-            var pattern = $"%{search}%";
-            query = Guid.TryParse(search, out var orderId)
-                ? query.Where(o => o.Id == orderId)
-                : query.Where(o =>
-                    (o.Notes != null && EF.Functions.ILike(o.Notes, pattern)) ||
-                    EF.Functions.ILike(o.Employee.FirstName, pattern) ||
-                    EF.Functions.ILike(o.Employee.LastName, pattern));
-        }
-
-        var orders = await query
-            .OrderByDescending(o => o.CreatedAt)
+        var orders = await ordersQuery
+            .OrderByDescending(order => order.CreatedAt)
             .Take(take)
-            .Select(o => new
+            .Select(order => new
             {
-                o.Id,
-                o.CreatedAt,
-                o.Notes,
-                o.OrderType,
-                o.Status,
-                o.Total,
-                PaymentMethod = o.Payments
-                    .OrderBy(p => p.CreatedAt)
-                    .Select(p => p.Method)
+                order.Id,
+                order.CreatedAt,
+                order.Notes,
+                order.OrderType,
+                order.Status,
+                order.Total,
+                PaymentMethod = order.Payments
+                    .OrderBy(payment => payment.CreatedAt)
+                    .Select(payment => payment.Method)
                     .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
         return orders
-            .Select(o => new SalesOrderSummary(
-                o.Id,
-                o.CreatedAt,
-                ExtractCustomerName(o.Notes),
-                o.OrderType,
-                string.IsNullOrWhiteSpace(o.PaymentMethod) ? "N/D" : o.PaymentMethod,
-                o.Status,
-                o.Total))
+            .Select(order => new SalesOrderSummary(
+                order.Id,
+                order.CreatedAt,
+                OrderNotesFormatter.ExtractCustomerDisplayName(order.Notes),
+                order.OrderType,
+                string.IsNullOrWhiteSpace(order.PaymentMethod)
+                    ? SalesDomainConstants.OrderChannelLabels.PaymentMethodNotAvailable
+                    : order.PaymentMethod,
+                order.Status,
+                order.Total))
             .ToList();
     }
 
-    private static string ExtractCustomerName(string? notes)
+    private static async Task<Order?> FindOrderByClientRequestIdAsync(
+        FlexoDbContext dbContext,
+        Guid clientRequestId,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(notes))
+        return await dbContext.Orders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(order => order.ClientRequestId == clientRequestId, cancellationToken);
+    }
+
+    private static async Task AddSaleLineAsync(
+        FlexoDbContext dbContext,
+        Order order,
+        CashSaleLineRequest line,
+        Guid employeeId,
+        string inventoryReason,
+        CancellationToken cancellationToken)
+    {
+        var product = await LoadActiveProductAsync(dbContext, line.ProductId, cancellationToken);
+        InventoryQuantityValidator.ValidatePositiveQuantity(line.Quantity, product.MeasurementType.Decimals);
+
+        var lineSubtotal = Math.Round(product.SalePrice * line.Quantity, 2, MidpointRounding.AwayFromZero);
+        order.Subtotal += lineSubtotal;
+
+        order.OrderDetails.Add(new OrderDetail
         {
-            return "Consumidor Final";
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            Quantity = line.Quantity,
+            UnitPrice = product.SalePrice,
+            UnitCost = product.CostPrice,
+            Subtotal = lineSubtotal,
+            Notes = line.Notes
+        });
+
+        DeductInventoryForCompletedSale(order, product, line.Quantity, employeeId, inventoryReason);
+    }
+
+    private static async Task AddPendingWorkOrderLineAsync(
+        FlexoDbContext dbContext,
+        Order order,
+        CashSaleLineRequest line,
+        CancellationToken cancellationToken)
+    {
+        var product = await LoadActiveProductAsync(dbContext, line.ProductId, cancellationToken);
+        InventoryQuantityValidator.ValidatePositiveQuantity(line.Quantity, product.MeasurementType.Decimals);
+
+        var lineSubtotal = Math.Round(product.SalePrice * line.Quantity, 2, MidpointRounding.AwayFromZero);
+        order.Subtotal += lineSubtotal;
+
+        order.OrderDetails.Add(new OrderDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            Quantity = line.Quantity,
+            UnitPrice = product.SalePrice,
+            UnitCost = product.CostPrice,
+            Subtotal = lineSubtotal,
+            Notes = line.Notes
+        });
+    }
+
+    private static async Task<Product> LoadActiveProductAsync(
+        FlexoDbContext dbContext,
+        Guid productId,
+        CancellationToken cancellationToken)
+    {
+        var product = await dbContext.Products
+            .Include(product => product.MeasurementType)
+            .FirstOrDefaultAsync(
+                product => product.Id == productId && product.IsActive,
+                cancellationToken);
+
+        if (product is null)
+        {
+            throw new ProductNotFoundException(productId);
         }
 
-        const string prefix = "Cliente: ";
-        var customerPart = notes.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault(p => p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-
-        return customerPart is null
-            ? "Consumidor Final"
-            : customerPart[prefix.Length..].Trim();
+        return product;
     }
 
-    private static string? BuildConfectionNotes(CreateConfectionOrderRequest request)
+    private static void DeductInventoryForCompletedSale(
+        Order order,
+        Product product,
+        decimal quantity,
+        Guid employeeId,
+        string inventoryReason)
     {
-        var parts = new[]
+        var stockBefore = product.CurrentStock;
+        if (stockBefore < quantity)
         {
-            string.IsNullOrWhiteSpace(request.CustomerName) ? null : $"Cliente: {request.CustomerName.Trim()}",
-            string.IsNullOrWhiteSpace(request.CustomerPhone) ? null : $"Telefono: {request.CustomerPhone.Trim()}",
-            string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
-        };
+            throw new InsufficientStockException(product.Code, quantity, stockBefore);
+        }
 
-        var notes = string.Join(" | ", parts.Where(p => p is not null));
-        return string.IsNullOrWhiteSpace(notes) ? null : notes;
+        var stockAfter = stockBefore - quantity;
+        product.CurrentStock = stockAfter;
+        product.UpdatedAt = DateTime.UtcNow;
+
+        order.InventoryMovements.Add(new InventoryMovement
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            MovementType = SalesDomainConstants.InventoryMovementTypes.SaleOutflow,
+            Quantity = quantity,
+            UnitCost = product.CostPrice,
+            TotalCost = product.CostPrice * quantity,
+            StockBefore = stockBefore,
+            StockAfter = stockAfter,
+            EmployeeId = employeeId,
+            Reason = inventoryReason,
+            CreatedAt = DateTime.UtcNow
+        });
     }
 
-    private static void ValidateRequest(CreateCashSaleRequest request)
+    private static void ApplyTaxTotals(Order order)
+    {
+        order.TaxAmount = TaxAmountCalculator.CalculateTaxAmount(order.Subtotal);
+        order.Total = TaxAmountCalculator.CalculateGrandTotal(order.Subtotal);
+    }
+
+    private static void AddPayments(
+        Order order,
+        IReadOnlyList<CashSalePaymentRequest> payments,
+        Guid? cashSessionId)
+    {
+        foreach (var payment in payments)
+        {
+            order.Payments.Add(new Payment
+            {
+                Id = Guid.NewGuid(),
+                CashSessionId = cashSessionId,
+                Method = payment.Method.Trim().ToUpperInvariant(),
+                Amount = payment.Amount,
+                Reference = payment.Reference,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+    }
+
+    private static CashSaleResult MapToCashSaleResult(Order order)
+    {
+        return new CashSaleResult(
+            order.Id,
+            order.ClientRequestId,
+            order.Subtotal,
+            order.TaxAmount,
+            order.Total);
+    }
+
+    private static WorkOrderResult MapToWorkOrderResult(Order order)
+    {
+        return new WorkOrderResult(
+            order.Id,
+            order.ClientRequestId,
+            order.Subtotal,
+            order.TaxAmount,
+            order.Total);
+    }
+
+    private static void ValidateCashSaleRequest(CreateCashSaleRequest request)
     {
         if (request.EmployeeId == Guid.Empty)
         {
@@ -476,31 +458,30 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         }
     }
 
-    private static void ValidatePayments(IReadOnlyList<CashSalePaymentRequest> payments, decimal total)
+    private static void ValidateConfectionOrderRequest(CreateConfectionOrderRequest request)
     {
-        var paidTotal = payments.Sum(p => p.Amount);
-        if (payments.Any(p => p.Amount <= 0))
+        if (request.EmployeeId == Guid.Empty)
+        {
+            throw new InvalidOrderException("La orden requiere empleado autenticado.");
+        }
+
+        if (request.Lines.Count == 0)
+        {
+            throw new InvalidOrderException("La orden debe tener al menos un producto.");
+        }
+    }
+
+    private static void ValidatePaymentTotals(IReadOnlyList<CashSalePaymentRequest> payments, decimal expectedTotal)
+    {
+        if (payments.Any(payment => payment.Amount <= 0))
         {
             throw new InvalidOrderException("Todos los pagos deben ser mayores que cero.");
         }
 
-        if (Math.Round(paidTotal, 2, MidpointRounding.AwayFromZero) != total)
+        var paidTotal = payments.Sum(payment => payment.Amount);
+        if (Math.Round(paidTotal, 2, MidpointRounding.AwayFromZero) != expectedTotal)
         {
             throw new InvalidOrderException("La suma de pagos debe coincidir con el total de la venta.");
-        }
-    }
-
-    private static void ValidateQuantity(decimal quantity, short allowedDecimals)
-    {
-        if (quantity <= 0)
-        {
-            throw new InvalidInventoryQuantityException("La cantidad debe ser mayor que cero.");
-        }
-
-        var rounded = Math.Round(quantity, allowedDecimals, MidpointRounding.AwayFromZero);
-        if (quantity != rounded)
-        {
-            throw new InvalidInventoryQuantityException($"La cantidad permite maximo {allowedDecimals} decimales.");
         }
     }
 }

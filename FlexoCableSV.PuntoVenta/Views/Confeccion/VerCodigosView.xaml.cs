@@ -1,12 +1,14 @@
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Confeccion;
 
+/// <summary>Consulta de códigos de producto para el módulo de confección.</summary>
 public partial class VerCodigosView : UserControl
 {
     private readonly IInventoryService _inventoryService;
-    private CancellationTokenSource? _searchCancellation;
+    private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
     public VerCodigosView(IInventoryService inventoryService)
     {
@@ -23,8 +25,7 @@ public partial class VerCodigosView : UserControl
 
     private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
+        _searchCoordinator.Dispose();
     }
 
     private async void OnSearchChanged(object sender, TextChangedEventArgs e)
@@ -34,21 +35,19 @@ public partial class VerCodigosView : UserControl
 
     private void OnSelectedProductChanged(object sender, SelectionChangedEventArgs e)
     {
-        RenderSelectedProduct(ProductsListBox.SelectedItem as InventoryProductResult);
+        RenderSelectedProductDetails(ProductsListBox.SelectedItem as InventoryProductResult);
     }
 
     private async Task LoadProductsAsync()
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
-        _searchCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCoordinator.BeginNewSearch();
 
         try
         {
             var products = await _inventoryService.SearchProductsAsync(
                 SearchTextBox.Text,
-                null,
-                cancellationToken: _searchCancellation.Token);
+                stockStatus: null,
+                cancellationToken: cancellationToken);
 
             ProductsListBox.ItemsSource = products;
             ProductsListBox.SelectedIndex = products.Count > 0 ? 0 : -1;
@@ -66,9 +65,9 @@ public partial class VerCodigosView : UserControl
         }
     }
 
-    private void RenderSelectedProduct(InventoryProductResult? product)
+    private void RenderSelectedProductDetails(InventoryProductResult? selectedProduct)
     {
-        if (product is null)
+        if (selectedProduct is null)
         {
             DetailCodeText.Text = "Sin seleccion";
             DetailDescriptionText.Text = "Selecciona un codigo del listado.";
@@ -81,13 +80,13 @@ public partial class VerCodigosView : UserControl
             return;
         }
 
-        DetailCodeText.Text = product.Code;
-        DetailDescriptionText.Text = product.Description;
-        DetailFamilyText.Text = $"Familia: {product.Family}";
-        DetailMeasurementText.Text = $"Tipo medida: {product.Measurement}";
-        DetailUnitText.Text = $"Unidad: {product.UnitLabel}";
-        DetailStockText.Text = $"Stock actual: {product.FormattedStock}";
-        DetailPriceText.Text = $"Precio: {product.PriceText}";
-        DetailStatusText.Text = product.DetailStatus;
+        DetailCodeText.Text = selectedProduct.Code;
+        DetailDescriptionText.Text = selectedProduct.Description;
+        DetailFamilyText.Text = $"Familia: {selectedProduct.Family}";
+        DetailMeasurementText.Text = $"Tipo medida: {selectedProduct.Measurement}";
+        DetailUnitText.Text = $"Unidad: {selectedProduct.UnitLabel}";
+        DetailStockText.Text = $"Stock actual: {selectedProduct.FormattedStock}";
+        DetailPriceText.Text = $"Precio: {selectedProduct.PriceText}";
+        DetailStatusText.Text = selectedProduct.DetailStatus;
     }
 }

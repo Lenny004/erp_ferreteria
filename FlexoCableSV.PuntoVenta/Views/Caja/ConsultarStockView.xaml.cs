@@ -1,12 +1,14 @@
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Caja;
 
+/// <summary>Consulta de inventario con filtros por estado de stock.</summary>
 public partial class ConsultarStockView : UserControl
 {
     private readonly IInventoryService _inventoryService;
-    private CancellationTokenSource? _searchCancellation;
+    private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
     public ConsultarStockView(IInventoryService inventoryService)
     {
@@ -23,8 +25,7 @@ public partial class ConsultarStockView : UserControl
 
     private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
+        _searchCoordinator.Dispose();
     }
 
     private async void OnActualizarClick(object sender, System.Windows.RoutedEventArgs e)
@@ -49,22 +50,22 @@ public partial class ConsultarStockView : UserControl
 
     private async Task LoadProductsAsync()
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
-        _searchCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCoordinator.BeginNewSearch();
 
         try
         {
-            var selectedStatus = (StatusFilterCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "TODOS";
+            var selectedStockFilter = (StatusFilterCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+                ?? SalesDomainConstants.StockFilters.All;
+
             var products = await _inventoryService.SearchProductsAsync(
                 SearchTextBox.Text,
-                selectedStatus,
-                cancellationToken: _searchCancellation.Token);
+                selectedStockFilter,
+                cancellationToken: cancellationToken);
 
             ProductsItemsControl.ItemsSource = products;
             ActiveProductsText.Text = products.Count.ToString();
-            StockLowText.Text = products.Count(p => p.Status == "BAJO").ToString();
-            OutOfStockText.Text = products.Count(p => p.Status == "AGOTADO").ToString();
+            StockLowText.Text = products.Count(product => product.Status == SalesDomainConstants.StockFilters.Low).ToString();
+            OutOfStockText.Text = products.Count(product => product.Status == SalesDomainConstants.StockFilters.Depleted).ToString();
             LastUpdatedText.Text = DateTime.Now.ToString("HH:mm:ss");
             EmptyStateText.Visibility = products.Count == 0
                 ? System.Windows.Visibility.Visible

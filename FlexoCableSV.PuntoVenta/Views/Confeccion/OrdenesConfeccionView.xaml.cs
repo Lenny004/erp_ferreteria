@@ -3,17 +3,19 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Confeccion;
 
+/// <summary>
+/// Captura de órdenes de taller. La orden queda pendiente hasta facturación en caja.
+/// </summary>
 public partial class OrdenesConfeccionView : UserControl
 {
-    private const decimal IvaRate = 0.13m;
-
     private readonly IInventoryService _inventoryService;
     private readonly IOrderService _orderService;
     private readonly ICurrentSessionService _currentSession;
-    private readonly ObservableCollection<WorkOrderLine> _lines = new();
+    private readonly ObservableCollection<WorkOrderLineItem> _lineItems = new();
 
     public OrdenesConfeccionView(
         IInventoryService inventoryService,
@@ -25,9 +27,9 @@ public partial class OrdenesConfeccionView : UserControl
         _currentSession = currentSession;
 
         InitializeComponent();
-        LinesItemsControl.ItemsSource = _lines;
+        LinesItemsControl.ItemsSource = _lineItems;
         Loaded += OnLoaded;
-        RenderTotals();
+        RenderOrderTotals();
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -45,31 +47,32 @@ public partial class OrdenesConfeccionView : UserControl
 
     private void OnAddLineClick(object sender, RoutedEventArgs e)
     {
-        if (ProductComboBox.SelectedItem is not InventoryProductResult product)
+        if (ProductComboBox.SelectedItem is not InventoryProductResult selectedProduct)
         {
             MessageBox.Show("Seleccione un codigo.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        if (!decimal.TryParse(QuantityTextBox.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var quantity) || quantity <= 0)
+        if (!decimal.TryParse(QuantityTextBox.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var quantity)
+            || quantity <= 0)
         {
             MessageBox.Show("Ingrese una cantidad valida.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var existing = _lines.FirstOrDefault(l => l.ProductId == product.Id);
-        if (existing is not null)
+        var existingLine = _lineItems.FirstOrDefault(line => line.ProductId == selectedProduct.Id);
+        if (existingLine is not null)
         {
-            existing.Quantity += quantity;
-            RefreshLines();
+            existingLine.Quantity += quantity;
+            RefreshLineItems();
         }
         else
         {
-            _lines.Add(new WorkOrderLine(product, quantity));
+            _lineItems.Add(new WorkOrderLineItem(selectedProduct, quantity));
         }
 
         QuantityTextBox.Text = "1";
-        RenderTotals();
+        RenderOrderTotals();
     }
 
     private async void OnCreateOrderClick(object sender, RoutedEventArgs e)
@@ -80,7 +83,7 @@ public partial class OrdenesConfeccionView : UserControl
             return;
         }
 
-        if (_lines.Count == 0)
+        if (_lineItems.Count == 0)
         {
             MessageBox.Show("Agregue al menos un codigo.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -88,21 +91,25 @@ public partial class OrdenesConfeccionView : UserControl
 
         try
         {
-            var result = await _orderService.CreateConfectionOrderAsync(new CreateConfectionOrderRequest(
+            var createdOrder = await _orderService.CreateConfectionOrderAsync(new CreateConfectionOrderRequest(
                 _currentSession.CurrentEmployee.Id,
                 CustomerId: null,
                 ClientRequestId: Guid.NewGuid(),
                 CustomerName: CustomerNameTextBox.Text,
                 CustomerPhone: null,
-                Lines: _lines.Select(l => new CashSaleLineRequest(l.ProductId, l.Quantity)).ToList(),
+                Lines: _lineItems.Select(line => new CashSaleLineRequest(line.ProductId, line.Quantity)).ToList(),
                 Notes: NotesTextBox.Text));
 
-            _lines.Clear();
+            _lineItems.Clear();
             CustomerNameTextBox.Clear();
             NotesTextBox.Clear();
-            RenderTotals();
+            RenderOrderTotals();
 
-            MessageBox.Show($"Orden pendiente creada: {result.OrderId}", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                $"Orden pendiente creada: {createdOrder.OrderId}",
+                "Confeccion",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -112,29 +119,30 @@ public partial class OrdenesConfeccionView : UserControl
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
-        _lines.Clear();
-        RenderTotals();
+        _lineItems.Clear();
+        RenderOrderTotals();
     }
 
-    private void RefreshLines()
+    private void RefreshLineItems()
     {
         LinesItemsControl.ItemsSource = null;
-        LinesItemsControl.ItemsSource = _lines;
+        LinesItemsControl.ItemsSource = _lineItems;
     }
 
-    private void RenderTotals()
+    private void RenderOrderTotals()
     {
-        var subtotal = _lines.Sum(l => l.Subtotal);
-        var tax = Math.Round(subtotal * IvaRate, 2, MidpointRounding.AwayFromZero);
-        var total = subtotal + tax;
+        var subtotal = _lineItems.Sum(line => line.Subtotal);
+        var taxAmount = TaxAmountCalculator.CalculateTaxAmount(subtotal);
+        var grandTotal = TaxAmountCalculator.CalculateGrandTotal(subtotal);
 
-        ItemsText.Text = _lines.Count.ToString();
+        ItemsText.Text = _lineItems.Count.ToString();
         SubtotalText.Text = subtotal.ToString("C2");
-        TaxText.Text = tax.ToString("C2");
-        TotalText.Text = total.ToString("C2");
+        TaxText.Text = taxAmount.ToString("C2");
+        TotalText.Text = grandTotal.ToString("C2");
     }
 
-    private sealed class WorkOrderLine(InventoryProductResult product, decimal quantity)
+    /// <summary>Línea editable de la orden en memoria antes de persistir.</summary>
+    private sealed class WorkOrderLineItem(InventoryProductResult product, decimal quantity)
     {
         public Guid ProductId { get; } = product.Id;
         public string Description { get; } = $"{product.Code} {product.Description}";

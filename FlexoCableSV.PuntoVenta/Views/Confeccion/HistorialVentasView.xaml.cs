@@ -1,14 +1,18 @@
 using System.Windows;
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Confeccion;
 
+/// <summary>
+/// Bandeja de órdenes de confección (pendientes y completadas) con acción de facturación.
+/// </summary>
 public partial class HistorialVentasView : UserControl
 {
     private readonly IOrderService _orderService;
     private readonly ICurrentSessionService _currentSession;
-    private CancellationTokenSource? _loadCancellation;
+    private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
     public HistorialVentasView(
         IOrderService orderService,
@@ -23,18 +27,17 @@ public partial class HistorialVentasView : UserControl
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        await LoadOrdersAsync();
+        await LoadConfectionOrdersAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
+        _searchCoordinator.Dispose();
     }
 
     private async void OnSearchChanged(object sender, TextChangedEventArgs e)
     {
-        await LoadOrdersAsync();
+        await LoadConfectionOrdersAsync();
     }
 
     private async void OnStatusFilterChanged(object sender, SelectionChangedEventArgs e)
@@ -44,30 +47,30 @@ public partial class HistorialVentasView : UserControl
             return;
         }
 
-        await LoadOrdersAsync();
+        await LoadConfectionOrdersAsync();
     }
 
-    private async Task LoadOrdersAsync()
+    private async Task LoadConfectionOrdersAsync()
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
-        _loadCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCoordinator.BeginNewSearch();
 
         try
         {
-            var status = (StatusFilterCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "PENDIENTE";
+            var selectedStatus = (StatusFilterCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+                ?? SalesDomainConstants.OrderStatuses.Pending;
+
             var orders = await _orderService.GetConfectionOrdersAsync(
-                status,
+                selectedStatus,
                 SearchTextBox.Text,
-                cancellationToken: _loadCancellation.Token);
+                cancellationToken: cancellationToken);
 
             OrdersListBox.ItemsSource = orders;
             EmptyStateText.Visibility = orders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
             var today = DateTime.Today;
-            OrdersTodayText.Text = orders.Count(o => o.CreatedAt.ToLocalTime().Date == today).ToString();
-            PendingText.Text = orders.Count(o => o.Status == "PENDIENTE").ToString();
-            CompletedText.Text = orders.Count(o => o.Status == "COMPLETADA").ToString();
+            OrdersTodayText.Text = orders.Count(order => order.CreatedAt.ToLocalTime().Date == today).ToString();
+            PendingText.Text = orders.Count(order => order.Status == SalesDomainConstants.OrderStatuses.Pending).ToString();
+            CompletedText.Text = orders.Count(order => order.Status == SalesDomainConstants.OrderStatuses.Completed).ToString();
             ShownText.Text = orders.Count.ToString();
         }
         catch (OperationCanceledException)
@@ -82,30 +85,38 @@ public partial class HistorialVentasView : UserControl
 
     private async void OnCompleteOrderClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: ConfectionOrderSummary order })
+        if (sender is not Button { DataContext: ConfectionOrderSummary orderSummary })
         {
             return;
         }
 
-        if (order.Status != "PENDIENTE")
+        if (orderSummary.Status != SalesDomainConstants.OrderStatuses.Pending)
         {
-            MessageBox.Show("Solo se pueden facturar ordenes pendientes.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                "Solo se pueden facturar ordenes pendientes.",
+                "Confeccion",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
         if (_currentSession.CurrentEmployee is null)
         {
-            MessageBox.Show("No hay cajero autenticado.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                "No hay cajero autenticado.",
+                "Confeccion",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show(
-            $"Facturar la orden {order.OrderNumber} por {order.TotalText}?",
+        var confirmBilling = MessageBox.Show(
+            $"Facturar la orden {orderSummary.OrderNumber} por {orderSummary.TotalText}?",
             "Confeccion",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
-        if (confirm != MessageBoxResult.Yes)
+        if (confirmBilling != MessageBoxResult.Yes)
         {
             return;
         }
@@ -113,17 +124,28 @@ public partial class HistorialVentasView : UserControl
         try
         {
             await _orderService.CompleteConfectionOrderAsync(new CompleteConfectionOrderRequest(
-                order.OrderId,
+                orderSummary.OrderId,
                 _currentSession.CurrentEmployee.Id,
                 CashSessionId: null,
-                Payments: new[] { new CashSalePaymentRequest("EFECTIVO", order.Total) }));
+                Payments: new[]
+                {
+                    new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, orderSummary.Total)
+                }));
 
-            await LoadOrdersAsync();
-            MessageBox.Show("Orden facturada. DTE pendiente de Fase 4.", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Information);
+            await LoadConfectionOrdersAsync();
+            MessageBox.Show(
+                "Orden facturada. DTE pendiente de Fase 4.",
+                "Confeccion",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"No se pudo facturar la orden: {ex.Message}", "Confeccion", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                $"No se pudo facturar la orden: {ex.Message}",
+                "Confeccion",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 }

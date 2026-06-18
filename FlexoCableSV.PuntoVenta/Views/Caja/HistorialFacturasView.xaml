@@ -243,9 +243,9 @@
                                                 <ColumnDefinition Width="120" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding DateText}" Style="{StaticResource FlexoTableCellStyle}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding ControlText}" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Customer}" Style="{StaticResource FlexoTableCellStyle}" />
-                                            <TextBlock Grid.Column="3" Text="{Binding DteTypeText}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding ControlNumberText}" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding CustomerDisplayName}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding ChannelLabel}" Style="{StaticResource FlexoTableCellStyle}" />
                                             <TextBlock Grid.Column="4" Text="{Binding PaymentMethod}" Style="{StaticResource FlexoTableCellStyle}" />
                                             <TextBlock Grid.Column="5" Text="{Binding TotalText}" Style="{StaticResource FlexoTableCellStyle}" />
                                             <Border Grid.Column="6" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}">

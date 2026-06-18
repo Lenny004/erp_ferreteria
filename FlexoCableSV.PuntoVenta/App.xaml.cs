@@ -38,16 +38,16 @@ public partial class App : Application
             })
             .ConfigureServices((context, services) =>
             {
-                // Base de datos — usa el DatabaseConfig que ya hiciste
                 services.AddFlexoDatabase(context.Configuration);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
                 services.AddSingleton<IConnectivityService, ConnectivityService>();
                 services.AddSingleton<IAuditService, AuditService>();
                 services.AddSingleton<IPinAttemptService, PinAttemptService>();
-                services.AddSingleton<IInventoryService, InventarioService>();
+                services.AddSingleton<IInventoryService, InventoryService>();
                 services.AddSingleton<IOrderService, OrderService>();
                 services.AddSingleton<PinAuthService>();
+
                 services.AddTransient<PinWindow>();
                 services.AddTransient<InicioWindow>();
                 services.AddTransient<MainShellWindow>();

@@ -2,18 +2,20 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Caja;
 
+/// <summary>
+/// Punto de venta de mostrador: búsqueda de productos, carrito y registro de venta.
+/// </summary>
 public partial class FacturacionView : UserControl
 {
-    private const decimal IvaRate = 0.13m;
-
     private readonly IInventoryService _inventoryService;
     private readonly IOrderService _orderService;
     private readonly ICurrentSessionService _currentSession;
-    private readonly ObservableCollection<CartLine> _cartLines = new();
-    private CancellationTokenSource? _searchCancellation;
+    private readonly ObservableCollection<CartLineItem> _cartLineItems = new();
+    private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
     public FacturacionView(
         IInventoryService inventoryService,
@@ -25,10 +27,10 @@ public partial class FacturacionView : UserControl
         _currentSession = currentSession;
 
         InitializeComponent();
-        CartItemsControl.ItemsSource = _cartLines;
+        CartItemsControl.ItemsSource = _cartLineItems;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        RenderTotals();
+        RenderSaleTotals();
     }
 
     private async void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
@@ -38,8 +40,7 @@ public partial class FacturacionView : UserControl
 
     private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
+        _searchCoordinator.Dispose();
     }
 
     private async void OnProductSearchChanged(object sender, TextChangedEventArgs e)
@@ -49,169 +50,168 @@ public partial class FacturacionView : UserControl
 
     private async Task SearchProductsAsync()
     {
-        _searchCancellation?.Cancel();
-        _searchCancellation?.Dispose();
-        _searchCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCoordinator.BeginNewSearch();
 
         try
         {
             ProductResultsListBox.ItemsSource = await _inventoryService.SearchProductsAsync(
                 ProductSearchTextBox.Text,
-                null,
+                stockStatus: null,
                 take: 25,
-                cancellationToken: _searchCancellation.Token);
+                cancellationToken: cancellationToken);
         }
         catch (OperationCanceledException)
         {
         }
         catch (Exception ex)
         {
-            SetStatus($"No se pudo buscar productos: {ex.Message}", isError: true);
+            SetStatusMessage($"No se pudo buscar productos: {ex.Message}", isError: true);
         }
     }
 
     private void OnAgregarClick(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (ProductResultsListBox.SelectedItem is not InventoryProductResult product)
+        if (ProductResultsListBox.SelectedItem is not InventoryProductResult selectedProduct)
         {
-            SetStatus("Seleccione un producto.", isError: true);
+            SetStatusMessage("Seleccione un producto.", isError: true);
             return;
         }
 
         if (!decimal.TryParse(QuantityTextBox.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var quantity))
         {
-            SetStatus("Ingrese una cantidad valida.", isError: true);
+            SetStatusMessage("Ingrese una cantidad valida.", isError: true);
             return;
         }
 
         if (quantity <= 0)
         {
-            SetStatus("La cantidad debe ser mayor que cero.", isError: true);
+            SetStatusMessage("La cantidad debe ser mayor que cero.", isError: true);
             return;
         }
 
-        if (quantity > product.CurrentStock)
+        if (quantity > selectedProduct.CurrentStock)
         {
-            SetStatus("No hay stock suficiente para esa cantidad.", isError: true);
+            SetStatusMessage("No hay stock suficiente para esa cantidad.", isError: true);
             return;
         }
 
-        var existingLine = _cartLines.FirstOrDefault(l => l.ProductId == product.Id);
+        var existingLine = _cartLineItems.FirstOrDefault(line => line.ProductId == selectedProduct.Id);
         if (existingLine is not null)
         {
-            if (existingLine.Quantity + quantity > product.CurrentStock)
+            if (existingLine.Quantity + quantity > selectedProduct.CurrentStock)
             {
-                SetStatus("No hay stock suficiente para acumular esa cantidad.", isError: true);
+                SetStatusMessage("No hay stock suficiente para acumular esa cantidad.", isError: true);
                 return;
             }
 
             existingLine.Quantity += quantity;
-            RefreshCart();
+            RefreshCartItems();
         }
         else
         {
-            _cartLines.Add(new CartLine(product, quantity));
+            _cartLineItems.Add(new CartLineItem(selectedProduct, quantity));
         }
 
         QuantityTextBox.Text = "1";
-        SetStatus("Producto agregado.");
-        RenderTotals();
+        SetStatusMessage("Producto agregado.");
+        RenderSaleTotals();
     }
 
     private async void OnFacturarClick(object sender, System.Windows.RoutedEventArgs e)
     {
         if (_currentSession.CurrentEmployee is null)
         {
-            SetStatus("No hay cajero autenticado.", isError: true);
+            SetStatusMessage("No hay cajero autenticado.", isError: true);
             return;
         }
 
-        if (_cartLines.Count == 0)
+        if (_cartLineItems.Count == 0)
         {
-            SetStatus("Agregue al menos un producto.", isError: true);
+            SetStatusMessage("Agregue al menos un producto.", isError: true);
             return;
         }
 
-        var paymentMethod = (PaymentMethodCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "EFECTIVO";
-        var total = CalculateTotal();
+        var paymentMethod = (PaymentMethodCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+            ?? SalesDomainConstants.PaymentMethods.Cash;
+        var grandTotal = CalculateGrandTotal();
 
         try
         {
-            var result = await _orderService.CreateCashSaleAsync(new CreateCashSaleRequest(
+            var saleResult = await _orderService.CreateCashSaleAsync(new CreateCashSaleRequest(
                 _currentSession.CurrentEmployee.Id,
                 CashSessionId: null,
                 CustomerId: null,
                 ClientRequestId: Guid.NewGuid(),
-                Lines: _cartLines.Select(l => new CashSaleLineRequest(l.ProductId, l.Quantity)).ToList(),
-                Payments: new[] { new CashSalePaymentRequest(paymentMethod, total) },
+                Lines: _cartLineItems.Select(line => new CashSaleLineRequest(line.ProductId, line.Quantity)).ToList(),
+                Payments: new[] { new CashSalePaymentRequest(paymentMethod, grandTotal) },
                 Notes: "Venta registrada desde WPF"));
 
-            _cartLines.Clear();
-            RenderTotals();
+            _cartLineItems.Clear();
+            RenderSaleTotals();
             await SearchProductsAsync();
-            SetStatus($"Venta registrada: {result.OrderId}. DTE pendiente de Fase 4.");
+            SetStatusMessage($"Venta registrada: {saleResult.OrderId}. DTE pendiente de Fase 4.");
         }
         catch (Exception ex)
         {
-            SetStatus($"No se pudo registrar la venta: {ex.Message}", isError: true);
+            SetStatusMessage($"No se pudo registrar la venta: {ex.Message}", isError: true);
         }
     }
 
     private void OnLimpiarClick(object sender, System.Windows.RoutedEventArgs e)
     {
-        _cartLines.Clear();
-        RenderTotals();
-        SetStatus("Orden limpiada.");
+        _cartLineItems.Clear();
+        RenderSaleTotals();
+        SetStatusMessage("Orden limpiada.");
     }
 
     private void OnRemoveCartLineClick(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: CartLine line })
+        if (sender is not Button { DataContext: CartLineItem cartLine })
         {
             return;
         }
 
-        _cartLines.Remove(line);
-        RenderTotals();
-        SetStatus("Linea removida.");
+        _cartLineItems.Remove(cartLine);
+        RenderSaleTotals();
+        SetStatusMessage("Linea removida.");
     }
 
-    private void RefreshCart()
+    private void RefreshCartItems()
     {
         CartItemsControl.ItemsSource = null;
-        CartItemsControl.ItemsSource = _cartLines;
+        CartItemsControl.ItemsSource = _cartLineItems;
     }
 
     private decimal CalculateSubtotal()
     {
-        return _cartLines.Sum(l => l.Subtotal);
+        return _cartLineItems.Sum(line => line.Subtotal);
     }
 
-    private decimal CalculateTotal()
+    private decimal CalculateGrandTotal()
     {
-        var subtotal = CalculateSubtotal();
-        return subtotal + Math.Round(subtotal * IvaRate, 2, MidpointRounding.AwayFromZero);
+        return TaxAmountCalculator.CalculateGrandTotal(CalculateSubtotal());
     }
 
-    private void RenderTotals()
+    private void RenderSaleTotals()
     {
         var subtotal = CalculateSubtotal();
-        var tax = Math.Round(subtotal * IvaRate, 2, MidpointRounding.AwayFromZero);
-        var total = subtotal + tax;
+        var taxAmount = TaxAmountCalculator.CalculateTaxAmount(subtotal);
+        var grandTotal = TaxAmountCalculator.CalculateGrandTotal(subtotal);
 
-        HeaderTotalText.Text = total.ToString("C2");
+        HeaderTotalText.Text = grandTotal.ToString("C2");
         SubtotalText.Text = $"Subtotal: {subtotal:C2}";
-        TaxText.Text = $"IVA: {tax:C2}";
-        TotalText.Text = $"Total: {total:C2}";
+        TaxText.Text = $"IVA: {taxAmount:C2}";
+        TotalText.Text = $"Total: {grandTotal:C2}";
     }
 
-    private void SetStatus(string message, bool isError = false)
+    private void SetStatusMessage(string message, bool isError = false)
     {
         StatusText.Text = message;
         StatusText.Foreground = (System.Windows.Media.Brush)FindResource(isError ? "FlexoError" : "FlexoSuccess");
     }
 
-    private sealed class CartLine(InventoryProductResult product, decimal quantity)
+    /// <summary>Línea temporal del carrito de venta en mostrador.</summary>
+    private sealed class CartLineItem(InventoryProductResult product, decimal quantity)
     {
         public Guid ProductId { get; } = product.Id;
         public string Description { get; } = product.Description;

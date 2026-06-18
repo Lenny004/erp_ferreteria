@@ -1,13 +1,17 @@
 using System.Windows;
 using System.Windows.Controls;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Services.Domain;
 
 namespace FlexoCableSV.PuntoVenta.Views.Caja;
 
+/// <summary>
+/// Historial de ventas completadas (mostrador y taller facturado).
+/// </summary>
 public partial class HistorialFacturasView : UserControl
 {
     private readonly IOrderService _orderService;
-    private CancellationTokenSource? _loadCancellation;
+    private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
     public HistorialFacturasView(IOrderService orderService)
     {
@@ -19,39 +23,36 @@ public partial class HistorialFacturasView : UserControl
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        await LoadSalesAsync();
+        await LoadCompletedSalesAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
+        _searchCoordinator.Dispose();
     }
 
     private async void OnSearchChanged(object sender, TextChangedEventArgs e)
     {
-        await LoadSalesAsync();
+        await LoadCompletedSalesAsync();
     }
 
-    private async Task LoadSalesAsync()
+    private async Task LoadCompletedSalesAsync()
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
-        _loadCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCoordinator.BeginNewSearch();
 
         try
         {
-            var sales = await _orderService.GetCompletedSalesAsync(
+            var completedSales = await _orderService.GetCompletedSalesAsync(
                 SearchTextBox.Text,
-                cancellationToken: _loadCancellation.Token);
+                cancellationToken: cancellationToken);
 
-            SalesListBox.ItemsSource = sales;
-            EmptyStateText.Visibility = sales.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            SalesListBox.ItemsSource = completedSales;
+            EmptyStateText.Visibility = completedSales.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
             var today = DateTime.Today;
-            IssuedTodayText.Text = sales.Count(s => s.CreatedAt.ToLocalTime().Date == today).ToString();
-            TotalBilledText.Text = sales.Sum(s => s.Total).ToString("C2");
-            ShownText.Text = sales.Count.ToString();
+            IssuedTodayText.Text = completedSales.Count(sale => sale.CreatedAt.ToLocalTime().Date == today).ToString();
+            TotalBilledText.Text = completedSales.Sum(sale => sale.Total).ToString("C2");
+            ShownText.Text = completedSales.Count.ToString();
         }
         catch (OperationCanceledException)
         {

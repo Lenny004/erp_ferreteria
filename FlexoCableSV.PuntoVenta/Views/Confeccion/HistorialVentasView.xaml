@@ -245,9 +245,9 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding OrderNumber}" Style="{StaticResource FlexoTableCellStyle}" Foreground="{StaticResource FlexoRojo}" />
                                             <TextBlock Grid.Column="1" Text="{Binding DateText}" Style="{StaticResource FlexoTableCellStyle}" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Customer}" Style="{StaticResource FlexoTableCellStyle}" />
-                                            <TextBlock Grid.Column="3" Text="{Binding Employee}" Style="{StaticResource FlexoTableCellStyle}" />
-                                            <TextBlock Grid.Column="4" Text="{Binding Application}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding CustomerDisplayName}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding EmployeeDisplayName}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            <TextBlock Grid.Column="4" Text="{Binding ApplicationLabel}" Style="{StaticResource FlexoTableCellStyle}" />
                                             <TextBlock Grid.Column="5" Text="{Binding TotalText}" Style="{StaticResource FlexoTableCellStyle}" />
                                             <Border Grid.Column="6" Style="{StaticResource FlexoBadgeStyle}" Background="{StaticResource FlexoAzulClaro}">
                                                 <TextBlock Text="{Binding Status}" Foreground="{StaticResource FlexoBlanco}" FontSize="{StaticResource FlexoFontSize_XS}" />
