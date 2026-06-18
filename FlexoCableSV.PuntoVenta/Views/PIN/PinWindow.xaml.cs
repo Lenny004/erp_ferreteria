@@ -18,13 +18,27 @@ public partial class PinWindow : Window
 
     private readonly PinAuthService _pinAuth;
     private readonly IServiceProvider _services;
+    private readonly ICurrentSessionService _currentSession;
+    private readonly IAuditService _auditService;
+    private readonly IPinAttemptService _pinAttemptService;
+    private readonly string _initialSection;
     private string _pinActual = string.Empty;
     private bool _validando;
 
-    public PinWindow(PinAuthService pinAuth, IServiceProvider services)
+    public PinWindow(
+        PinAuthService pinAuth,
+        IServiceProvider services,
+        ICurrentSessionService currentSession,
+        IAuditService auditService,
+        IPinAttemptService pinAttemptService,
+        string initialSection = "Facturacion")
     {
         _pinAuth = pinAuth;
         _services = services;
+        _currentSession = currentSession;
+        _auditService = auditService;
+        _pinAttemptService = pinAttemptService;
+        _initialSection = initialSection;
 
         InitializeComponent();
 
@@ -95,6 +109,9 @@ public partial class PinWindow : Window
         if (_validando)
             return;
 
+        if (MostrarBloqueoSiAplica())
+            return;
+
         OcultarError();
 
         if (_pinActual.Length >= PinLength || string.IsNullOrEmpty(digito))
@@ -132,6 +149,9 @@ public partial class PinWindow : Window
         if (_validando)
             return;
 
+        if (MostrarBloqueoSiAplica())
+            return;
+
         if (_pinActual.Length < PinLength)
         {
             MostrarError("Ingresa los 4 digitos completos.");
@@ -144,15 +164,18 @@ public partial class PinWindow : Window
             var employee = await _pinAuth.ValidatePinAsync(_pinActual);
             if (employee is null)
             {
-                MostrarError("PIN incorrecto. Intente de nuevo.");
+                var status = _pinAttemptService.RegisterFailedAttempt();
+                MostrarError(BuildFailedAttemptMessage(status));
                 AnimarError();
                 LimpiarPin();
                 return;
             }
 
-            PosSession.Set(employee);
+            _pinAttemptService.Reset();
+            _currentSession.StartSession(employee, _initialSection);
+            await _auditService.RecordLoginAsync(employee, _initialSection);
 
-            var shell = new MainShellWindow("Facturacion");
+            var shell = ActivatorUtilities.CreateInstance<MainShellWindow>(_services, _initialSection);
             shell.Show();
             Close();
         }
@@ -185,6 +208,32 @@ public partial class PinWindow : Window
     {
         ErrorMsg.Text = mensaje;
         ErrorPanel.Visibility = Visibility.Visible;
+    }
+
+    private bool MostrarBloqueoSiAplica()
+    {
+        var status = _pinAttemptService.GetStatus();
+        if (!status.IsLocked)
+        {
+            return false;
+        }
+
+        MostrarError(BuildLockoutMessage(status));
+        LimpiarPin();
+        return true;
+    }
+
+    private static string BuildFailedAttemptMessage(PinAttemptStatus status)
+    {
+        return status.IsLocked
+            ? BuildLockoutMessage(status)
+            : $"PIN incorrecto. Intentos restantes: {status.RemainingAttempts}.";
+    }
+
+    private static string BuildLockoutMessage(PinAttemptStatus status)
+    {
+        var seconds = Math.Max(1, (int)Math.Ceiling(status.RemainingLockout.TotalSeconds));
+        return $"Demasiados intentos. Espere {seconds} segundos.";
     }
 
     private void OcultarError()

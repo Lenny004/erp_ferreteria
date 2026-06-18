@@ -36,52 +36,12 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition
                         Width="*" />
-                    <ColumnDefinition
-                        Width="150" />
-                    <ColumnDefinition
-                        Width="150" />
-                    <ColumnDefinition
-                        Width="150" />
                 </Grid.ColumnDefinitions>
                 <TextBox
+                    x:Name="SearchTextBox"
                     Style="{StaticResource FlexoFieldTextBoxStyle}"
-                    helpers:WatermarkService.Watermark="Buscar codigo o descripcion" />
-                <ComboBox
-                    Grid.Column="1"
-                    Style="{StaticResource FlexoFieldComboBoxStyle}"
-                    Margin="10,0,0,0"
-                    SelectedIndex="0">
-                    <ComboBoxItem
-                        Content="Familia" />
-                    <ComboBoxItem
-                        Content="Cables" />
-                    <ComboBoxItem
-                        Content="Boquillas" />
-                </ComboBox>
-                <ComboBox
-                    Grid.Column="2"
-                    Style="{StaticResource FlexoFieldComboBoxStyle}"
-                    Margin="10,0,0,0"
-                    SelectedIndex="0">
-                    <ComboBoxItem
-                        Content="Subfamilia" />
-                    <ComboBoxItem
-                        Content="Acelerador" />
-                    <ComboBoxItem
-                        Content="Freno" />
-                </ComboBox>
-                <ComboBox
-                    Grid.Column="3"
-                    Style="{StaticResource FlexoFieldComboBoxStyle}"
-                    Margin="10,0,0,0"
-                    SelectedIndex="0">
-                    <ComboBoxItem
-                        Content="Medida" />
-                    <ComboBoxItem
-                        Content="METRO" />
-                    <ComboBoxItem
-                        Content="PIEZA" />
-                </ComboBox>
+                    helpers:WatermarkService.Watermark="Buscar codigo, descripcion, familia o codigo de barra"
+                    TextChanged="OnSearchChanged" />
             </Grid>
             <Grid
                 Grid.Row="2">
@@ -97,8 +57,13 @@
                     BorderThickness="1"
                     CornerRadius="{StaticResource FlexoRadius_MD}"
                     Margin="0,0,12,0">
-                    <StackPanel>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="40" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
                         <Grid
+                            Grid.Row="0"
                             Height="40"
                             Style="{StaticResource FlexoGridHeaderStyle}">
                             <Grid.ColumnDefinitions>
@@ -139,95 +104,62 @@
                                 Text="PRECIO"
                                 Style="{StaticResource FlexoGridHeaderTextStyle}" />
                         </Grid>
-                        <Border
-                            Style="{StaticResource FlexoDataGridRowStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition
-                                        Width="130" />
-                                    <ColumnDefinition
-                                        Width="*" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="90" />
-                                    <ColumnDefinition
-                                        Width="90" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    Text="01-CGA-03"
-                                    Style="{StaticResource FlexoTableCellStyle}"
-                                    Foreground="{StaticResource FlexoRojo}" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="Cable galvanizado acero #3"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="Cables"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="3"
-                                    Text="METRO"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="4"
-                                    Text="128.5"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="5"
-                                    Text="$12.50"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                            </Grid>
-                        </Border>
-                        <Border
-                            Style="{StaticResource FlexoDataGridRowStyle}"
-                            Background="{StaticResource FlexoAzulFilaAlt}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition
-                                        Width="130" />
-                                    <ColumnDefinition
-                                        Width="*" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="90" />
-                                    <ColumnDefinition
-                                        Width="90" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    Text="02-AC-01"
-                                    Style="{StaticResource FlexoTableCellStyle}"
-                                    Foreground="{StaticResource FlexoRojo}" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="Boquilla acelerador #1"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="Boquillas"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="3"
-                                    Text="PIEZA"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="4"
-                                    Text="8"
-                                    Style="{StaticResource FlexoTableCellStyle}"
-                                    Foreground="{StaticResource FlexoWarning}" />
-                                <TextBlock
-                                    Grid.Column="5"
-                                    Text="$7.10"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                            </Grid>
-                        </Border>
-                    </StackPanel>
+                        <Grid Grid.Row="1">
+                            <TextBlock
+                                x:Name="EmptyStateText"
+                                Text="Sin codigos para mostrar."
+                                Style="{StaticResource FlexoTableCellStyle}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed" />
+                            <ListBox
+                                x:Name="ProductsListBox"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                SelectionChanged="OnSelectedProductChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource FlexoDataGridRowStyle}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="130" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="90" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock
+                                                    Text="{Binding Code}"
+                                                    Style="{StaticResource FlexoTableCellStyle}"
+                                                    Foreground="{StaticResource FlexoRojo}" />
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    Text="{Binding Description}"
+                                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock
+                                                    Grid.Column="2"
+                                                    Text="{Binding Family}"
+                                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock
+                                                    Grid.Column="3"
+                                                    Text="{Binding Measurement}"
+                                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock
+                                                    Grid.Column="4"
+                                                    Text="{Binding FormattedStock}"
+                                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock
+                                                    Grid.Column="5"
+                                                    Text="{Binding PriceText}"
+                                                    Style="{StaticResource FlexoTableCellStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
                 </Border>
                 <Border
                     Grid.Column="1"
@@ -237,40 +169,48 @@
                             Text="Detalle del codigo"
                             Style="{StaticResource FlexoCardLabelStyle}" />
                         <TextBlock
-                            Text="01-CGA-03"
+                            x:Name="DetailCodeText"
+                            Text="Sin seleccion"
                             Foreground="{StaticResource FlexoRojo}"
                             FontSize="{StaticResource FlexoFontSize_XL}"
                             FontWeight="Bold"
                             Margin="0,12,0,6" />
                         <TextBlock
-                            Text="Cable galvanizado acero #3"
+                            x:Name="DetailDescriptionText"
+                            Text="Selecciona un codigo del listado."
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,16" />
                         <TextBlock
-                            Text="Familia: Cables"
+                            x:Name="DetailFamilyText"
+                            Text="Familia: -"
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,6" />
                         <TextBlock
-                            Text="Tipo medida: METRO"
+                            x:Name="DetailMeasurementText"
+                            Text="Tipo medida: -"
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,6" />
                         <TextBlock
-                            Text="Unidad: metros"
+                            x:Name="DetailUnitText"
+                            Text="Unidad: -"
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,6" />
                         <TextBlock
-                            Text="Stock actual: 128.50 m"
+                            x:Name="DetailStockText"
+                            Text="Stock actual: -"
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,6" />
                         <TextBlock
-                            Text="Precio: $12.50"
+                            x:Name="DetailPriceText"
+                            Text="Precio: -"
                             Style="{StaticResource FlexoTableCellStyle}"
                             Margin="0,0,0,20" />
                         <Border
                             Style="{StaticResource FlexoBadgeStyle}"
                             Background="{StaticResource FlexoAzulClaro}">
                             <TextBlock
-                                Text="ACTIVO / STOCK OK"
+                                x:Name="DetailStatusText"
+                                Text="SIN DATOS"
                                 Foreground="{StaticResource FlexoSuccess}"
                                 FontSize="{StaticResource FlexoFontSize_XS}" />
                         </Border>

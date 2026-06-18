@@ -101,10 +101,12 @@
                                 </ComboBox>
                             </Grid>
                             <TextBox
+                            x:Name="CustomerNameTextBox"
                             Style="{StaticResource FlexoFieldTextBoxStyle}"
                             helpers:WatermarkService.Watermark="Cliente"
                             Margin="0,0,0,8" />
                             <TextBox
+                            x:Name="NotesTextBox"
                             Style="{StaticResource FlexoFieldTextBoxStyle}"
                             helpers:WatermarkService.Watermark="Notas"
                             Height="48"
@@ -113,6 +115,7 @@
                             Style="{StaticResource FlexoActionButtonStyle}"
                             Margin="0,12,0,0"
                             HorizontalAlignment="Right"
+                            Click="OnAddLineClick"
                             ClipToBounds="True">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -155,99 +158,37 @@
                                         Width="96" />
                                 </Grid.ColumnDefinitions>
                                 <ComboBox
+                                    x:Name="ProductComboBox"
                                     Style="{StaticResource FlexoFieldComboBoxStyle}"
-                                    SelectedIndex="0">
-                                    <ComboBoxItem
-                                        Content="Codigo" />
-                                    <ComboBoxItem
-                                        Content="01-CGA-03 Cable galvanizado" />
-                                    <ComboBoxItem
-                                        Content="02-AC-01 Boquilla acelerador" />
-                                    <ComboBoxItem
-                                        Content="03-FR-02 Cable freno" />
-                                </ComboBox>
-                                <ComboBox
+                                    DisplayMemberPath="Description" />
+                                <TextBox
+                                    x:Name="QuantityTextBox"
                                     Grid.Column="1"
-                                    Style="{StaticResource FlexoFieldComboBoxStyle}"
+                                    Style="{StaticResource FlexoFieldTextBoxStyle}"
                                     Margin="8,0,0,0"
-                                    SelectedIndex="0">
-                                    <ComboBoxItem
-                                        Content="Cant." />
-                                    <ComboBoxItem
-                                        Content="1" />
-                                    <ComboBoxItem
-                                        Content="2" />
-                                    <ComboBoxItem
-                                        Content="3" />
-                                    <ComboBoxItem
-                                        Content="4" />
-                                    <ComboBoxItem
-                                        Content="5" />
-                                    <ComboBoxItem
-                                        Content="10" />
-                                </ComboBox>
+                                    Text="1"
+                                    helpers:WatermarkService.Watermark="Cant." />
                             </Grid>
-                            <Border
-                            Style="{StaticResource FlexoDataGridRowStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition
-                                        Width="*" />
-                                        <ColumnDefinition
-                                        Width="80" />
-                                        <ColumnDefinition
-                                        Width="80" />
-                                        <ColumnDefinition
-                                        Width="90" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock
-                                    Text="01-CGA-03 Cable galvanizado"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="1"
-                                    Text="METRO"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="2"
-                                    Text="4.00"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="3"
-                                    Text="$50.00"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                </Grid>
-                            </Border>
-                            <Border
-                            Style="{StaticResource FlexoDataGridRowStyle}"
-                            Background="{StaticResource FlexoAzulFilaAlt}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition
-                                        Width="*" />
-                                        <ColumnDefinition
-                                        Width="80" />
-                                        <ColumnDefinition
-                                        Width="80" />
-                                        <ColumnDefinition
-                                        Width="90" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock
-                                    Text="02-AC-01 Boquilla acelerador"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="1"
-                                    Text="PIEZA"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="2"
-                                    Text="2"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                    <TextBlock
-                                    Grid.Column="3"
-                                    Text="$14.20"
-                                    Style="{StaticResource FlexoTableCellStyle}" />
-                                </Grid>
-                            </Border>
+                            <ItemsControl x:Name="LinesItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource FlexoDataGridRowStyle}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="90" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Description}" Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Measurement}" Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding QuantityText}" Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock Grid.Column="3" Text="{Binding SubtotalText}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -286,7 +227,8 @@
                                         Text="Items"
                                         Style="{StaticResource FlexoCardLabelStyle}" />
                                     <TextBlock
-                                        Text="2"
+                                        x:Name="ItemsText"
+                                        Text="0"
                                         FontSize="{StaticResource FlexoFontSize_LG}"
                                         FontWeight="Bold"
                                         Foreground="{StaticResource FlexoBlanco}" />
@@ -297,7 +239,8 @@
                                         Text="Subtotal"
                                         Style="{StaticResource FlexoCardLabelStyle}" />
                                     <TextBlock
-                                        Text="$64.20"
+                                        x:Name="SubtotalText"
+                                        Text="$0.00"
                                         FontSize="{StaticResource FlexoFontSize_LG}"
                                         FontWeight="Bold"
                                         Foreground="{StaticResource FlexoBlanco}" />
@@ -308,7 +251,8 @@
                                         Text="IVA"
                                         Style="{StaticResource FlexoCardLabelStyle}" />
                                     <TextBlock
-                                        Text="$8.35"
+                                        x:Name="TaxText"
+                                        Text="$0.00"
                                         FontSize="{StaticResource FlexoFontSize_LG}"
                                         FontWeight="Bold"
                                         Foreground="{StaticResource FlexoBlanco}" />
@@ -320,7 +264,8 @@
                                         Text="Total"
                                         Style="{StaticResource FlexoCardLabelStyle}" />
                                     <TextBlock
-                                        Text="$72.55"
+                                        x:Name="TotalText"
+                                        Text="$0.00"
                                         FontSize="{StaticResource FlexoFontSize_LG}"
                                         FontWeight="Bold"
                                         Foreground="{StaticResource FlexoSuccess}" />
@@ -341,6 +286,7 @@
                                 <Button
                                     Style="{StaticResource FlexoSecondaryWideButtonStyle}"
                                     MinWidth="100"
+                                    Click="OnClearClick"
                                     HorizontalContentAlignment="Center">
                                     <TextBlock
                                         Text="BORRAR"
@@ -363,9 +309,10 @@
                                 Style="{StaticResource FlexoPrimaryWideButtonStyle}"
                                 MinWidth="100"
                                 Margin="6,0,6,52"
+                                Click="OnCreateOrderClick"
                                 HorizontalContentAlignment="Center">
                                 <TextBlock
-                                    Text="FINALIZAR"
+                                    Text="GUARDAR"
                                     Foreground="{StaticResource FlexoBlanco}"
                                     FontWeight="Bold" />
                             </Button>

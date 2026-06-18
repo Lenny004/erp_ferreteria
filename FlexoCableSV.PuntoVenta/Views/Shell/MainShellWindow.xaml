@@ -361,6 +361,7 @@
             Style="{StaticResource FlexoStatusBarStyle}">
             <Grid>
                 <TextBlock
+                    x:Name="SessionText"
                     Text="FlexoCable El Salvador 2026"
                     Style="{StaticResource FlexoStatusBarTextStyle}" />
                 <StackPanel
@@ -375,7 +376,8 @@
                         Margin="0,0,16,0"
                         Cursor="Hand" />
                     <TextBlock
-                        Text="System Status"
+                        x:Name="ConnectivityText"
+                        Text="Verificando conexion"
                         Foreground="{StaticResource FlexoGris}"
                         FontSize="{StaticResource FlexoFontSize_XS}"
                         Margin="0,0,16,0"

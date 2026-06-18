@@ -34,15 +34,15 @@ public partial class InicioWindow : Window
 
     private void OnVentasClick(object sender, RoutedEventArgs e)
     {
-        var pinWindow = _services.GetRequiredService<PinWindow>();
+        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(_services, "Facturacion");
         pinWindow.Show();
         Close();
     }
 
     private void OnInventarioClick(object sender, RoutedEventArgs e)
     {
-        var shell = new MainShellWindow("HistorialVentas");
-        shell.Show();
+        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(_services, "HistorialVentas");
+        pinWindow.Show();
         Close();
     }
 }

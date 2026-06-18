@@ -1,7 +1,10 @@
 ﻿using FlexoCableSV.PuntoVenta.Data;
 using FlexoCableSV.PuntoVenta.Services;
+using FlexoCableSV.PuntoVenta.Views.Caja;
+using FlexoCableSV.PuntoVenta.Views.Confeccion;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
 using FlexoCableSV.PuntoVenta.Views.PIN;
+using FlexoCableSV.PuntoVenta.Views.Shell;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,9 +41,20 @@ public partial class App : Application
                 // Base de datos — usa el DatabaseConfig que ya hiciste
                 services.AddFlexoDatabase(context.Configuration);
 
+                services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
+                services.AddSingleton<IConnectivityService, ConnectivityService>();
+                services.AddSingleton<IAuditService, AuditService>();
+                services.AddSingleton<IPinAttemptService, PinAttemptService>();
+                services.AddSingleton<IInventoryService, InventarioService>();
+                services.AddSingleton<IOrderService, OrderService>();
                 services.AddSingleton<PinAuthService>();
                 services.AddTransient<PinWindow>();
                 services.AddTransient<InicioWindow>();
+                services.AddTransient<MainShellWindow>();
+                services.AddTransient<FacturacionView>();
+                services.AddTransient<ConsultarStockView>();
+                services.AddTransient<OrdenesConfeccionView>();
+                services.AddTransient<VerCodigosView>();
             })
             .Build();
     }
