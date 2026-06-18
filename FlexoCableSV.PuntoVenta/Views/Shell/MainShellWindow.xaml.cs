@@ -37,7 +37,7 @@ public partial class MainShellWindow : Window
         {
             ["Stock"] = (BtnStock, "Consultar Stock", () => _serviceProvider.GetRequiredService<ConsultarStockView>()),
             ["Facturacion"] = (BtnFacturacion, "Facturacion", () => _serviceProvider.GetRequiredService<FacturacionView>()),
-            ["HistorialFacturas"] = (BtnHistorialFacturas, "Historial de Facturas", () => new HistorialFacturasView()),
+            ["HistorialFacturas"] = (BtnHistorialFacturas, "Historial de Facturas", () => _serviceProvider.GetRequiredService<HistorialFacturasView>()),
             ["Impresoras"] = (BtnImpresoras, "Impresoras", () => new ImpresorasView()),
             ["Devoluciones"] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
             ["CorteCaja"] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
