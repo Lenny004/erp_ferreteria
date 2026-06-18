@@ -2,19 +2,25 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Cabecera de venta u orden de confección. Tabla <c>sales.Orders</c>.</summary>
 public class Order
 {
     [Key]
     public Guid Id { get; set; }
+
     public Guid EmployeeId { get; set; }
     public Guid? CashSessionId { get; set; }
     public Guid? CustomerId { get; set; }
 
+    /// <summary>VENTA_CAJA | ORDEN_CONFECCION.</summary>
     [Required, MaxLength(20)]
     public string OrderType { get; set; } = "VENTA_CAJA";
 
+    /// <summary>Idempotencia del cliente WPF ante reintentos offline.</summary>
     public Guid ClientRequestId { get; set; } = Guid.NewGuid();
 
+    /// <summary>PENDIENTE | COMPLETADA | CANCELADA.</summary>
     [Required, MaxLength(20)]
     public string Status { get; set; } = "PENDIENTE";
 
@@ -26,13 +32,16 @@ public class Order
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
+
+    /// <summary>En confección puede incluir cliente/teléfono hasta tener campos dedicados.</summary>
     public string? Notes { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     [ForeignKey(nameof(EmployeeId))]
     public Employee Employee { get; set; } = null!;
 

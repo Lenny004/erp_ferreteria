@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Departamento organizacional. Tabla <c>hr.Departments</c>.</summary>
 public class Department
 {
     [Key]
@@ -9,18 +11,20 @@ public class Department
 
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
+
     public Guid? ParentId { get; set; }
 
     [MaxLength(300)]
     public string? Description { get; set; }
 
     public bool IsActive { get; set; } = true;
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     [ForeignKey(nameof(ParentId))]
     public Department? Parent { get; set; }
 

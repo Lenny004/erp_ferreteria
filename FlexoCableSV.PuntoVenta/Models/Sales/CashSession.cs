@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 
+/// <summary>Turno de caja. Tabla <c>sales.CashSessions</c>.</summary>
 public class CashSession
 {
     [Key]
@@ -31,6 +32,7 @@ public class CashSession
     [Column(TypeName = "numeric(12,2)")]
     public decimal? Difference { get; set; }
 
+    /// <summary>ABIERTA | CERRADA | CANCELADA.</summary>
     [Required, MaxLength(20)]
     public string Status { get; set; } = "ABIERTA";
 

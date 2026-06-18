@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Proveedor. Tabla <c>purchasing.Suppliers</c> (solo lectura en WPF).</summary>
 public class Supplier
 {
     [Key]
@@ -47,8 +49,7 @@ public class Supplier
 
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    // Purchasing is administered by the backend; WPF keeps this read-only shape for lookups.
 }

@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Datos del emisor para DTE. Tabla <c>dte.DteConfig</c>.</summary>
 public class DteConfig
 {
     [Key]
@@ -37,12 +39,15 @@ public class DteConfig
     [MaxLength(100)]
     public string? Email { get; set; }
 
+    /// <summary>00 = pruebas, 01 = producción.</summary>
     [Required, MaxLength(5)]
     public string Ambiente { get; set; } = "00";
 
     public bool IsActive { get; set; } = true;
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

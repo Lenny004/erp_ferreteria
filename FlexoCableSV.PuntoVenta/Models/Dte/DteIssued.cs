@@ -2,20 +2,26 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Documento tributario emitido. Tabla <c>dte.DteIssued</c>.</summary>
 public class DteIssued
 {
     [Key]
     public Guid Id { get; set; }
+
     public Guid? OrderId { get; set; }
 
+    /// <summary>01 factura, 03 CCF, 05 nota crédito, etc.</summary>
     [Required, MaxLength(2)]
     public string DteType { get; set; } = string.Empty;
 
     [Required, MaxLength(50)]
     public string ControlNumber { get; set; } = string.Empty;
+
     public Guid GenerationCode { get; set; } = Guid.NewGuid();
     public Guid? RelatedDteId { get; set; }
 
+    /// <summary>PENDIENTE, PROCESADO, RECHAZADO.</summary>
     [Required, MaxLength(20)]
     public string MhStatus { get; set; } = "PENDIENTE";
 
@@ -53,7 +59,6 @@ public class DteIssued
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     [ForeignKey(nameof(OrderId))]
     public Order? Order { get; set; }
 

@@ -2,12 +2,16 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Kardex de inventario. Tabla <c>public.InventoryMovements</c>.</summary>
 public class InventoryMovement
 {
     [Key]
     public Guid Id { get; set; }
+
     public Guid ProductId { get; set; }
 
+    /// <summary>ENTRADA, SALIDA, AJUSTE, VENTA, etc.</summary>
     [Required, MaxLength(30)]
     public string MovementType { get; set; } = string.Empty;
 
@@ -36,7 +40,6 @@ public class InventoryMovement
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     [ForeignKey(nameof(ProductId))]
     public Product Product { get; set; } = null!;
 

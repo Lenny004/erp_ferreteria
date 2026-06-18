@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
 
+/// <summary>Pago de una orden completada. Tabla <c>sales.Payments</c>.</summary>
 public class Payment
 {
     [Key]
@@ -11,6 +12,7 @@ public class Payment
     public Guid OrderId { get; set; }
     public Guid? CashSessionId { get; set; }
 
+    /// <summary>EFECTIVO, TARJETA, TRANSFERENCIA, OTRO.</summary>
     [Required, MaxLength(20)]
     public string Method { get; set; } = string.Empty;
 

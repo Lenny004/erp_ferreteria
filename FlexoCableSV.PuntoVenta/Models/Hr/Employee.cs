@@ -2,12 +2,14 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Empleado de taller o caja. Tabla <c>hr.Employees</c>.</summary>
 public class Employee
 {
     [Key]
     public Guid Id { get; set; }
 
-    // Identity
+    // Identidad
     [Required, MaxLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
@@ -32,14 +34,14 @@ public class Employee
     public string? Gender { get; set; }
 
     [MaxLength(20)]
-    public string? Nationality { get; set; } = "SALVADORE�A";
+    public string? Nationality { get; set; } = "SALVADOREÑA";
 
     [MaxLength(30)]
     public string? PassportNumber { get; set; }
 
     public string? DependentsDescription { get; set; }
 
-    // Job
+    // Puesto y contrato
     public Guid? PositionId { get; set; }
     public Guid? DepartmentId { get; set; }
     public Guid? DirectSupervisorId { get; set; }
@@ -50,9 +52,11 @@ public class Employee
     [Column(TypeName = "numeric(10,2)")]
     public decimal BaseSalary { get; set; }
 
+    /// <summary>PLAZO_FIJO, TIEMPO_PARCIAL, HONORARIOS, PASANTE.</summary>
     [Required, MaxLength(20)]
     public string ContractType { get; set; } = "PLAZO_FIJO";
 
+    /// <summary>MENSUAL, QUINCENAL, SEMANAL.</summary>
     [Required, MaxLength(20)]
     public string SalaryType { get; set; } = "MENSUAL";
 
@@ -69,7 +73,7 @@ public class Employee
     public bool IsssEnrolled { get; set; } = true;
     public DateTime? IsssEnrollmentDate { get; set; }
 
-    // Contact
+    // Contacto
     [MaxLength(20)]
     public string? Phone { get; set; }
 
@@ -83,24 +87,27 @@ public class Employee
     [MaxLength(30)]
     public string? PaymentChannel { get; set; } = "DEPOSITO_BANCARIO";
 
-    // Personal
     [MaxLength(20)]
     public string? MaritalStatus { get; set; }
 
     [MaxLength(50)]
     public string? AcademicLevel { get; set; }
 
-    // POS access (replaces technicians table)
+    // Acceso punto de venta
+    /// <summary>Hash bcrypt del PIN. Validado por <see cref="Services.PinAuthService"/>.</summary>
     public string? PinHash { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime? PinUpdatedAt { get; set; }
+
     public bool AttendanceEnabled { get; set; } = true;
     public bool CanSell { get; set; } = false;
     public bool CanCashier { get; set; } = false;
 
-    // Trial period and termination dossier
+    // Baja y período de prueba
     public bool OnProbation { get; set; }
     public DateTime? ProbationEndDate { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime? ProbationCompletedAt { get; set; }
 
@@ -108,14 +115,15 @@ public class Employee
     public string? TerminationReason { get; set; }
     public string? TerminationNotes { get; set; }
 
-    // Status
     public bool IsActive { get; set; } = true;
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
+    // Navegación
     [ForeignKey(nameof(PositionId))]
     public Position? Position { get; set; }
 
@@ -126,7 +134,6 @@ public class Employee
     public Employee? DirectSupervisor { get; set; }
 
     public ICollection<Employee> Subordinates { get; set; } = new List<Employee>();
-
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<CashSession> CashSessions { get; set; } = new List<CashSession>();
     public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();

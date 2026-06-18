@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Catálogo de productos. Tabla <c>public.Products</c>.</summary>
 public class Product
 {
     [Key]
@@ -15,6 +17,7 @@ public class Product
 
     [Required, MaxLength(200)]
     public string Description { get; set; } = string.Empty;
+
     public Guid FamilyId { get; set; }
     public Guid? SubfamilyId { get; set; }
     public Guid MeasurementTypeId { get; set; }
@@ -42,10 +45,10 @@ public class Product
 
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     [ForeignKey(nameof(FamilyId))]
     public Family Family { get; set; } = null!;
 
@@ -56,11 +59,6 @@ public class Product
     public MeasurementType MeasurementType { get; set; } = null!;
 
     public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
-
-    /// <summary>
-    /// Detalles de venta asociados al producto.
-    /// Debe mantenerse como colecci�n inicializada (vac�a cuando no hay ventas), y no como <see langword="null" />.
-    /// </summary>
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<StockAlert> StockAlerts { get; set; } = new List<StockAlert>();
 }

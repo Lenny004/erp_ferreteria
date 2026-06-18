@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Bitácora de cambios. Tabla <c>system.AuditLog</c>.</summary>
 public class AuditLog
 {
     [Key]
@@ -13,6 +15,7 @@ public class AuditLog
     [Required, MaxLength(50)]
     public string RecordId { get; set; } = string.Empty;
 
+    /// <summary>INSERT, UPDATE, DELETE.</summary>
     [Required, MaxLength(10)]
     public string Action { get; set; } = string.Empty;
 
@@ -21,6 +24,7 @@ public class AuditLog
 
     [Column(TypeName = "jsonb")]
     public string? NewData { get; set; }
+
     public Guid? UserId { get; set; }
 
     [MaxLength(45)]

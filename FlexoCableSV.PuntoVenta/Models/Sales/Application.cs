@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlexoCableSV.PuntoVenta.Models;
+
+/// <summary>Tipo de aplicación de taller (VT-01, VT-02, etc.). Tabla <c>sales.Applications</c>.</summary>
 public class Application
 {
     [Key]
@@ -12,12 +14,12 @@ public class Application
 
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
+
     public bool IsActive { get; set; } = true;
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     [Column(TypeName = "timestamptz")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    // Navigation
-    public ICollection<Order> Orders { get; set; } = new List<Order>();
 }
