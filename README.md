@@ -1,8 +1,8 @@
 # FlexoCable SV — Sistema Integrado de Punto de Venta y Gestión
 
 > **Código interno:** FCSV-2026 · **Versión:** 1.0.0-MVP · **Inicio:** Mayo 2026  
-> **Cliente:** FlexoCable El Salvador, S.A. de C.V. · **Matriz:** FlexoCable Panamá
-> **Ubicación:** San Salvador, El Salvador
+> **Cliente:** FlexoCable El Salvador, S.A. de C.V. · **Matriz:** FlexoCable Panamá.
+> **Ubicación:** San Salvador, El Salvador.
 
 Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta táctil con facturación electrónica DTE, control de inventario y gestión de planillas. Diseñado específicamente para personal mayor con experiencia tecnológica limitada.
 

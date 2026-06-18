@@ -1,10 +1,10 @@
-# FlexoCable SV - Plan Validado de Finalizacion de la Aplicacion
+﻿# FlexoCable SV - Plan Validado de Finalizacion de la Aplicacion
 
 > **Documento:** FLEXO-PLAN-001  
-> **Version:** 2.4  
+> **Version:** 3.0  
 > **Fecha:** Junio 2026  
-> **Estado:** Auditado QA v2.4 — esquema BD unificado UUID; admin Node/Next separado de WPF  
-> **Base revisada:** `README.md`, `Squema.sql`, vistas WPF existentes, modelos EF Core, estandares `FLEXOCABLE_C_CODING_STANDARDS_2026.md` y modulo empleados/planilla de `beraka-core-api` (referencia funcional).
+> **Estado:** v3.0 — schema Prisma reescrito desde cero; módulos Compras/Kardex, Clientes, Libros IVA y BI incorporados; CxC descartada para MVP; multisucursal pospuesta  
+> **Base revisada:** `README.md`, `schema.prisma` v3.0, vistas WPF existentes, modelos EF Core, estandares `FLEXOCABLE_C_CODING_STANDARDS_2026.md`, modulo empleados/planilla de `beraka-core-api` y análisis comparativo propuesta ERP FERRESAL (COT-9520).
 
 ---
 
@@ -24,7 +24,14 @@ Las correcciones principales son:
 - El DTE requiere una fase especifica de certificacion, validacion de JSON, firma, token MH, contingencia, QR y pruebas contra el ambiente oficial.
 - El esquema `hr` actual **no soporta planilla quincenal ni expediente completo**; requiere refactorizacion Fase 0b antes del modulo administrativo (seccion 17).
 
-Resultado recomendado: primero cerrar la arquitectura de datos y seguridad (**incluyendo RRHH/planilla**), luego implementar inventario y ventas de forma transaccional, despues DTE, impresion y corte de caja, y finalmente crear la WebApp administrativa con planilla portada desde Beraka.
+Resultado recomendado: primero cerrar la arquitectura de datos y seguridad (**incluyendo RRHH/planilla**), luego implementar inventario y ventas de forma transaccional, despues DTE, impresion y corte de caja, y finalmente crear la WebApp administrativa con planilla, compras, libros IVA y dashboard BI.
+
+**v3.0 — Cambios incorporados del análisis comparativo ERP FERRESAL:**
+
+- **Módulos nuevos agregados al plan:** Compras y Proveedores (Fase 9b), Kardex valorado con costo promedio ponderado (integrado en Fases 2 y 9b), Maestro de Clientes fiscal (Fase 8), Libros de IVA (Fase 10d) y Dashboard BI gerencial (Fase 11).
+- **Módulos descartados para MVP:** Cuentas por Cobrar (CxC) — FlexoCable opera principalmente al contado; puede incorporarse en una fase futura si se requiere crédito a clientes.
+- **Multisucursal:** descartado para el alcance actual. La arquitectura de BD no impide crecer a multisucursal en el futuro (el campo `CashRegisterCode` en `CashSessions` es el punto de extensión), pero no se planifica ahora.
+- **Schema Prisma:** reescrito desde cero (v3.0) con esquemas `public`, `purchasing`, `sales`, `dte`, `fiscal`, `hr`, `system`. Migraciones SQL manuales eliminadas; Prisma gestiona la BD via `prisma migrate dev`.
 
 ### 1.1 Decisiones confirmadas por el equipo
 
@@ -41,6 +48,12 @@ Resultado recomendado: primero cerrar la arquitectura de datos y seguridad (**in
 | IDs en BD | **UUID (`gen_random_uuid()`) en todas las tablas de negocio**, misma estructura que Beraka; sin esquemas distintos por app. WPF adapta en EF Core (`Guid`); Prisma en backend Node |
 | Bancos | Catalogo **editable** desde adminweb (CRUD), con seed inicial de bancos SV como en Beraka |
 | Documentos empleado | Mismos tipos requeridos que Beraka (seed idempotente); modulo administrable |
+| **CxC (Cuentas por Cobrar)** | **Descartada para MVP.** FlexoCable opera al contado. El modelo `Customer` existe como base si se requiere credito en el futuro. |
+| **Multisucursal** | **Pospuesto indefinidamente.** Sin planificacion activa. `CashRegisterCode` en `CashSessions` es el punto de extension futuro. |
+| **Compras y Proveedores** | **Incluido — Fase 9b.** Esquema `purchasing`: `Suppliers`, `PurchaseOrders`, `PurchaseOrderDetails`. Costeo promedio ponderado integrado. |
+| **Libros de IVA** | **Incluido — Fase 10d.** Esquema `fiscal`: `IvaReports`. Generados desde `dte.DteIssued` y `purchasing.PurchaseOrders`. |
+| **Dashboard BI** | **Incluido — Fase 11.** KPIs de ventas, inventario, compras y planilla. API de agregacion sobre datos existentes. |
+| **Schema Prisma** | Reescrito v3.0 desde cero. `prisma migrate dev` gestiona la BD. Migraciones SQL manuales eliminadas. |
 
 ---
 
@@ -564,6 +577,7 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 - Asignacion/cambio de PIN.
 - CRUD catalogo basico.
 - Gestion de usuarios web.
+- CRUD **Clientes** (public.Customers): nombre, tipo (CF/CCF), DUI/NIT/NRC, datos de contacto y direccion fiscal. Base para receptor DTE y trazabilidad de ventas.
 - **Planeacion RRHH (sin implementar en esta fase):** estructura de modulos backend y rutas adminweb para expediente completo del empleado (seccion 17.8–17.9).
 - CRUD catalogo **bancos** (editable; seed inicial SV).
 - CRUD **tipos de documento requerido** (editable; seed inicial Beraka).
@@ -621,6 +635,41 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 
 ---
 
+### Fase 9b - Compras, Proveedores y Kardex Valorado
+
+**Prioridad:** Alta
+**Esfuerzo:** Alto
+**Objetivo:** Gestionar el abastecimiento de productos con trazabilidad de costo y actualizar el inventario valorado (Kardex con costo promedio ponderado).
+
+**Implementar:**
+
+- Maestro de proveedores (purchasing.Suppliers): nombre, NIT/NRC, condiciones de credito, pais (para diferenciar nacional vs importacion).
+- Ordenes de compra (purchasing.PurchaseOrders): flujo BORRADOR → CONFIRMADA → RECIBIDA → CANCELADA.
+- Detalle de OC (purchasing.PurchaseOrderDetails): cantidad, costo unitario, tasa de impuesto, totales.
+- Al recibir OC: generar InventoryMovement tipo ENTRADA_COMPRA con unitCost, 	otalCost, stockBefore, stockAfter.
+- Actualizar costPrice del producto con **costo promedio ponderado**: (stockActual * costoActual + cantidadRecibida * costoNuevo) / (stockActual + cantidadRecibida).
+- Registro del documento de compra (CCF/FAC del proveedor) para libro de compras.
+- CRUD de proveedores en FlexoCable-adminweb.
+- Lista de ordenes de compra con estado, proveedor y totales.
+- Reporte de Kardex valorado por producto (movimientos con costo y saldo valorado).
+- Reporte de valuacion de inventario total (stock × costo promedio).
+
+**Validaciones:**
+
+- Costo unitario > 0 al recibir OC.
+- Stock no puede quedar negativo al ajustar.
+- OC recibida no puede editarse; solo cancelarse antes de recibir.
+- costPrice del producto siempre refleja el ultimo costo promedio calculado.
+- Movimiento de inventario referencia la OC de origen (purchaseOrderId).
+
+**Criterios de cierre:**
+
+- Se crea un proveedor y una OC.
+- Al marcar OC como RECIBIDA, el inventario sube y el costPrice del producto se actualiza.
+- El Kardex valorado muestra historial de movimientos con costos correctos.
+- El reporte de valuacion de inventario muestra el valor total del stock.
+
+---
 ### Fase 10 - Planilla, Reportes y Operacion
 
 **Prioridad:** Media-Alta (elevada por requerimiento RRHH confirmado v2.3)  
@@ -695,6 +744,79 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 
 ---
 
+### Fase 10d - Libros de IVA y Cumplimiento Fiscal
+
+**Prioridad:** Alta (requerimiento legal)
+**Esfuerzo:** Medio
+**Objetivo:** Generar los libros de IVA obligatorios a partir de los DTEs ya emitidos y las compras registradas, sin doble digitacion.
+
+**Implementar:**
+
+- **Libro de ventas a consumidor final:** agregar desde dte.DteIssued tipo  1 del mes.
+- **Libro de ventas a contribuyentes (CCF):** desde dte.DteIssued tipo  3 del mes.
+- **Libro de compras:** desde purchasing.PurchaseOrders recibidas con documento del proveedor.
+- Cuadre automatico entre DTEs emitidos/recibidos y los libros (verificacion de totales).
+- Generacion de archivo Excel en formato compatible con declaracion mensual Hacienda.
+- Registro del libro generado en iscal.IvaReports con estado BORRADOR → CERRADO.
+- Endpoint GET /api/v1/fiscal/iva-reports/:year/:month/:type para consulta y descarga.
+
+**Validaciones:**
+
+- Solo se puede cerrar un libro si el cuadre con DTEs es correcto.
+- Libro cerrado es inmutable.
+- Periodo sin DTEs genera libro vacio (no falla).
+
+**Criterios de cierre:**
+
+- Libro de ventas CF generado para un mes con ventas reales.
+- Libro de compras generado para un mes con OCs recibidas.
+- Exportacion Excel descargable desde adminweb.
+
+---
+
+### Fase 11 - Dashboard de Inteligencia de Negocios (BI)
+
+**Prioridad:** Media
+**Esfuerzo:** Medio
+**Objetivo:** Tablero gerencial centralizado con KPIs operativos, comerciales y de RRHH para toma de decisiones.
+
+**Implementar:**
+
+**Ventas:**
+- Total de ventas del dia / semana / mes con comparativo vs periodo anterior.
+- Ventas por cajero, por tipo de orden (VENTA_CAJA vs ORDEN_CONFECCION).
+- Productos mas vendidos por cantidad y por monto.
+- Ticket promedio y cantidad de transacciones.
+
+**Inventario:**
+- Valor total del inventario (stock × costo promedio).
+- Productos bajo stock minimo (alertas de reabastecimiento).
+- Rotacion de inventario por familia/subfamilia.
+- Movimientos del dia (entradas, salidas, ajustes).
+
+**Compras:**
+- OCs pendientes de recibir.
+- Total comprado por proveedor en el mes.
+- Comparativo costo promedio historico por producto.
+
+**RRHH:**
+- Headcount activo por tipo de contrato.
+- Proximas planillas por pagar.
+- Empleados con documentos por vencer.
+
+**Implementacion:**
+- Endpoints de agregacion en FlexoCable-backend: GET /api/v1/dashboard/sales, /inventory, /purchases, /hr.
+- Sin tablas adicionales; todas las consultas sobre datos existentes con indices adecuados.
+- Filtros por rango de fechas.
+- Frontend: pagina /dashboard en FlexoCable-adminweb con tarjetas, graficas (recharts o chart.js) y tablas.
+
+**Criterios de cierre:**
+
+- Dashboard muestra datos reales del dia y del mes.
+- Las 4 secciones (ventas, inventario, compras, RRHH) tienen al menos 3 KPIs cada una.
+- Exportacion de datos en Excel desde cada seccion.
+
+---
 ## 7. Estructura Inicial Recomendada para el Sistema Web
 
 ### 7.1 Repositorios confirmados
@@ -1151,6 +1273,13 @@ Orden recomendado para empezar sin bloquearse:
 13. Implementar impresion y corte.
 14. Crear `FlexoCable-backend` (Node.js 22 + Express 5 + Prisma 6) y `FlexoCable-adminweb` (Next.js 15 + React 19).
 15. Implementar import/export Excel bidireccional.
+16. **Fase 9b:** Maestro de proveedores, ordenes de compra y recepcion con costeo promedio ponderado.
+17. **Fase 10d:** Libros de IVA (ventas CF, ventas CCF, compras) desde DTEs y OCs; exportacion Excel.
+18. **Fase 10a:** planilla ordinaria (portar calculo + payroll-exports.service.ts).
+19. **Fase 10b:** aguinaldo y vacaciones.
+20. **Fase 10c:** liquidaciones.
+21. **Fase 11:** Dashboard BI (ventas, inventario, compras, RRHH).
+22. Reportes, backups, resiliencia offline produccion y auditoria.
 16. **Fase 10a:** planilla ordinaria (portar calculo + `payroll-exports.service.ts`).
 17. **Fase 10b:** aguinaldo y vacaciones.
 18. **Fase 10c:** liquidaciones (+ ISR declaraciones si aplica).
