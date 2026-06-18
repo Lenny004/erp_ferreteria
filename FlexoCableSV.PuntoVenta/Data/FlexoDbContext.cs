@@ -47,8 +47,6 @@ public class FlexoDbContext : DbContext
     //  Maneja las aplicaciones (puntos de venta), órdenes y su detalle.
     // ========================================================================
 
-    /// <summary>Puntos de venta o aplicaciones desde donde se generan órdenes.</summary>
-    public DbSet<Application> Applications => Set<Application>();
     /// <summary>Órdenes de venta (cabecera).</summary>
     public DbSet<Order> Orders => Set<Order>();
     /// <summary>Líneas de detalle de cada orden (productos y cantidades).</summary>
@@ -127,6 +125,10 @@ public class FlexoDbContext : DbContext
             // Asigna explícitamente el esquema y nombre de tabla para evitar que EF
             // use el nombre por defecto (que sería "MeasurementTypes" sin esquema).
             entity.ToTable("MeasurementTypes", "public");
+            entity.Property(m => m.Id).HasColumnName("id");
+            entity.Property(m => m.Code).HasColumnName("code");
+            entity.Property(m => m.Name).HasColumnName("name");
+            entity.Property(m => m.Decimals).HasColumnName("decimals");
 
             // Índice único sobre Code, ya que este campo se usa como clave alternativa
             // en dropdowns y búsquedas, y debe ser irrepetible.
@@ -138,6 +140,10 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Family>(entity =>
         {
             entity.ToTable("Families", "public");
+            entity.Property(f => f.Id).HasColumnName("id");
+            entity.Property(f => f.Code).HasColumnName("code");
+            entity.Property(f => f.Name).HasColumnName("name");
+            entity.Property(f => f.Description).HasColumnName("description");
 
             // Code es el identificador lógico visible en pantallas y reportes.
             entity.HasIndex(f => f.Code).IsUnique();
@@ -149,6 +155,9 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Subfamily>(entity =>
         {
             entity.ToTable("Subfamilies", "public");
+            entity.Property(s => s.Id).HasColumnName("id");
+            entity.Property(s => s.Code).HasColumnName("code");
+            entity.Property(s => s.Name).HasColumnName("name");
 
             // Relación N:1 con Family. Una subfamilia pertenece a exactamente una familia.
             // DeleteBehavior.NoAction evita borrados en cascada no deseados desde el ORM;
@@ -166,7 +175,20 @@ public class FlexoDbContext : DbContext
         // --- Supplier ---
         // Tabla simple de proveedores sin configuraciones adicionales de momento.
         // Se deja la definición mínima y se heredan las columnas de la clase Supplier.
-        modelBuilder.Entity<Supplier>().ToTable("Suppliers", "public");
+        modelBuilder.Entity<Supplier>(entity =>
+        {
+            entity.ToTable("Suppliers", "purchasing");
+            entity.Property(s => s.Id).HasColumnName("id");
+            entity.Property(s => s.Name).HasColumnName("name");
+            entity.Property(s => s.Phone).HasColumnName("phone");
+            entity.Property(s => s.Email).HasColumnName("email");
+            entity.Property(s => s.Address).HasColumnName("address");
+            entity.Property(s => s.Municipality).HasColumnName("municipality");
+            entity.Property(s => s.Department).HasColumnName("department");
+            entity.Property(s => s.Country).HasColumnName("country");
+            entity.Property(s => s.Notes).HasColumnName("notes");
+            entity.HasIndex(s => s.Nit).IsUnique().HasDatabaseName("IdxSuppliersNit");
+        });
 
         // --- Product ---
         // Tabla central del catálogo. Contiene toda la información comercial,
@@ -174,6 +196,11 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Product>(entity =>
         {
             entity.ToTable("Products", "public");
+            entity.Property(p => p.Id).HasColumnName("id");
+            entity.Property(p => p.Code).HasColumnName("code");
+            entity.Property(p => p.Barcode).HasColumnName("barcode");
+            entity.Property(p => p.Description).HasColumnName("description");
+            entity.Property(p => p.Notes).HasColumnName("notes");
 
             // Relaciones del catálogo — cada producto apunta a una familia, subfamilia,
             // tipo de medida y proveedor. Todas con DeleteBehavior.NoAction para que EF
@@ -191,11 +218,6 @@ public class FlexoDbContext : DbContext
             entity.HasOne(p => p.MeasurementType)
                 .WithMany()
                 .HasForeignKey(p => p.MeasurementTypeId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity.HasOne(p => p.Supplier)
-                .WithMany(s => s.Products)
-                .HasForeignKey(p => p.SupplierId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // El código de producto (Code) debe ser único en toda la tabla.
@@ -217,6 +239,8 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<InventoryMovement>(entity =>
         {
             entity.ToTable("InventoryMovements", "public");
+            entity.Property(i => i.Id).HasColumnName("id");
+            entity.Property(i => i.Reason).HasColumnName("reason");
 
             // Relación N:1 con Product. Cada movimiento afecta a un solo producto.
             entity.HasOne(i => i.Product)
@@ -224,18 +248,16 @@ public class FlexoDbContext : DbContext
                 .HasForeignKey(i => i.ProductId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // Relación opcional con Supplier. Se usa cuando el movimiento es una
-            // entrada por compra o devolución a proveedor.
-            entity.HasOne(i => i.Supplier)
-                .WithMany(s => s.InventoryMovements)
-                .HasForeignKey(i => i.SupplierId)
-                .OnDelete(DeleteBehavior.NoAction);
-
             // Relación opcional con Employee. Se usa cuando el movimiento es un ajuste
             // de inventario realizado por un empleado específico.
             entity.HasOne(i => i.Employee)
                 .WithMany(e => e.InventoryMovements)
                 .HasForeignKey(i => i.EmployeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(i => i.Order)
+                .WithMany(o => o.InventoryMovements)
+                .HasForeignKey(i => i.OrderId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Índices para las consultas más frecuentes sobre movimientos:
@@ -271,40 +293,21 @@ public class FlexoDbContext : DbContext
         //  ESQUEMA "sales"
         // ====================================================================
 
-        // --- Application ---
-        // Punto de venta o aplicación que genera órdenes.
-        // Ej: "CAJA_01", "CAJA_02", "TIENDA_ONLINE".
-        modelBuilder.Entity<Application>(entity =>
-        {
-            entity.ToTable("Applications", "sales");
-
-            // Cada aplicación se identifica por un código único.
-            entity.HasIndex(a => a.Code).IsUnique();
-        });
-
         // --- Order ---
         // Cabecera de una orden de venta. Contiene fechas, estado, empleado y punto de venta.
         modelBuilder.Entity<Order>(entity =>
         {
             entity.ToTable("Orders", "sales");
-
-            // Configuración explícita de tipos DATE y TIME en lugar de DateTime completa.
-            // La orden se emite en una fecha civil local (OrderDate) y una hora (OrderTime),
-            // sin componente de zona horaria. Esto evita conversiones UTC/locales innecesarias
-            // ya que la hora del punto de venta es siempre la hora local de El Salvador.
-            entity.Property(o => o.OrderDate).HasColumnType("date");
-            entity.Property(o => o.OrderTime).HasColumnType("time");
+            entity.Property(o => o.Id).HasColumnName("id");
+            entity.Property(o => o.Status).HasColumnName("status");
+            entity.Property(o => o.Subtotal).HasColumnName("subtotal");
+            entity.Property(o => o.Total).HasColumnName("total");
+            entity.Property(o => o.Notes).HasColumnName("notes");
 
             // Relación N:1 con Employee. Cada orden es atendida por un empleado.
             entity.HasOne(o => o.Employee)
                 .WithMany(e => e.Orders)
                 .HasForeignKey(o => o.EmployeeId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            // Relación N:1 con Application. Cada orden pertenece a un punto de venta.
-            entity.HasOne(o => o.Application)
-                .WithMany(a => a.Orders)
-                .HasForeignKey(o => o.ApplicationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(o => o.CashSession)
@@ -313,10 +316,8 @@ public class FlexoDbContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Índices para consultas comunes:
-            // - por fecha (reportes diarios/mensuales)
             // - por estado (órdenes pendientes, canceladas)
             // - por empleado (historial de ventas por vendedor)
-            entity.HasIndex(o => o.OrderDate).HasDatabaseName("IdxOrdersDate");
             entity.HasIndex(o => o.Status).HasDatabaseName("IdxOrdersStatus");
             entity.HasIndex(o => o.EmployeeId).HasDatabaseName("IdxOrdersEmployee");
             entity.HasIndex(o => o.ClientRequestId)
@@ -331,6 +332,10 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<OrderDetail>(entity =>
         {
             entity.ToTable("OrderDetails", "sales");
+            entity.Property(od => od.Id).HasColumnName("id");
+            entity.Property(od => od.Quantity).HasColumnName("quantity");
+            entity.Property(od => od.Subtotal).HasColumnName("subtotal");
+            entity.Property(od => od.Notes).HasColumnName("notes");
 
             // Relación N:1 con Order. El detalle se borra en cascada si se elimina la orden.
             // Esto es correcto porque el detalle no tiene sentido sin su orden padre.
@@ -347,13 +352,18 @@ public class FlexoDbContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Índice para acelerar consultas que traen todo el detalle de una orden.
-            entity.HasIndex(od => od.OrderId).HasDatabaseName("IdxDetailOrder");
+            entity.HasIndex(od => od.OrderId).HasDatabaseName("IdxOrderDetailsOrder");
+            entity.HasIndex(od => od.ProductId).HasDatabaseName("IdxOrderDetailsProduct");
         });
 
         // --- CashSession ---
         modelBuilder.Entity<CashSession>(entity =>
         {
             entity.ToTable("CashSessions", "sales");
+            entity.Property(c => c.Id).HasColumnName("id");
+            entity.Property(c => c.Difference).HasColumnName("difference");
+            entity.Property(c => c.Status).HasColumnName("status");
+            entity.Property(c => c.Notes).HasColumnName("notes");
 
             entity.HasOne(c => c.Employee)
                 .WithMany(e => e.CashSessions)
@@ -363,7 +373,7 @@ public class FlexoDbContext : DbContext
             entity.HasIndex(c => new { c.EmployeeId, c.CashRegisterCode })
                 .IsUnique()
                 .HasDatabaseName("IdxCashSessionOpen")
-                .HasFilter("\"Status\" = 'ABIERTA'");
+                .HasFilter("\"status\" = 'ABIERTA'");
             entity.HasIndex(c => c.Status).HasDatabaseName("IdxCashSessionStatus");
             entity.HasIndex(c => c.OpenedAt).HasDatabaseName("IdxCashSessionOpened");
         });
@@ -372,6 +382,10 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.ToTable("Payments", "sales");
+            entity.Property(p => p.Id).HasColumnName("id");
+            entity.Property(p => p.Method).HasColumnName("method");
+            entity.Property(p => p.Amount).HasColumnName("amount");
+            entity.Property(p => p.Reference).HasColumnName("reference");
 
             entity.HasOne(p => p.Order)
                 .WithMany(o => o.Payments)
@@ -398,7 +412,11 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<DteConfig>(entity =>
         {
             entity.ToTable("DteConfig", "dte");
-            // NOTA: Los CHECK constraints (Environment en '00','01') se gestionan en SQL.
+            entity.Property(d => d.Id).HasColumnName("id");
+            entity.Property(d => d.Phone).HasColumnName("phone");
+            entity.Property(d => d.Email).HasColumnName("email");
+            entity.Property(d => d.Ambiente).HasColumnName("ambiente");
+            // NOTA: Los CHECK constraints (Ambiente en '00','01') se gestionan en SQL.
         });
 
         // --- DteIssued ---
@@ -408,6 +426,9 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<DteIssued>(entity =>
         {
             entity.ToTable("DteIssued", "dte");
+            entity.Property(d => d.Id).HasColumnName("id");
+            entity.Property(d => d.Ambiente).HasColumnName("ambiente");
+            entity.Property(d => d.Reprints).HasColumnName("reprints");
 
             // Relación N:1 con Order. Un DTE puede estar asociado a una orden de venta
             // (o podría ser nota de crédito/débito sin orden directa).
@@ -417,7 +438,7 @@ public class FlexoDbContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(d => d.RelatedDte)
-                .WithMany()
+                .WithMany(d => d.CreditNotes)
                 .HasForeignKey(d => d.RelatedDteId)
                 .OnDelete(DeleteBehavior.NoAction);
 
@@ -432,10 +453,10 @@ public class FlexoDbContext : DbContext
             // - búsqueda de DTE por orden
             // - filtro por estado MH (PENDIENTE, PROCESADO, RECHAZADO)
             // - reportes por fecha de emisión
-            entity.HasIndex(d => d.OrderId).HasDatabaseName("IdxDteOrder");
-            entity.HasIndex(d => d.MhStatus).HasDatabaseName("IdxDteStatus");
-            entity.HasIndex(d => d.CreatedAt).HasDatabaseName("IdxDteDate");
-            entity.HasIndex(d => d.RelatedDteId).HasDatabaseName("IdxDteRelated");
+            entity.HasIndex(d => d.OrderId).HasDatabaseName("IdxDteIssuedOrder");
+            entity.HasIndex(d => d.MhStatus).HasDatabaseName("IdxDteIssuedStatus");
+            entity.HasIndex(d => d.DteType).HasDatabaseName("IdxDteIssuedType");
+            entity.HasIndex(d => d.IssuedAt).HasDatabaseName("IdxDteIssuedAt");
         });
 
         // --- DteContingency ---
@@ -445,14 +466,18 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<DteContingency>(entity =>
         {
             entity.ToTable("DteContingency", "dte");
+            entity.Property(d => d.Id).HasColumnName("id");
 
             // Relación N:1 con DteIssued. Un DTE en contingencia se asocia al DTE generado.
             // Se usa WithMany() (sin propiedad de navegación) porque la colección de
             // contingencias en DteIssued no es necesaria para el modelo de dominio.
             entity.HasOne(d => d.DteIssued)
-                .WithMany()
-                .HasForeignKey(d => d.DteId)
+                .WithOne(d => d.Contingency)
+                .HasForeignKey<DteContingency>(d => d.DteId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(d => d.DteId).IsUnique();
+            entity.HasIndex(d => d.NextRetryAt).HasDatabaseName("IdxContingencyRetry");
         });
 
         // ====================================================================
@@ -464,6 +489,9 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Department>(entity =>
         {
             entity.ToTable("Departments", "hr");
+            entity.Property(d => d.Id).HasColumnName("id");
+            entity.Property(d => d.Name).HasColumnName("name");
+            entity.Property(d => d.Description).HasColumnName("description");
 
             entity.HasOne(d => d.Parent)
                 .WithMany(d => d.Children)
@@ -480,6 +508,9 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Position>(entity =>
         {
             entity.ToTable("Positions", "hr");
+            entity.Property(p => p.Id).HasColumnName("id");
+            entity.Property(p => p.Name).HasColumnName("name");
+            entity.Property(p => p.Description).HasColumnName("description");
 
             // Relación N:1 con Department. Cada puesto pertenece a un departamento.
             entity.HasOne(p => p.Department)
@@ -495,6 +526,10 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<Employee>(entity =>
         {
             entity.ToTable("Employees", "hr");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Phone).HasColumnName("phone");
+            entity.Property(e => e.Email).HasColumnName("email");
+            entity.Property(e => e.Address).HasColumnName("address");
 
             // Configuración de tipo de columna para fechas administrativas.
             // Se usa "date" (no "timestamp with time zone") porque la fecha de contratación
@@ -523,6 +558,8 @@ public class FlexoDbContext : DbContext
             // son documentos oficiales salvadoreños que deben ser únicos por empleado.
             entity.HasIndex(e => e.Dui).IsUnique();
             entity.HasIndex(e => e.Nit).IsUnique();
+            entity.HasIndex(e => e.Nup).IsUnique();
+            entity.HasIndex(e => e.IsssNumber).IsUnique();
             entity.HasIndex(e => e.DepartmentId).HasDatabaseName("IdxEmployeesDepartment");
             entity.HasIndex(e => e.DirectSupervisorId).HasDatabaseName("IdxEmployeesSupervisor");
             entity.HasIndex(e => e.ContractType).HasDatabaseName("IdxEmployeesContractType");
@@ -536,7 +573,10 @@ public class FlexoDbContext : DbContext
         // Configuración global del sistema en pares clave/valor.
         // Ej: "EMPRESA_NOMBRE", "EMPRESA_NIT", "TASA_IVA", etc.
         // No requiere configuración adicional por ahora.
-        modelBuilder.Entity<Setting>().ToTable("Settings", "system");
+        modelBuilder.Entity<Setting>(entity =>
+        {
+            entity.ToTable("Settings", "system");
+        });
 
         // --- Printer ---
         // Impresoras configuradas en el sistema para tiquets, facturas, reportes.
@@ -561,12 +601,15 @@ public class FlexoDbContext : DbContext
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.ToTable("AuditLog", "system");
+            entity.Property(a => a.Id).HasColumnName("id");
+            entity.Property(a => a.Action).HasColumnName("action");
 
             // Índice para consultas de auditoría por tabla de negocio.
-            entity.HasIndex(a => a.TableName).HasDatabaseName("IdxAuditTable");
+            entity.HasIndex(a => new { a.TableName, a.RecordId }).HasDatabaseName("IdxAuditLogRecord");
+            entity.HasIndex(a => a.UserId).HasDatabaseName("IdxAuditLogUser");
 
             // Índice para consultas por fecha (ej: "mostrar auditoría de la última semana").
-            entity.HasIndex(a => a.CreatedAt).HasDatabaseName("IdxAuditDate");
+            entity.HasIndex(a => a.CreatedAt).HasDatabaseName("IdxAuditLogCreatedAt");
         });
     }
 }

@@ -10,6 +10,9 @@ public class Product
     [Required, MaxLength(30)]
     public string Code { get; set; } = string.Empty;
 
+    [MaxLength(50)]
+    public string? Barcode { get; set; }
+
     [Required, MaxLength(200)]
     public string Description { get; set; } = string.Empty;
     public Guid FamilyId { get; set; }
@@ -19,7 +22,7 @@ public class Product
     [Column(TypeName = "numeric(12,2)")]
     public decimal SalePrice { get; set; } = 0;
 
-    [Column(TypeName = "numeric(12,2)")]
+    [Column(TypeName = "numeric(12,4)")]
     public decimal CostPrice { get; set; } = 0;
 
     [Column(TypeName = "numeric(12,3)")]
@@ -27,8 +30,16 @@ public class Product
 
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; } = 0;
-    public Guid? SupplierId { get; set; }
+
+    [Column(TypeName = "numeric(12,3)")]
+    public decimal? MaxStock { get; set; }
+
+    [Column(TypeName = "numeric(12,3)")]
+    public decimal? ReorderPoint { get; set; }
+
     public bool IsActive { get; set; } = true;
+    public string? Notes { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [Column(TypeName = "timestamptz")]
@@ -44,14 +55,11 @@ public class Product
     [ForeignKey(nameof(MeasurementTypeId))]
     public MeasurementType MeasurementType { get; set; } = null!;
 
-    [ForeignKey(nameof(SupplierId))]
-    public Supplier? Supplier { get; set; }
-
     public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
 
     /// <summary>
     /// Detalles de venta asociados al producto.
-    /// Debe mantenerse como colección inicializada (vacía cuando no hay ventas), y no como <see langword="null" />.
+    /// Debe mantenerse como colecciï¿½n inicializada (vacï¿½a cuando no hay ventas), y no como <see langword="null" />.
     /// </summary>
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<StockAlert> StockAlerts { get; set; } = new List<StockAlert>();

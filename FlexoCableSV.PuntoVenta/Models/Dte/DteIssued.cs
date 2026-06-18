@@ -6,7 +6,7 @@ public class DteIssued
 {
     [Key]
     public Guid Id { get; set; }
-    public Guid OrderId { get; set; }
+    public Guid? OrderId { get; set; }
 
     [Required, MaxLength(2)]
     public string DteType { get; set; } = string.Empty;
@@ -16,42 +16,50 @@ public class DteIssued
     public Guid GenerationCode { get; set; } = Guid.NewGuid();
     public Guid? RelatedDteId { get; set; }
 
-    [MaxLength(100)]
-    public string? ReceptionStamp { get; set; }
-
     [Required, MaxLength(20)]
     public string MhStatus { get; set; } = "PENDIENTE";
 
-    [Required]
-    [Column(TypeName = "jsonb")]
-    public string JsonSent { get; set; } = "{}";
+    public string? MhResponse { get; set; }
+    public string? MhSello { get; set; }
 
-    [Column(TypeName = "jsonb")]
-    public string? JsonResponse { get; set; }
+    [Required, MaxLength(5)]
+    public string Ambiente { get; set; } = "00";
 
-    [Required, MaxLength(20)]
-    public string PaymentMethod { get; set; } = "EFECTIVO";
+    public string? JsonPayload { get; set; }
 
-    [MaxLength(20)]
-    public string? ReceiverNit { get; set; }
+    [MaxLength(500)]
+    public string? PdfUrl { get; set; }
 
-    [MaxLength(200)]
-    public string? ReceiverName { get; set; }
+    [Column(TypeName = "numeric(12,2)")]
+    public decimal TotalExenta { get; set; }
 
-    [Required, MaxLength(2)]
-    public string Environment { get; set; } = "01";
+    [Column(TypeName = "numeric(12,2)")]
+    public decimal TotalGravada { get; set; }
+
+    [Column(TypeName = "numeric(12,2)")]
+    public decimal TotalIva { get; set; }
+
+    [Column(TypeName = "numeric(12,2)")]
+    public decimal TotalPagar { get; set; }
+
+    public int Reprints { get; set; } = 0;
+
     [Column(TypeName = "timestamptz")]
-    public DateTime? SentAt { get; set; }
+    public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
+
+    [Column(TypeName = "timestamptz")]
+    public DateTime? ProcessedAt { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public short Reprints { get; set; } = 0;
 
     // Navigation
     [ForeignKey(nameof(OrderId))]
-    public Order Order { get; set; } = null!;
+    public Order? Order { get; set; }
 
     [ForeignKey(nameof(RelatedDteId))]
     public DteIssued? RelatedDte { get; set; }
 
+    public ICollection<DteIssued> CreditNotes { get; set; } = new List<DteIssued>();
     public DteContingency? Contingency { get; set; }
 }

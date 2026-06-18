@@ -10,8 +10,8 @@ public class AuditLog
     [Required, MaxLength(100)]
     public string TableName { get; set; } = string.Empty;
 
-    [MaxLength(50)]
-    public string? RecordId { get; set; }
+    [Required, MaxLength(50)]
+    public string RecordId { get; set; } = string.Empty;
 
     [Required, MaxLength(10)]
     public string Action { get; set; } = string.Empty;
@@ -21,10 +21,14 @@ public class AuditLog
 
     [Column(TypeName = "jsonb")]
     public string? NewData { get; set; }
-    public string? Description { get; set; }
+    public Guid? UserId { get; set; }
 
     [MaxLength(45)]
     public string? IpAddress { get; set; }
+
+    [MaxLength(300)]
+    public string? UserAgent { get; set; }
+
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

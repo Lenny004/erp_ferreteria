@@ -15,10 +15,14 @@ public class OrderDetail
     [Column(TypeName = "numeric(12,2)")]
     public decimal UnitPrice { get; set; }
 
+    [Column(TypeName = "numeric(12,4)")]
+    public decimal UnitCost { get; set; }
+
     [Column(TypeName = "numeric(12,2)")]
     public decimal Subtotal { get; set; }
-    [Column(TypeName = "timestamptz")]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [MaxLength(300)]
+    public string? Notes { get; set; }
 
     // Navigation
     [ForeignKey(nameof(OrderId))]

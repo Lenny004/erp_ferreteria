@@ -7,27 +7,29 @@ public class DteConfig
     [Key]
     public Guid Id { get; set; }
 
-    [Required, MaxLength(2)]
-    public string Environment { get; set; } = "00";
-
-    [Required, MaxLength(200)]
-    public string ApiUrl { get; set; } = string.Empty;
+    [Required, MaxLength(20)]
+    public string EmisorNit { get; set; } = string.Empty;
 
     [Required, MaxLength(20)]
-    public string IssuerNit { get; set; } = string.Empty;
+    public string EmisorNrc { get; set; } = string.Empty;
 
-    [Required, MaxLength(200)]
-    public string IssuerName { get; set; } = string.Empty;
+    [Required, MaxLength(250)]
+    public string EmisorName { get; set; } = string.Empty;
 
-    [MaxLength(9)]
-    public string? IssuerNrc { get; set; }
+    [MaxLength(250)]
+    public string? EmisorTradeName { get; set; }
 
-    [MaxLength(10)]
-    public string? ActivityCode { get; set; }
+    [Required, MaxLength(10)]
+    public string ActividadEconomica { get; set; } = string.Empty;
 
-    [MaxLength(200)]
-    public string? ActivityDescription { get; set; }
-    public string? Address { get; set; }
+    [Required, MaxLength(300)]
+    public string AddressLine { get; set; } = string.Empty;
+
+    [Required, MaxLength(100)]
+    public string Municipality { get; set; } = string.Empty;
+
+    [Required, MaxLength(50)]
+    public string Department { get; set; } = string.Empty;
 
     [MaxLength(20)]
     public string? Phone { get; set; }
@@ -35,9 +37,9 @@ public class DteConfig
     [MaxLength(100)]
     public string? Email { get; set; }
 
-    [MaxLength(500)]
-    public string? CertificatePath { get; set; }
-    public string? CertificateKey { get; set; }
+    [Required, MaxLength(5)]
+    public string Ambiente { get; set; } = "00";
+
     public bool IsActive { get; set; } = true;
     [Column(TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

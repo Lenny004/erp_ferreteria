@@ -54,6 +54,11 @@ Resultado recomendado: primero cerrar la arquitectura de datos y seguridad (**in
 | **Libros de IVA** | **Incluido — Fase 10d.** Esquema `fiscal`: `IvaReports`. Generados desde `dte.DteIssued` y `purchasing.PurchaseOrders`. |
 | **Dashboard BI** | **Incluido — Fase 11.** KPIs de ventas, inventario, compras y planilla. API de agregacion sobre datos existentes. |
 | **Schema Prisma** | Reescrito v3.0 desde cero. `prisma migrate dev` gestiona la BD. Migraciones SQL manuales eliminadas. |
+| **Imagenes de producto** | Campo `imageUrl String? @db.VarChar(500)` directo en `Product`. Una imagen de referencia por producto (URL a blob/storage). No se crea tabla `ProductAsset` en MVP; si en el futuro se necesitan multiples imagenes o tipos (diagrama, PDF), se migra en ese momento. |
+| **Cliente en confeccion** | Datos del cliente (nombre, telefono) opcionales pero solicitados en pantalla al crear la orden. Si proporciona datos: crear o reutilizar `Customer` con `customerType = 'CF'`. Si no proporciona datos: `customerId` apunta al registro sistema "Consumidor Final". `customerId` nunca queda null en ordenes de confeccion. |
+| **Registro sistema "Consumidor Final"** | Agregado al seed: `Customer { customerType='CF', name='Consumidor Final', isActive=true }`. Su UUID se persiste en `system.Settings` con clave `DefaultCustomerId` para que WPF y API lo lean sin hardcode en el codigo. |
+| **Cola de ordenes confeccion** | No hay tabla separada. "Ordenes pendientes del taller" = query/vista sobre `sales.Orders` filtrado por `orderType = 'ORDEN_CONFECCION'` y `status = 'PENDIENTE'`. Sin tabla `PendingWorkOrders`. |
+| **Flujo confeccion (confirmado)** | (1) Llega cliente → cajera/tecnico crea `Order` con `orderType='ORDEN_CONFECCION'`, `status='PENDIENTE'`, captura nombre y telefono opcionales. (2) Tecnicos realizan el trabajo; la orden permanece `PENDIENTE`. (3) Cuando el cliente regresa a recoger → cajera selecciona la orden desde la bandeja de pendientes → ejecuta proceso de facturacion → `Order` pasa a `COMPLETADA`. |
 
 ---
 
@@ -375,44 +380,80 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 **Esfuerzo:** Alto  
 **Objetivo:** Crear ventas reales antes de facturar electronicamente.
 
+#### Flujo de confeccion (taller)
+
+```
+Cliente llega
+    ↓
+Cajera/Tecnico crea Order
+  orderType = 'ORDEN_CONFECCION'
+  status    = 'PENDIENTE'
+  Cliente proporciona nombre/telefono?
+    SI → crear o reutilizar Customer CF → customerId = Customer.id
+    NO → customerId = Settings['DefaultCustomerId'] ("Consumidor Final")
+    ↓
+Se agregan OrderDetails (codigos, cantidades)
+    ↓
+Tecnicos realizan el trabajo (orden permanece PENDIENTE)
+    ↓
+Cliente regresa a recoger
+    ↓
+Cajera selecciona orden desde bandeja PENDIENTE de confeccion
+    ↓
+Proceso de facturacion → DTE → Pago
+    ↓
+Order.status = 'COMPLETADA'
+```
+
+**Bandeja de pendientes de taller:** query/vista sobre `sales.Orders` donde `orderType = 'ORDEN_CONFECCION'` y `status = 'PENDIENTE'`. Sin tabla adicional.
+
+#### Flujo de venta en caja (mostrador)
+
+Orden `orderType = 'VENTA_CAJA'` creada y completada en el mismo acto (cliente presente).
+
 **Implementar:**
 
-- `IOrderService`.
-- `IPaymentService` si se agrega tabla de pagos.
-- Flujo de orden desde `OrdenesConfeccionView`.
-- Flujo de venta desde `FacturacionView`.
+- `IOrderService` (confeccion y caja).
+- `IPaymentService`.
+- Flujo de orden desde `OrdenesConfeccionView` (flujo taller arriba).
+- Flujo de venta desde `FacturacionView` (flujo mostrador).
+- Resolucion de cliente: buscar existente por nombre/telefono antes de crear uno nuevo.
 - Calculo de subtotal, IVA 13% y total.
 - Persistencia de `sales.Orders` y `sales.OrderDetails`.
-- Estados finales alineados al SQL.
-- Historial de ventas/facturas.
+- Estados finales alineados al esquema.
+- Historial de ventas y ordenes.
 
 **Estados alineados al esquema actual (obligatorio):**
 
 | Tabla | Campo | Valores permitidos | Uso |
 |---|---|---|---|
-| `sales.Orders` | `Status` | `PENDIENTE`, `COMPLETADA`, `CANCELADA` | Orden en taller o venta cerrada/cancelada |
+| `sales.Orders` | `Status` | `PENDIENTE`, `COMPLETADA`, `CANCELADA` | Orden taller en proceso / venta cerrada / cancelada |
 | `dte.DteIssued` | `MhStatus` | `PENDIENTE`, `PROCESADO`, `RECHAZADO`, `CONTINGENCIA` | Estado fiscal ante MH |
 
 **Nota:** no agregar `CONTINGENCIA` ni `CERRADA` a `Orders.Status` sin migracion SQL. La contingencia fiscal vive en `DteIssued.MhStatus`. Una orden `COMPLETADA` puede tener DTE en `CONTINGENCIA` si MH no respondio.
 
-**Extension opcional en Fase 0 (si se requiere borrador de confeccion):** agregar `BORRADOR` al CHECK de `Orders.Status` mediante migracion, o usar `PENDIENTE` como borrador hasta facturar.
+**Extension opcional (si se requiere borrador de confeccion):** agregar `BORRADOR` al CHECK de `Orders.Status` mediante migracion, o usar `PENDIENTE` como borrador hasta facturar.
 
 **Validaciones:**
 
 - Orden debe tener al menos un detalle.
 - Producto debe estar activo.
-- Precio unitario debe congelarse al momento de venta.
+- Precio unitario debe congelarse al momento de guardar el detalle.
 - Total calculado en servicio, no confiado desde UI.
-- Metodo de pago obligatorio.
-- Receptor obligatorio para credito fiscal.
-- Orden cerrada no puede editarse.
+- Metodo de pago obligatorio al completar.
+- `customerId` nunca null en confeccion (usar Consumidor Final si no hay datos).
+- Receptor con NIT+NRC obligatorio para DTE tipo `03` (credito fiscal).
+- Orden `COMPLETADA` no puede editarse ni eliminarse.
+- Stock se descuenta unicamente al pasar a `COMPLETADA`, no al crear la orden de confeccion.
 
 **Criterios de cierre:**
 
-- Se crea una orden real con detalle.
-- Totales coinciden con DB.
-- Stock se descuenta solo una vez.
-- Historial muestra datos reales.
+- Se crea una orden de confeccion real con detalle, queda PENDIENTE.
+- Cajera puede seleccionar la orden PENDIENTE y completar la facturacion.
+- Orden de caja (mostrador) se crea y completa en el mismo flujo.
+- Totales coinciden con BD.
+- Stock se descuenta solo una vez (al completar).
+- Historial muestra datos reales de ambos tipos de orden.
 
 ---
 

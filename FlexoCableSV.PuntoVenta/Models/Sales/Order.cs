@@ -7,13 +7,12 @@ public class Order
     [Key]
     public Guid Id { get; set; }
     public Guid EmployeeId { get; set; }
-    public Guid ApplicationId { get; set; }
     public Guid? CashSessionId { get; set; }
+    public Guid? CustomerId { get; set; }
 
-    [MaxLength(150)]
-    public string? CustomerName { get; set; }
-    public DateTime OrderDate { get; set; } = DateTime.UtcNow.Date;
-    public TimeSpan OrderTime { get; set; } = DateTime.UtcNow.TimeOfDay;
+    [Required, MaxLength(20)]
+    public string OrderType { get; set; } = "VENTA_CAJA";
+
     public Guid ClientRequestId { get; set; } = Guid.NewGuid();
 
     [Required, MaxLength(20)]
@@ -23,7 +22,7 @@ public class Order
     public decimal Subtotal { get; set; } = 0;
 
     [Column(TypeName = "numeric(12,2)")]
-    public decimal Iva { get; set; } = 0;
+    public decimal TaxAmount { get; set; } = 0;
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
@@ -37,13 +36,11 @@ public class Order
     [ForeignKey(nameof(EmployeeId))]
     public Employee Employee { get; set; } = null!;
 
-    [ForeignKey(nameof(ApplicationId))]
-    public Application Application { get; set; } = null!;
-
     [ForeignKey(nameof(CashSessionId))]
     public CashSession? CashSession { get; set; }
 
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<DteIssued> DteIssued { get; set; } = new List<DteIssued>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+    public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
 }

@@ -32,7 +32,7 @@ public class Employee
     public string? Gender { get; set; }
 
     [MaxLength(20)]
-    public string? Nationality { get; set; } = "SALVADOREÑA";
+    public string? Nationality { get; set; } = "SALVADOREï¿½A";
 
     [MaxLength(30)]
     public string? PassportNumber { get; set; }
@@ -62,9 +62,6 @@ public class Employee
     [Column(TypeName = "numeric(10,2)")]
     public decimal DefaultViaticos { get; set; }
 
-    [MaxLength(50)]
-    public string? Afp { get; set; }
-
     [MaxLength(20)]
     public string? AfpInstitution { get; set; }
 
@@ -76,15 +73,9 @@ public class Employee
     [MaxLength(20)]
     public string? Phone { get; set; }
 
-    [MaxLength(20)]
-    public string? AltPhone { get; set; }
-
     [MaxLength(100)]
     public string? Email { get; set; }
     public string? Address { get; set; }
-
-    [MaxLength(100)]
-    public string? Municipality { get; set; }
 
     [MaxLength(30)]
     public string? DepartmentSv { get; set; }
@@ -98,16 +89,6 @@ public class Employee
 
     [MaxLength(50)]
     public string? AcademicLevel { get; set; }
-
-    // Emergency contact
-    [MaxLength(100)]
-    public string? EmergencyName { get; set; }
-
-    [MaxLength(20)]
-    public string? EmergencyPhone { get; set; }
-
-    [MaxLength(50)]
-    public string? EmergencyRelationship { get; set; }
 
     // POS access (replaces technicians table)
     public string? PinHash { get; set; }
