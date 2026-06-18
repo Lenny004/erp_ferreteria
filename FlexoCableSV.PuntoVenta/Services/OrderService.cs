@@ -371,6 +371,64 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return new CashSaleResult(order.Id, order.ClientRequestId, order.Subtotal, order.TaxAmount, order.Total);
     }
 
+    public async Task<IReadOnlyList<SalesOrderSummary>> GetCompletedSalesAsync(
+        string? searchText,
+        int take = 100,
+        CancellationToken cancellationToken = default)
+    {
+        take = Math.Clamp(take, 1, 500);
+
+        using var scope = scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
+
+        var query = dbContext.Orders
+            .AsNoTracking()
+            .Include(o => o.Employee)
+            .Include(o => o.Payments)
+            .Where(o => o.Status == "COMPLETADA");
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var search = searchText.Trim().TrimStart('#');
+            var pattern = $"%{search}%";
+            query = Guid.TryParse(search, out var orderId)
+                ? query.Where(o => o.Id == orderId)
+                : query.Where(o =>
+                    (o.Notes != null && EF.Functions.ILike(o.Notes, pattern)) ||
+                    EF.Functions.ILike(o.Employee.FirstName, pattern) ||
+                    EF.Functions.ILike(o.Employee.LastName, pattern));
+        }
+
+        var orders = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(take)
+            .Select(o => new
+            {
+                o.Id,
+                o.CreatedAt,
+                o.Notes,
+                o.OrderType,
+                o.Status,
+                o.Total,
+                PaymentMethod = o.Payments
+                    .OrderBy(p => p.CreatedAt)
+                    .Select(p => p.Method)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(cancellationToken);
+
+        return orders
+            .Select(o => new SalesOrderSummary(
+                o.Id,
+                o.CreatedAt,
+                ExtractCustomerName(o.Notes),
+                o.OrderType,
+                string.IsNullOrWhiteSpace(o.PaymentMethod) ? "N/D" : o.PaymentMethod,
+                o.Status,
+                o.Total))
+            .ToList();
+    }
+
     private static string ExtractCustomerName(string? notes)
     {
         if (string.IsNullOrWhiteSpace(notes))

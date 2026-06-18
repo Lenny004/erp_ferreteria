@@ -19,6 +19,11 @@ public interface IOrderService
     Task<CashSaleResult> CompleteConfectionOrderAsync(
         CompleteConfectionOrderRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesOrderSummary>> GetCompletedSalesAsync(
+        string? searchText,
+        int take = 100,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record CreateCashSaleRequest(
@@ -75,5 +80,20 @@ public sealed record ConfectionOrderSummary(
 {
     public string OrderNumber => $"#{OrderId.ToString()[..8].ToUpperInvariant()}";
     public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+    public string TotalText => Total.ToString("C2");
+}
+
+public sealed record SalesOrderSummary(
+    Guid OrderId,
+    DateTime CreatedAt,
+    string Customer,
+    string OrderType,
+    string PaymentMethod,
+    string Status,
+    decimal Total)
+{
+    public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+    public string ControlText => $"ORD-{OrderId.ToString()[..8].ToUpperInvariant()}";
+    public string DteTypeText => OrderType == "ORDEN_CONFECCION" ? "TALLER" : "CAJA";
     public string TotalText => Total.ToString("C2");
 }
