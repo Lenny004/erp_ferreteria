@@ -5,7 +5,9 @@ var root = FindRepositoryRoot();
 var appsettingsPath = Path.Combine(root, "FlexoCableSV.PuntoVenta", "Config", "appsettings.json");
 var schemaPath = Path.Combine(root, "FlexoCableSV.PuntoVenta", "Squema.sql");
 var migrationsPath = Path.Combine(root, "..", "FlexoCable-backend", "database", "migrations");
+var prismaSchemaPath = Path.Combine(root, "..", "FlexoCable-backend", "prisma", "schema.prisma");
 var connectionString = GetArg(args, "--connection") ?? ReadConnectionString(appsettingsPath);
+var forceLegacySql = HasFlag(args, "--force-legacy-sql");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -17,6 +19,15 @@ Console.WriteLine($"Conexion: {MaskConnectionString(connectionString)}");
 
 try
 {
+    if (File.Exists(prismaSchemaPath) && !forceLegacySql)
+    {
+        Console.Error.WriteLine("Se detecto FlexoCable-backend/prisma/schema.prisma.");
+        Console.Error.WriteLine("Prisma v3.0 es la fuente de verdad del esquema. Este aplicador ya no debe ejecutar Squema.sql por defecto.");
+        Console.Error.WriteLine("Use en FlexoCable-backend: npm run db:push o npm run db:migrate:dev.");
+        Console.Error.WriteLine("Si necesita aplicar el SQL legacy bajo su responsabilidad, ejecute: dotnet run --project tools/FlexoCable.DbApply -- --force-legacy-sql");
+        return 2;
+    }
+
     await using var connection = new NpgsqlConnection(connectionString);
     await connection.OpenAsync();
 
@@ -30,9 +41,12 @@ try
         await ExecuteScriptAsync(connection, schemaPath, root);
     }
 
-    foreach (var migration in Directory.EnumerateFiles(migrationsPath, "*.sql").Order())
+    if (Directory.Exists(migrationsPath))
     {
-        await ExecuteScriptAsync(connection, migration, root);
+        foreach (var migration in Directory.EnumerateFiles(migrationsPath, "*.sql").Order())
+        {
+            await ExecuteScriptAsync(connection, migration, root);
+        }
     }
 
     await PrintVerificationAsync(connection);
@@ -67,6 +81,11 @@ static string? GetArg(string[] args, string name)
     }
 
     return null;
+}
+
+static bool HasFlag(string[] args, string name)
+{
+    return args.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase));
 }
 
 static string FindRepositoryRoot()
@@ -136,8 +155,14 @@ static async Task PrintVerificationAsync(NpgsqlConnection connection)
             EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hr' AND table_name = 'PayrollRuns') AS payroll_runs,
             EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hr' AND table_name = 'EmployeeBankAccounts') AS employee_bank_accounts,
             EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'hr' AND table_name = 'Employees' AND column_name = 'SalaryType') AS employee_salary_type,
-            EXISTS (SELECT 1 FROM hr."Banks" WHERE "Code" = 'BAC') AS bank_seed,
-            EXISTS (SELECT 1 FROM hr."IsrBrackets" WHERE "Year" = 2026 AND "PeriodType" = 'QUINCENAL') AS isr_seed,
+            CASE
+                WHEN to_regclass('hr."Banks"') IS NULL THEN FALSE
+                ELSE EXISTS (SELECT 1 FROM hr."Banks" WHERE "Code" = 'BAC')
+            END AS bank_seed,
+            CASE
+                WHEN to_regclass('hr."IsrBrackets"') IS NULL THEN FALSE
+                ELSE EXISTS (SELECT 1 FROM hr."IsrBrackets" WHERE "Year" = 2026 AND "PeriodType" = 'QUINCENAL')
+            END AS isr_seed,
             EXISTS (SELECT 1 FROM hr."Employees" WHERE "Dui" = '00000001-0' AND "PinHash" IS NOT NULL) AS employee_pin_seed;
         """;
 

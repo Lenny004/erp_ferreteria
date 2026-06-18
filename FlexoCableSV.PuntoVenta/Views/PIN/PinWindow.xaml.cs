@@ -152,8 +152,7 @@ public partial class PinWindow : Window
 
             PosSession.Set(employee);
 
-            var destino = employee.CanCashier ? "Facturacion" : "HistorialVentas";
-            var shell = new MainShellWindow(destino);
+            var shell = new MainShellWindow("Facturacion");
             shell.Show();
             Close();
         }

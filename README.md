@@ -560,11 +560,13 @@ FlexoCable Sistema/
 # Desde FlexoCable-backend/
 docker compose up -d
 
-# Aplicar Squema.sql + migraciones (desde repo FlexoCable/)
-dotnet run --project tools/FlexoCable.DbApply
+# Aplicar schema Prisma v3.0 (desde FlexoCable-backend/)
+npm run db:push
 ```
 
 `FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto `55432` por defecto).
+
+`tools/FlexoCable.DbApply` queda solo como herramienta legacy/diagnostico. Por defecto no aplica `Squema.sql` si detecta `FlexoCable-backend/prisma/schema.prisma`, para evitar mezclar dos fuentes de verdad de BD.
 
 **Empleados demo (solo desarrollo)** — seeds en `Squema.sql`:
 

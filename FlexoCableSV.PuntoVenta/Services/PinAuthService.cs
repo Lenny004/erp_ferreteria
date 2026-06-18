@@ -20,7 +20,7 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
 
         var candidates = await db.Employees
             .AsNoTracking()
-            .Where(e => e.IsActive && e.PinHash != null && (e.CanSell || e.CanCashier))
+            .Where(e => e.IsActive && e.PinHash != null && e.CanCashier)
             .ToListAsync(cancellationToken);
 
         foreach (var employee in candidates)

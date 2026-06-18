@@ -292,6 +292,10 @@ Antes de implementar servicios, crear una migracion SQL de saneamiento:
 | EF Core | Modelos C# con `Guid` para PKs/FKs; WPF solo consulta/escribe datos operativos de caja (ver 17.12) |
 | Documentacion | Mapeo Beraka → FlexoCable en seccion 17.5 |
 
+**Regla operativa Fase 0 — fuente de verdad BD:** desde v3.0, `FlexoCable-backend/prisma/schema.prisma` es la fuente principal del schema. `FlexoCableSV.PuntoVenta/Squema.sql` queda como referencia legacy hasta eliminarlo o convertirlo en migraciones raw puntuales. No ejecutar ambos caminos sobre la misma BD.
+
+**Pendiente antes de servicios WPF:** alinear modelos EF Core contra Prisma v3.0 y documentar cualquier SQL raw requerido por PostgreSQL que Prisma no pueda expresar, por ejemplo indices parciales, triggers y politicas RLS.
+
 ---
 
 ### Fase 1 - Seguridad, Sesion y PIN Real
@@ -1259,31 +1263,28 @@ La exportacion Excel/PDF de planilla **no se rediseña desde cero**. Se porta la
 Orden recomendado para empezar sin bloquearse:
 
 1. Confirmar modo offline MVP (seccion 13): bloqueo total vs cola local.
-2. Crear migracion de saneamiento SQL + seed dev + plantillas Excel.
-3. **Ejecutar Fase 0b:** refactorizacion esquema `hr` segun seccion 17 (antes de backend RRHH).
-4. Crear `.sln` y proyecto de tests.
-5. Ejecutar schema en PostgreSQL local y Supabase staging.
-6. Activar validacion de conexion al iniciar WPF + `IConnectivityService`.
-7. Implementar `PinService` y sesion real.
-8. Implementar `InventoryService` con transacciones.
-9. Implementar `OrderService` y estados alineados al SQL.
-10. Conectar vistas WPF existentes a servicios.
-11. Implementar DTE tipo `01` en ambiente test.
-12. Agregar DTE tipo `03` y `05` + reintentos background.
-13. Implementar impresion y corte.
-14. Crear `FlexoCable-backend` (Node.js 22 + Express 5 + Prisma 6) y `FlexoCable-adminweb` (Next.js 15 + React 19).
-15. Implementar import/export Excel bidireccional.
-16. **Fase 9b:** Maestro de proveedores, ordenes de compra y recepcion con costeo promedio ponderado.
-17. **Fase 10d:** Libros de IVA (ventas CF, ventas CCF, compras) desde DTEs y OCs; exportacion Excel.
-18. **Fase 10a:** planilla ordinaria (portar calculo + payroll-exports.service.ts).
-19. **Fase 10b:** aguinaldo y vacaciones.
-20. **Fase 10c:** liquidaciones.
-21. **Fase 11:** Dashboard BI (ventas, inventario, compras, RRHH).
-22. Reportes, backups, resiliencia offline produccion y auditoria.
-16. **Fase 10a:** planilla ordinaria (portar calculo + `payroll-exports.service.ts`).
-17. **Fase 10b:** aguinaldo y vacaciones.
-18. **Fase 10c:** liquidaciones (+ ISR declaraciones si aplica).
-19. Reportes, backups, resiliencia offline produccion y auditoria.
+2. Aplicar schema Prisma v3.0 desde `FlexoCable-backend` (`npm run db:push` en desarrollo; `prisma migrate` cuando se congele migracion).
+3. Documentar SQL raw complementario para indices parciales, triggers, RLS y seeds que Prisma no exprese.
+4. Alinear modelos EF Core WPF contra Prisma v3.0 antes de servicios.
+5. Crear `.sln` y proyecto de tests.
+6. Ejecutar schema en PostgreSQL local y Supabase staging.
+7. Activar validacion de conexion al iniciar WPF + `IConnectivityService`.
+8. Implementar `PinService` y sesion real.
+9. Implementar `InventoryService` con transacciones.
+10. Implementar `OrderService` y estados alineados al schema Prisma.
+11. Conectar vistas WPF existentes a servicios.
+12. Implementar DTE tipo `01` en ambiente test.
+13. Agregar DTE tipo `03` y `05` + reintentos background.
+14. Implementar impresion y corte.
+15. Crear/continuar `FlexoCable-backend` (Node.js 22 + Express 5 + Prisma 6) y `FlexoCable-adminweb` (Next.js 15 + React 19).
+16. Implementar import/export Excel bidireccional.
+17. **Fase 9b:** Maestro de proveedores, ordenes de compra y recepcion con costeo promedio ponderado.
+18. **Fase 10d:** Libros de IVA (ventas CF, ventas CCF, compras) desde DTEs y OCs; exportacion Excel.
+19. **Fase 10a:** planilla ordinaria (portar calculo + `payroll-exports.service.ts`).
+20. **Fase 10b:** aguinaldo y vacaciones.
+21. **Fase 10c:** liquidaciones (+ ISR declaraciones si aplica).
+22. **Fase 11:** Dashboard BI (ventas, inventario, compras, RRHH).
+23. Reportes, backups, resiliencia offline produccion y auditoria.
 
 ---
 
