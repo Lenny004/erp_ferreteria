@@ -1,4 +1,5 @@
 using System.Windows;
+using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.PIN;
 using FlexoCableSV.PuntoVenta.Views.Shell;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,14 +35,20 @@ public partial class InicioWindow : Window
 
     private void OnVentasClick(object sender, RoutedEventArgs e)
     {
-        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(_services, "Facturacion");
+        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(
+            _services,
+            OperationalModule.Caja,
+            NavSections.Facturacion);
         pinWindow.Show();
         Close();
     }
 
     private void OnInventarioClick(object sender, RoutedEventArgs e)
     {
-        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(_services, "HistorialVentas");
+        var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(
+            _services,
+            OperationalModule.Confeccion,
+            NavSections.Ordenes);
         pinWindow.Show();
         Close();
     }

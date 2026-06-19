@@ -21,6 +21,7 @@ public partial class PinWindow : Window
     private readonly ICurrentSessionService _currentSession;
     private readonly IAuditService _auditService;
     private readonly IPinAttemptService _pinAttemptService;
+    private readonly OperationalModule _module;
     private readonly string _initialSection;
     private string _pinActual = string.Empty;
     private bool _validando;
@@ -31,16 +32,34 @@ public partial class PinWindow : Window
         ICurrentSessionService currentSession,
         IAuditService auditService,
         IPinAttemptService pinAttemptService,
-        string initialSection = "Facturacion")
+        OperationalModule module,
+        string initialSection = "")
     {
         _pinAuth = pinAuth;
         _services = services;
         _currentSession = currentSession;
         _auditService = auditService;
         _pinAttemptService = pinAttemptService;
-        _initialSection = initialSection;
+        _module = module;
+        _initialSection = string.IsNullOrWhiteSpace(initialSection)
+            ? NavSections.DefaultSection(module)
+            : initialSection;
 
         InitializeComponent();
+
+        PinTitleText.Text = _module switch
+        {
+            OperationalModule.Caja => "Acceso a Caja",
+            OperationalModule.Confeccion => "Acceso a Confeccion",
+            _ => "Ingrese su PIN"
+        };
+
+        PinSubtitleText.Text = _module switch
+        {
+            OperationalModule.Caja => "PIN de cajero autorizado",
+            OperationalModule.Confeccion => "PIN de tecnico autorizado",
+            _ => "4 digitos"
+        };
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         KeyDown += OnTeclaFisica;
@@ -161,21 +180,21 @@ public partial class PinWindow : Window
         _validando = true;
         try
         {
-            var employee = await _pinAuth.ValidatePinAsync(_pinActual);
+            var employee = await _pinAuth.ValidatePinAsync(_pinActual, _module);
             if (employee is null)
             {
                 var status = _pinAttemptService.RegisterFailedAttempt();
-                MostrarError(BuildFailedAttemptMessage(status));
+                MostrarError(BuildFailedAttemptMessage(status, _module));
                 AnimarError();
                 LimpiarPin();
                 return;
             }
 
             _pinAttemptService.Reset();
-            _currentSession.StartSession(employee, _initialSection);
-            await _auditService.RecordLoginAsync(employee, _initialSection);
+            _currentSession.StartSession(employee, _module, _initialSection);
+            await _auditService.RecordLoginAsync(employee, _currentSession.CurrentModule!);
 
-            var shell = ActivatorUtilities.CreateInstance<MainShellWindow>(_services, _initialSection);
+            var shell = _services.GetRequiredService<MainShellWindow>();
             shell.Show();
             Close();
         }
@@ -223,11 +242,21 @@ public partial class PinWindow : Window
         return true;
     }
 
-    private static string BuildFailedAttemptMessage(PinAttemptStatus status)
+    private static string BuildFailedAttemptMessage(PinAttemptStatus status, OperationalModule module)
     {
-        return status.IsLocked
-            ? BuildLockoutMessage(status)
-            : $"PIN incorrecto. Intentos restantes: {status.RemainingAttempts}.";
+        if (status.IsLocked)
+        {
+            return BuildLockoutMessage(status);
+        }
+
+        var roleHint = module switch
+        {
+            OperationalModule.Caja => "cajero",
+            OperationalModule.Confeccion => "tecnico de confeccion",
+            _ => "usuario"
+        };
+
+        return $"PIN incorrecto o sin permiso de {roleHint}. Intentos restantes: {status.RemainingAttempts}.";
     }
 
     private static string BuildLockoutMessage(PinAttemptStatus status)

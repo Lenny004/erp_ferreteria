@@ -23,8 +23,7 @@ public partial class MainShellWindow : Window
         IConnectivityService connectivityService,
         ICurrentSessionService currentSession,
         IAuditService auditService,
-        IServiceProvider serviceProvider,
-        string initialSection = "Stock")
+        IServiceProvider serviceProvider)
     {
         _connectivityService = connectivityService;
         _currentSession = currentSession;
@@ -35,18 +34,19 @@ public partial class MainShellWindow : Window
 
         _sections = new Dictionary<string, (Button Button, string Title, Func<UserControl> CreateView)>
         {
-            ["Stock"] = (BtnStock, "Consultar Stock", () => _serviceProvider.GetRequiredService<ConsultarStockView>()),
-            ["Facturacion"] = (BtnFacturacion, "Facturacion", () => _serviceProvider.GetRequiredService<FacturacionView>()),
-            ["HistorialFacturas"] = (BtnHistorialFacturas, "Historial de Facturas", () => _serviceProvider.GetRequiredService<HistorialFacturasView>()),
-            ["Impresoras"] = (BtnImpresoras, "Impresoras", () => new ImpresorasView()),
-            ["Devoluciones"] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
-            ["CorteCaja"] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
-            ["HistorialVentas"] = (BtnHistorialVentas, "Historial de Ventas", () => _serviceProvider.GetRequiredService<ConfeccionViews.HistorialVentasView>()),
-            ["Ordenes"] = (BtnOrdenes, "Ordenes de Confeccion", () => _serviceProvider.GetRequiredService<ConfeccionViews.OrdenesConfeccionView>()),
-            ["Codigos"] = (BtnCodigos, "Ver Codigos", () => _serviceProvider.GetRequiredService<ConfeccionViews.VerCodigosView>())
+            [NavSections.Stock] = (BtnStock, "Consultar Stock", () => _serviceProvider.GetRequiredService<ConsultarStockView>()),
+            [NavSections.Facturacion] = (BtnFacturacion, "Facturacion", () => _serviceProvider.GetRequiredService<FacturacionView>()),
+            [NavSections.HistorialFacturas] = (BtnHistorialFacturas, "Historial de Facturas", () => _serviceProvider.GetRequiredService<HistorialFacturasView>()),
+            [NavSections.Impresoras] = (BtnImpresoras, "Impresoras", () => new ImpresorasView()),
+            [NavSections.Devoluciones] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
+            [NavSections.CorteCaja] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
+            [NavSections.HistorialVentas] = (BtnHistorialVentas, "Historial de Ventas", () => _serviceProvider.GetRequiredService<ConfeccionViews.HistorialVentasView>()),
+            [NavSections.Ordenes] = (BtnOrdenes, "Ordenes de Confeccion", () => _serviceProvider.GetRequiredService<ConfeccionViews.OrdenesConfeccionView>()),
+            [NavSections.Codigos] = (BtnCodigos, "Ver Codigos", () => _serviceProvider.GetRequiredService<ConfeccionViews.VerCodigosView>())
         };
 
-        ShowSection(initialSection);
+        ApplyModuleNavigation();
+        ShowSection(_currentSession.ResolveInitialSection());
         RenderCurrentSession();
 
         _connectivityTimer = new DispatcherTimer
@@ -58,6 +58,55 @@ public partial class MainShellWindow : Window
 
         Loaded += OnLoaded;
         Closed += OnClosed;
+    }
+
+    private void ApplyModuleNavigation()
+    {
+        if (_currentSession.ActiveModule is not OperationalModule activeModule)
+        {
+            foreach (var section in _sections.Values)
+            {
+                section.Button.Visibility = Visibility.Collapsed;
+            }
+
+            TxtNavSectionCaja.Visibility = Visibility.Collapsed;
+            NavSectionDivider.Visibility = Visibility.Collapsed;
+            TxtNavSectionConfeccion.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var allowedSections = NavSections.ForModule(activeModule);
+        var allowedSet = allowedSections.ToHashSet(StringComparer.Ordinal);
+
+        var cajaVisible = false;
+        var confeccionVisible = false;
+
+        foreach (var (sectionKey, section) in _sections)
+        {
+            var isAllowed = allowedSet.Contains(sectionKey);
+            section.Button.Visibility = isAllowed ? Visibility.Visible : Visibility.Collapsed;
+
+            if (!isAllowed)
+            {
+                continue;
+            }
+
+            if (NavSections.ForModule(OperationalModule.Caja).Contains(sectionKey, StringComparer.Ordinal))
+            {
+                cajaVisible = true;
+            }
+
+            if (NavSections.ForModule(OperationalModule.Confeccion).Contains(sectionKey, StringComparer.Ordinal))
+            {
+                confeccionVisible = true;
+            }
+        }
+
+        TxtNavSectionCaja.Visibility = cajaVisible ? Visibility.Visible : Visibility.Collapsed;
+        TxtNavSectionConfeccion.Visibility = confeccionVisible ? Visibility.Visible : Visibility.Collapsed;
+        NavSectionDivider.Visibility = cajaVisible && confeccionVisible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -92,7 +141,18 @@ public partial class MainShellWindow : Window
 
     private void ShowSection(string sectionKey)
     {
+        if (_currentSession.ActiveModule is OperationalModule activeModule
+            && !NavSections.BelongsToModule(sectionKey, activeModule))
+        {
+            return;
+        }
+
         if (!_sections.TryGetValue(sectionKey, out var activeSection))
+        {
+            return;
+        }
+
+        if (activeSection.Button.Visibility != Visibility.Visible)
         {
             return;
         }
@@ -147,6 +207,13 @@ public partial class MainShellWindow : Window
 
         var employee = _currentSession.CurrentEmployee;
         var startedAt = _currentSession.StartedAtUtc?.ToLocalTime().ToString("HH:mm") ?? "--:--";
-        SessionText.Text = $"Cajero: {employee.FirstName} {employee.LastName} | Inicio: {startedAt}";
+        var roleLabel = _currentSession.ActiveModule switch
+        {
+            OperationalModule.Caja => "Cajero",
+            OperationalModule.Confeccion => "Tecnico",
+            _ => "Usuario"
+        };
+
+        SessionText.Text = $"{roleLabel}: {employee.FirstName} {employee.LastName} | Inicio: {startedAt}";
     }
 }

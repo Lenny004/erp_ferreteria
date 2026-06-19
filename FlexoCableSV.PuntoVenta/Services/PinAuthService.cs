@@ -6,11 +6,17 @@ using Microsoft.Extensions.DependencyInjection;
 namespace FlexoCableSV.PuntoVenta.Services;
 
 /// <summary>
-/// Valida PIN de caja contra hr.Employees.PinHash (bcrypt).
+/// Valida PIN contra hr.Employees.PinHash (bcrypt) según el módulo operativo elegido.
 /// </summary>
 public class PinAuthService(IServiceScopeFactory scopeFactory)
 {
-    public async Task<Employee?> ValidatePinAsync(string pin, CancellationToken cancellationToken = default)
+    public Task<Employee?> ValidatePinAsync(string pin, CancellationToken cancellationToken = default) =>
+        ValidatePinAsync(pin, OperationalModule.Caja, cancellationToken);
+
+    public async Task<Employee?> ValidatePinAsync(
+        string pin,
+        OperationalModule module,
+        CancellationToken cancellationToken = default)
     {
         if (pin.Length != 4 || !pin.All(char.IsDigit))
             return null;
@@ -18,10 +24,18 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FlexoDbContext>();
 
-        var candidates = await db.Employees
+        var candidatesQuery = db.Employees
             .AsNoTracking()
-            .Where(e => e.IsActive && e.PinHash != null && e.CanCashier)
-            .ToListAsync(cancellationToken);
+            .Where(e => e.IsActive && e.PinHash != null);
+
+        candidatesQuery = module switch
+        {
+            OperationalModule.Caja => candidatesQuery.Where(e => e.CanCashier),
+            OperationalModule.Confeccion => candidatesQuery.Where(e => e.CanSell),
+            _ => candidatesQuery.Where(_ => false)
+        };
+
+        var candidates = await candidatesQuery.ToListAsync(cancellationToken);
 
         foreach (var employee in candidates)
         {

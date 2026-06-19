@@ -143,12 +143,38 @@ El sistema se instala igual en todas las PCs. La pantalla de inicio presenta amb
 
 **Reglas de acceso por módulo:**
 
+| Módulo (botón inicio) | Permiso en BD | PIN al entrar | Secciones visibles en sidenav |
+|---|---|---|---|
+| **VENTAS** (caja) | `can_cashier = true` | ✅ PIN 4 dígitos | Solo bloque **CAJA** (6 ítems) |
+| **CONFECCION** (taller) | `can_sell = true` | ✅ PIN 4 dígitos | Solo bloque **CONFECCION** (3 ítems) |
+
+El panel lateral **no muestra ambos bloques a la vez**. La visibilidad depende del módulo elegido en inicio y validado con PIN.
+
+**Ítems del sidenav — módulo CAJA (`can_cashier`):**
+
+| Botón sidenav | Vista | Descripción |
+|---|---|---|
+| Consultar Stock | `ConsultarStockView` | Búsqueda rápida de inventario (solo lectura) |
+| Facturacion | `FacturacionView` | Venta mostrador + DTE |
+| Historial Facturas | `HistorialFacturasView` | DTEs emitidos y reimpresión |
+| Impresoras | `ImpresorasView` | Configuración de impresión |
+| Devoluciones | `DevolucionesView` | Nota de crédito DTE-05 |
+| Corte de caja | `CorteCajaView` | Cierre de turno |
+
+**Ítems del sidenav — módulo CONFECCION (`can_sell`):**
+
+| Botón sidenav | Vista | Descripción |
+|---|---|---|
+| Historial Ventas | `HistorialVentasView` | Órdenes y ventas del taller |
+| Ordenes Confeccion | `OrdenesConfeccionView` | Crear órdenes pendientes |
+| Ver Codigos | `VerCodigosView` | Catálogo y stock por producto |
+
 | Módulo | Acción | PIN requerido |
 |---|---|---|
-| Caja | Ingresar al módulo | ✅ PIN del cajero (`can_cashier`) |
+| Caja (VENTAS) | Ingresar al módulo | ✅ PIN del cajero (`can_cashier`) |
 | Caja | Facturar / emitir DTE | ✅ Mismo PIN de la sesión activa (sin segundo PIN) |
-| Confección | Ingresar al módulo | ❌ No |
-| Confección | Crear órdenes, ver historial, consultar códigos | ❌ No |
+| Confección | Ingresar al módulo | ✅ PIN del técnico (`can_sell`) |
+| Confección | Crear órdenes, ver historial, consultar códigos | ✅ Misma sesión del ingreso |
 
 **Flujo de autenticación en Caja:**
 
@@ -179,7 +205,7 @@ El módulo de Confección es de acceso directo sin PIN, pues los técnicos de ta
         └── Ver Códigos → Catálogo de productos y códigos
 ```
 
-> **Nota de implementación:** `PinWindow.xaml` valida contra `hr."Employees"."PinHash"` con bcrypt vía `PinAuthService`. La sesión del cajero se propaga con `ICurrentSessionService` a facturación, corte y devoluciones.
+> **Nota de implementación:** `PinWindow` valida el PIN según el módulo elegido: `can_cashier` para VENTAS, `can_sell` para CONFECCION. Tras el ingreso, `MainShellWindow` oculta las secciones del otro módulo vía `NavSections` y `ICurrentSessionService.ActiveModule`.
 
 ---
 

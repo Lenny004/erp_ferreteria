@@ -79,6 +79,7 @@
                     Margin="0,4,0,0">
                     <StackPanel>
                         <TextBlock
+                            x:Name="TxtNavSectionCaja"
                             Text="CAJA"
                             Style="{StaticResource FlexoNavSectionTitleStyle}" />
                         <Button
@@ -220,8 +221,10 @@
                             </Grid>
                         </Button>
                         <Rectangle
+                            x:Name="NavSectionDivider"
                             Style="{StaticResource FlexoNavDividerStyle}" />
                         <TextBlock
+                            x:Name="TxtNavSectionConfeccion"
                             Text="CONFECCION"
                             Style="{StaticResource FlexoNavSectionTitleStyle}" />
                         <Button
