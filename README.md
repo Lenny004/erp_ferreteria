@@ -1,8 +1,9 @@
 # FlexoCable SV — Sistema Integrado de Punto de Venta y Gestión
 
-> **Código interno:** FCSV-2026 · **Versión:** 1.0.0-MVP · **Inicio:** Mayo 2026  
-> **Cliente:** FlexoCable El Salvador, S.A. de C.V. · **Matriz:** FlexoCable Panamá.
-> **Ubicación:** San Salvador, El Salvador.
+> **Código interno:** FCSV-2026 · **Versión:** 1.0.0-MVP · **Plan:** v3.0 (Junio 2026)  
+> **Cliente:** FlexoCable El Salvador, S.A. de C.V. · **Matriz:** FlexoCable Panamá  
+> **Ubicación:** San Salvador, El Salvador  
+> **Plan de desarrollo:** [`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`](docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md)
 
 Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta táctil con facturación electrónica DTE, control de inventario y gestión de planillas. Diseñado específicamente para personal mayor con experiencia tecnológica limitada.
 
@@ -12,6 +13,7 @@ Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta tá
 
 - [Contexto del Negocio](#contexto-del-negocio)
 - [Arquitectura del Sistema](#arquitectura-del-sistema)
+- [Estado del desarrollo](#estado-del-desarrollo)
 - [App de Escritorio (C# WPF)](#app-de-escritorio-c-wpf)
   - [Flujo de Navegación e Inicio](#flujo-de-navegación-e-inicio)
   - [Módulo Caja](#módulo-caja)
@@ -24,7 +26,9 @@ Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta tá
 - [Stack Tecnológico](#stack-tecnológico)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 - [Instalación y Configuración](#instalación-y-configuración)
-- [Roadmap](#roadmap)
+- [Roadmap por fases](#roadmap-por-fases)
+- [Repositorios relacionados](#repositorios-relacionados)
+- [Reglas de Negocio Críticas](#reglas-de-negocio-críticas)
 
 ---
 
@@ -49,7 +53,9 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
 
 ## Arquitectura del Sistema
 
-FlexoCable son **tres repositorios** con responsabilidades separadas. La base de datos PostgreSQL es **una sola estructura** (UUID, esquemas `public` / `sales` / `dte` / `hr` / `system`); las diferencias entre caja y administración se resuelven en **código**, no con tablas distintas por tecnología.
+FlexoCable son **tres repositorios** con responsabilidades separadas. La base de datos PostgreSQL es **una sola estructura** (UUID, esquemas `public` / `purchasing` / `sales` / `dte` / `fiscal` / `hr` / `system`); las diferencias entre caja y administración se resuelven en **código**, no con tablas distintas por tecnología.
+
+**Fuente de verdad del esquema (v3.0):** `FlexoCable-backend/prisma/schema.prisma`. WPF (EF Core) y el API Node consumen la misma BD.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -74,7 +80,8 @@ FlexoCable son **tres repositorios** con responsabilidades separadas. La base de
         ┌──────────────────────────────────────┐
         │         POSTGRESQL (esquema único)    │
         │  PKs/FKs: UUID (gen_random_uuid())    │
-        │  public/ sales/ dte/ hr/ system/      │
+        │  public/ purchasing/ sales/ dte/       │
+        │  fiscal/ hr/ system/                   │
         └──────────────────┬───────────────────┘
                            │
                 ┌──────────▼──────────┐
@@ -97,8 +104,8 @@ La caja **no** implementa módulos de planilla, RRHH ni inventario administrativ
 | Repositorio | Tecnología | Responsabilidad |
 |---|---|---|
 | `FlexoCable` / `FlexoCableSV.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
-| `FlexoCable-backend` | Node.js, Express, Prisma | API REST: empleados, planilla, inventario admin, reportes, Excel/PDF |
-| `FlexoCable-adminweb` | Next.js | UI administrativa; consume **solo** la API Node |
+| [`FlexoCable-backend`](../FlexoCable-backend/README.md) | Node.js, Express, Prisma | API REST: empleados, planilla, compras, libros IVA, BI, Excel/PDF |
+| [`FlexoCable-adminweb`](../FlexoCable-adminweb/README.md) | Next.js | UI administrativa; consume **solo** la API Node |
 
 **Principios arquitectónicos:**
 
@@ -138,8 +145,8 @@ El sistema se instala igual en todas las PCs. La pantalla de inicio presenta amb
 
 | Módulo | Acción | PIN requerido |
 |---|---|---|
-| Caja | Ingresar al módulo | ✅ PIN del cajero |
-| Caja | Facturar / emitir DTE | ✅ Mismo PIN del ingreso |
+| Caja | Ingresar al módulo | ✅ PIN del cajero (`can_cashier`) |
+| Caja | Facturar / emitir DTE | ✅ Mismo PIN de la sesión activa (sin segundo PIN) |
 | Confección | Ingresar al módulo | ❌ No |
 | Confección | Crear órdenes, ver historial, consultar códigos | ❌ No |
 
@@ -172,7 +179,7 @@ El módulo de Confección es de acceso directo sin PIN, pues los técnicos de ta
         └── Ver Códigos → Catálogo de productos y códigos
 ```
 
-> **Nota de implementación:** `PinWindow.xaml` es un modal reutilizable que recibe el `employee_id` como parámetro, consulta `hr.employees.pin_hash` y valida con bcrypt. Se usa en el ingreso a Caja y al facturar.
+> **Nota de implementación:** `PinWindow.xaml` valida contra `hr."Employees"."PinHash"` con bcrypt vía `PinAuthService`. La sesión del cajero se propaga con `ICurrentSessionService` a facturación, corte y devoluciones.
 
 ---
 
@@ -225,21 +232,34 @@ Panel de Caja (requiere PIN para entrar)
 
 **Pantallas del módulo Caja:**
 
-| Ventana | Archivo | Propósito |
-|---|---|---|
-| Facturación | `FacturarWindow.xaml` | DTE, envío MH, sello, impresión |
-| Historial de Facturas | *(nueva)* | Consulta y reimpresión de DTEs |
-| Consultar Stock | *(nueva, solo lectura)* | Vista rápida de inventario |
-| Nota de Crédito | *(nueva)* | Anulaciones DTE-05 |
-| Corte de Caja | *(nueva)* | Cierre de turno |
-| Impresoras | `ImpresorasWindow.xaml` | Configuración de impresión |
-| PIN | `PinWindow.xaml` | Modal reutilizable (recibe `employee_id`) |
+| Vista | Archivo | Propósito | Estado |
+|---|---|---|---|
+| Facturación | `Views/Caja/FacturacionView.xaml` | Venta mostrador, DTE, pago | UI + servicios parciales |
+| Historial de Facturas | `Views/Caja/HistorialFacturasView.xaml` | Consulta y reimpresión de DTEs | UI shell |
+| Consultar Stock | `Views/Caja/ConsultarStockView.xaml` | Vista rápida de inventario | Conectado a `InventoryService` |
+| Nota de Crédito | `Views/Caja/DevolucionesView.xaml` | Devoluciones DTE-05 | UI shell |
+| Corte de Caja | `Views/Caja/CorteCajaView.xaml` | Cierre de turno | UI shell |
+| Impresoras | `Views/Caja/ImpresorasView.xaml` | Configuración de impresión | UI shell |
+| PIN | `Views/PIN/PinWindow.xaml` | Modal de autenticación cajero | ✅ `PinAuthService` + bcrypt |
 
 ---
 
 ### Módulo Confección
 
 Acceso directo sin PIN. Orientado a los técnicos de taller que fabrican cables custom. No manejan facturación ni efectivo.
+
+### Flujo de confección (taller)
+
+Las órdenes pendientes del taller son una consulta sobre `sales."Orders"` con `orderType = 'ORDEN_CONFECCION'` y `status = 'PENDIENTE'` — no hay tabla separada de cola.
+
+```
+Cliente llega → crear Order PENDIENTE (datos cliente opcionales)
+    → técnicos trabajan (orden sigue PENDIENTE, sin descontar stock)
+    → cliente regresa → cajera factura desde bandeja pendientes
+    → Order pasa a COMPLETADA + DTE + descuento inventario
+```
+
+Si el cliente no proporciona datos, `customerId` apunta al registro sistema **"Consumidor Final"** (`system.Settings.DefaultCustomerId`).
 
 ```
 Panel de Confección (sin PIN)
@@ -249,13 +269,13 @@ Panel de Confección (sin PIN)
         │   └── Resumen de ventas del día
         │
         ├── ÓRDENES CONFECCIÓN
-        │   ├── Nueva orden de ensamble
+        │   ├── Nueva orden de ensamble (queda PENDIENTE)
         │   │   ├── Fecha/hora: automática
-        │   │   ├── Técnico: Select (empleados activos)
-        │   │   ├── Aplicación: Select (VT-01, VT-02, VT-03, RP-01)
-        │   │   └── Cliente: Input con teclado virtual
+        │   │   ├── Técnico: empleado activo con can_sell
+        │   │   ├── Aplicación: catálogo VT/RP
+        │   │   └── Cliente: nombre/teléfono opcionales
         │   ├── Agregar códigos con cantidades
-        │   └── Guardar borrador
+        │   └── Guardar orden pendiente (sin facturar)
         │
         └── VER CÓDIGOS
             ├── Catálogo completo de productos
@@ -266,11 +286,11 @@ Panel de Confección (sin PIN)
 
 **Pantallas del módulo Confección:**
 
-| Ventana | Archivo | Propósito |
-|---|---|---|
-| Historial de Ventas | `VentasWindow.xaml` | Lista de órdenes registradas |
-| Órdenes Confección | `NuevaOrdenWindow.xaml` | Formulario de orden de ensamble |
-| Ver Códigos | `SeleccionCodigoWindow.xaml` | Búsqueda y detalle de productos |
+| Vista | Archivo | Propósito | Estado |
+|---|---|---|---|
+| Historial de Ventas | `Views/Confeccion/HistorialVentasView.xaml` | Órdenes y ventas completadas | UI + `OrderService` parcial |
+| Órdenes Confección | `Views/Confeccion/OrdenesConfeccionView.xaml` | Crear y listar órdenes pendientes | UI + `OrderService` parcial |
+| Ver Códigos | `Views/Confeccion/VerCodigosView.xaml` | Búsqueda de catálogo | Conectado a `InventoryService` |
 
 ---
 
@@ -288,27 +308,30 @@ El control **completo** de inventario (entradas, ajustes, alertas, reconciliaci�
 | R-INV-04 | Stock no puede quedar negativo (validación antes de guardar) |
 | R-INV-05 | Alerta automática cuando stock ≤ mínimo |
 | R-INV-06 | Movimientos son inmutables — no se borran, solo se registran correcciones |
-| R-INV-07 | Ajustes manuales requieren motivo obligatorio + PIN personal (vía web)
+| R-INV-07 | Ajustes manuales requieren motivo obligatorio + rol autorizado (vía adminweb) |
 
 ---
 
 ## Administración web (`FlexoCable-adminweb`)
 
-Aplicación web separada (Next.js) que **no comparte código con WPF**. Se comunica **únicamente** con `FlexoCable-backend` por HTTP (`/api/v1/...`). No usa Prisma directamente desde el frontend.
+Aplicación web separada (Next.js) documentada en [`../FlexoCable-adminweb/README.md`](../FlexoCable-adminweb/README.md). Se comunica **únicamente** con [`FlexoCable-backend`](../FlexoCable-backend/README.md) por HTTP (`/api/v1/...`).
 
-> **Importante:** La administración (empleados, planilla, inventario, reportes) **no se desarrolla en C#**. El proyecto WPF no incluye login web ni módulos de RRHH.
+> **Importante:** La administración (empleados, planilla, compras, libros IVA, BI) **no se desarrolla en C#**. El proyecto WPF no incluye login web ni módulos de RRHH.
 
-### Módulos (implementación en Node + UI en Next)
+### Módulos administrativos (Node + Next)
 
-| Módulo | Backend Node | Adminweb |
-|---|---|---|
-| Dashboard y KPIs | `reports/`, agregaciones | `/dashboard` |
-| Empleados y PINs | `employees/` | `/empleados` |
-| Expediente (bancos, documentos, ficha PDF) | `employee-bank-accounts/`, `employee-documents/` | `/empleados/[id]/...` |
-| Planilla (quincenal, mensual, semanal) | `payroll-periods/`, `payroll-runs/` | `/planilla/...` |
-| Aguinaldo, vacaciones, liquidaciones | `aguinaldo/`, `leave-requests/`, `employee-terminations/` | `/planilla/...` |
-| Inventario administrativo | `inventory/` | `/inventario` |
-| Reportes y exportación Excel/PDF | `payroll-exports.service.ts` (portado de Beraka) | `/reportes` |
+| Módulo | Backend Node | Adminweb | Fase |
+|---|---|---|---|
+| Dashboard BI (KPIs) | `dashboard/` | `/dashboard` | 11 |
+| Empleados y PINs | `employees/` | `/empleados` | 8 |
+| Expediente (bancos, documentos, ficha PDF) | `employee-*` | `/empleados/[id]/...` | 8–10 |
+| Clientes fiscal (CF/CCF) | `customers/` | `/clientes` | 8 |
+| Planilla quincenal/mensual/semanal | `payroll-runs/` | `/planilla/...` | 10 |
+| Aguinaldo, vacaciones, liquidaciones | `aguinaldo/`, `leave-requests/`, … | `/planilla/...` | 10b–10c |
+| Inventario administrativo | `inventory/` | `/inventario` | 9 |
+| Compras, proveedores, Kardex valorado | `purchase-orders/`, `suppliers/` | `/compras/...` | 9b |
+| Libros de IVA | `fiscal/iva-reports/` | `/fiscal/libros-iva` | 10d |
+| Import/export Excel | `imports/`, `reports/` | `/importaciones`, `/reportes` | 9–10 |
 
 Referencia funcional del motor de planilla: `beraka-core-api` (módulos `payroll-runs`, `employees`, etc.).
 
@@ -335,10 +358,12 @@ Los nombres de tablas/columnas en PostgreSQL y modelos C# están en **inglés** 
 
 | Esquema | Tablas principales | Quién escribe |
 |---|---|---|
-| `public` | `Products`, `InventoryMovements`, `StockAlerts`, … | Admin: entradas/ajustes (Node). Caja: descuento por venta (WPF) |
+| `public` | `Products`, `Customers`, `InventoryMovements`, `StockAlerts` | Admin: entradas/ajustes (Node). Caja: descuento por venta (WPF) |
+| `purchasing` | `Suppliers`, `PurchaseOrders`, `PurchaseOrderDetails` | Solo admin (Node) — Fase 9b |
 | `sales` | `Orders`, `OrderDetails`, `CashSessions`, `Payments` | WPF (caja) |
 | `dte` | `DteConfig`, `DteIssued`, `DteContingency` | WPF (caja) |
-| `hr` | `Employees`, `PayrollPeriods`, `PayrollRuns`, `PayrollDetails`, … | Admin (Node): RRHH y planilla. WPF: solo lectura de empleado/PIN |
+| `fiscal` | `IvaReports` | Solo admin (Node) — Fase 10d |
+| `hr` | `Employees`, `PayrollPeriods`, `PayrollRuns`, `PayrollDetails`, … | Admin (Node): RRHH y planilla. WPF: solo lectura empleado/PIN |
 | `system` | `Settings`, `Printers`, `WebUsers`, `AuditLog` | `WebUsers`: solo admin Node. `Printers`: WPF. Resto según módulo |
 
 Detalle completo de planilla/RRHH: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (sección 17).
@@ -397,12 +422,19 @@ Los PINs se asignan y cambian desde **`FlexoCable-adminweb`** (API Node). La app
 | 05 | Nota de Crédito | Devoluciones o anulaciones |
 
 **Flujo simplificado:**
-1. Técnico finaliza orden → presiona "FACTURAR (DTE)" → ingresa su PIN
+1. Cajero completa venta → orden pasa a `COMPLETADA`
 2. Sistema genera JSON DTE (emisor, receptor, items, totales, IVA 13%)
 3. Firma con certificado `.p12`
-4. POST a API MH → recibe sello de recepción
-5. Venta marcada "CERRADA" → imprime ticket con QR
-6. Si falla: guarda en `dte.dte_contingency`, reintenta automáticamente
+4. POST a API MH → recibe sello de recepción → `MhStatus = PROCESADO`
+5. Imprime ticket con QR
+6. Si falla MH por red: `MhStatus = CONTINGENCIA` en `dte.DteIssued`, cola de reintento
+
+**Estados alineados al esquema:**
+
+| Entidad | Campo | Valores | Nota |
+|---|---|---|---|
+| `sales.Orders` | `Status` | `PENDIENTE`, `COMPLETADA`, `CANCELADA` | La contingencia fiscal **no** es estado de orden |
+| `dte.DteIssued` | `MhStatus` | `PENDIENTE`, `PROCESADO`, `RECHAZADO`, `CONTINGENCIA` | Una orden `COMPLETADA` puede tener DTE en contingencia |
 
 ---
 
@@ -508,26 +540,43 @@ El frontend **no** conecta a PostgreSQL; solo llama a `FlexoCable-backend`.
 ```
 FlexoCable Sistema/
 │
-├── FlexoCable/                          ← Repo WPF (caja)
-│   ├── FlexoCableSV.PuntoVenta/       ← App escritorio C#
-│   │   ├── Squema.sql                 ← Esquema base + seeds
-│   │   ├── Views/                     ← Caja, Confección, PIN
-│   │   ├── Models/                    ← EF Core (solo dominio operativo)
-│   │   ├── Services/                  ← DTE, inventario venta, PIN, impresión
-│   │   └── Data/FlexoDbContext.cs
-│   ├── tools/FlexoCable.DbApply/      ← Aplica Squema.sql + migraciones
-│   └── docs/                          ← Plan, estándares, manuales
+├── FlexoCable/                          ← Repo WPF (caja) — este README
+│   ├── FlexoCableSV.PuntoVenta/
+│   │   ├── Views/                       ← Shell, Inicio, Caja, Confección, PIN
+│   │   ├── Models/                      ← EF Core (dominio operativo)
+│   │   ├── Services/                    ← PIN, inventario, órdenes, DTE, impresión
+│   │   ├── Data/FlexoDbContext.cs
+│   │   └── Config/appsettings.json
+│   ├── tools/FlexoCable.DbApply/        ← Legacy/diagnóstico (no fuente de verdad)
+│   └── docs/
+│       └── FLEXOCABLE_PLAN_FINALIZACION_APP.md
 │
-├── FlexoCable-backend/                ← API Node (RRHH, planilla, inventario admin)
-│   ├── database/migrations/           ← SQL versionado (Fase 0 / 0b)
-│   ├── docker-compose.yml             ← PostgreSQL local desarrollo
-│   └── src/                           ← (pendiente) Express + Prisma
+├── FlexoCable-backend/                  ← API Node — ver README propio
+│   ├── prisma/schema.prisma             ← Fuente de verdad BD v3.0
+│   ├── prisma/seed.ts
+│   ├── docker-compose.yml
+│   └── src/                             ← (pendiente Fase 8)
 │
-└── FlexoCable-adminweb/               ← UI Next.js (pendiente)
-    └── src/app/                       ← Dashboard, empleados, planilla, …
+└── FlexoCable-adminweb/                 ← UI Next.js — ver README propio
+    └── src/app/                         ← (pendiente Fase 8)
 ```
 
-**Modelos WPF (`Models/`):** dominio de caja — `Sales`, `Dte`, `Public` (lectura catálogo/stock), `Hr.Employee` (PIN y permisos). **No** incluir lógica de `WebUser`, planilla ni CRUD RRHH en vistas o servicios WPF; esas tablas existen en BD para el backend Node.
+### Servicios WPF (`Services/`)
+
+| Servicio | Archivo | Estado | Fase |
+|---|---|---|---|
+| PIN / autenticación caja | `PinAuthService`, `PinAttemptService` | ✅ Implementado | 1 |
+| Sesión de cajero | `CurrentSessionService` | ✅ Implementado | 1 |
+| Conectividad | `ConnectivityService` | ✅ Implementado | 1 |
+| Auditoría | `AuditService` | ✅ Implementado | 1 |
+| Inventario (consulta + descuento) | `InventoryService` | ✅ Implementado | 2 |
+| Órdenes y ventas | `OrderService` | ✅ Implementado | 3 |
+| DTE | `DTEService` | 🔲 Vacío | 4 |
+| Impresión | `ImpresionService` | 🔲 Vacío | 5 |
+| Corte de caja | — | 🔲 Pendiente | 6 |
+| Configuración | `ConfigService` | Parcial | — |
+
+**Modelos WPF (`Models/`):** dominio de caja — `Sales`, `Dte`, `Public` (catálogo/stock), `Hr.Employee` (PIN y permisos). **No** incluir `WebUser`, planilla ni CRUD RRHH en WPF.
 
 ---
 
@@ -540,35 +589,36 @@ FlexoCable Sistema/
 | Requisito | Versión mínima |
 |---|---|
 | Windows 10 | Versión 1909 o superior |
-| .NET 8 SDK | 8.0.100+ |
+| .NET SDK | 10.0+ (`net10.0-windows`) |
 | Visual Studio 2022 | Community Edition |
-| PostgreSQL | 14+ |
+| PostgreSQL | 14+ (o Docker vía backend) |
 
-**WebApp:**
+**Administración web (cuando exista):**
 
 | Requisito | Versión mínima |
 |---|---|
-| Node.js | 20 LTS |
+| Node.js | 22+ |
 | npm | 10+ |
-| PostgreSQL | 14+ (misma instancia) |
+| Docker Desktop | Para PostgreSQL local |
 
 ---
 
-### 1. Base de Datos local (desarrollo WPF)
+### 1. Base de Datos local (desarrollo)
 
 ```bash
 # Desde FlexoCable-backend/
 docker compose up -d
-
-# Aplicar schema Prisma v3.0 (desde FlexoCable-backend/)
+cp .env.example .env
+npm install
 npm run db:push
+npm run db:seed
 ```
 
-`FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto `55432` por defecto).
+`FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto).
 
-`tools/FlexoCable.DbApply` queda solo como herramienta legacy/diagnostico. Por defecto no aplica `Squema.sql` si detecta `FlexoCable-backend/prisma/schema.prisma`, para evitar mezclar dos fuentes de verdad de BD.
+`tools/FlexoCable.DbApply` queda como herramienta legacy/diagnóstico. **No** es la fuente de verdad: usar Prisma (`FlexoCable-backend/prisma/schema.prisma`).
 
-**Empleados demo (solo desarrollo)** — seeds en `Squema.sql`:
+**Empleados demo (solo desarrollo)** — ver [`FlexoCable-backend/README.md`](../FlexoCable-backend/README.md):
 
 | PIN | Rol |
 |-----|-----|
@@ -618,33 +668,91 @@ Cuando `FlexoCable-adminweb` esté disponible:
 
 ---
 
-## Roadmap
+## Estado del desarrollo
 
-### Fase 1 — MVP "La Caja Factura" (Semanas 1–6)
+Resumen alineado al plan v3.0 (`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`):
 
-| Semana | Entregable | Estado |
+### WPF — vistas existentes
+
+| Área | Vista | Estado |
 |---|---|---|
-| 1–2 | Setup BD, catálogo 500+ productos cargado, pantalla de inicio con CAJA / CONFECCIONES | 🔲 Pendiente |
-| 3–4 | Módulo Caja: ingreso con PIN, facturación DTE, historial, consulta stock | 🔲 Pendiente |
-| 5–6 | Módulo Confección: órdenes de ensamble, historial, ver códigos + impresión ESC/POS | 🔲 Pendiente |
+| Shell | `MainShellWindow` | Navegación ✅ — falta inyectar sesión completa en todas las vistas |
+| Inicio | `InicioWindow` | UI ✅ |
+| Seguridad | `PinWindow` | ✅ bcrypt real (`PinAuthService`) |
+| Caja | `FacturacionView` | UI ✅ — integración DTE pendiente |
+| Caja | `HistorialFacturasView` | UI shell |
+| Caja | `ConsultarStockView` | ✅ conectado a inventario |
+| Caja | `CorteCajaView` | UI shell |
+| Caja | `DevolucionesView` | UI shell |
+| Caja | `ImpresorasView` | UI shell |
+| Confección | `HistorialVentasView` | UI + servicios parciales |
+| Confección | `OrdenesConfeccionView` | UI + servicios parciales |
+| Confección | `VerCodigosView` | ✅ conectado a inventario |
 
-### Fase 2 — Caja Avanzada (Semanas 7–10)
+`dotnet build` compila con 0 errores. Los flujos de negocio completos (DTE, corte, devoluciones) aún no están operativos en producción.
 
-| Semana | Entregable | Estado |
+### Base de datos y repos administrativos
+
+| Componente | Estado |
+|---|---|
+| Prisma schema v3.0 (7 esquemas) | ✅ |
+| Seeds idempotentes | ✅ |
+| Docker PostgreSQL local | ✅ |
+| API Express (`src/`) | 🔲 Fase 8 |
+| Adminweb Next.js | 🔲 Fase 8 |
+
+### Decisiones MVP confirmadas
+
+| Tema | Decisión |
+|---|---|
+| CxC (cuentas por cobrar) | Descartada — ventas al contado |
+| Multisucursal | Pospuesta |
+| Modo offline MVP | Cache catálogo + cola local (Fase 1) |
+| PIN al facturar | Solo cajero de sesión |
+| Planilla | Quincenal principal; referencia Beraka |
+
+---
+
+## Roadmap por fases
+
+Roadmap completo según `FLEXOCABLE_PLAN_FINALIZACION_APP.md`. Las fases WPF (0–7) preceden o corren en paralelo a la administración web (8–11).
+
+### Caja WPF
+
+| Fase | Objetivo | Estado |
 |---|---|---|
-| 7–8 | Corte de caja, notas de crédito (DTE-05), reimpresión de tickets | 🔲 Pendiente |
-| 9–10 | Configuración de impresoras, multisesión por PIN, refinamiento UX | 🔲 Pendiente |
+| **0** | Schema Prisma v3.0, seeds, alinear EF Core | 🟡 En progreso |
+| **0b** | Esquema `hr` Periodo+Corrida (planilla Beraka) | 🟡 Schema listo |
+| **1** | PIN real, sesión cajero, conectividad, auditoría | 🟡 Parcial |
+| **2** | Catálogo e inventario transaccional | 🟡 `InventoryService` listo |
+| **3** | Órdenes, ventas, pagos, confección | 🟡 `OrderService` listo |
+| **4** | DTE 01/03/05, firma, MH, contingencia | 🔲 Pendiente |
+| **5** | Impresión tickets con QR | 🔲 Pendiente |
+| **6** | Corte de caja y turnos | 🔲 Pendiente |
+| **7** | Devoluciones y nota de crédito DTE-05 | 🔲 Pendiente |
 
-### Fase 3 — Administración web Node/Next (después de caja estable)
+### Administración web
 
-| Entregable | Repos | Estado |
+| Fase | Objetivo | Repos | Estado |
+|---|---|---|---|
+| **8** | API base, auth JWT, CRUD empleados/clientes/catálogo | backend + adminweb | 🔲 Pendiente |
+| **9** | Inventario administrativo (entradas, ajustes, alertas) | backend + adminweb | 🔲 Pendiente |
+| **9b** | Compras, proveedores, Kardex valorado, costo promedio | backend + adminweb | 🔲 Pendiente |
+| **10** | Planilla quincenal + Excel/PDF (port Beraka) | backend | 🔲 Pendiente |
+| **10b** | Aguinaldo y vacaciones | backend + adminweb | 🔲 Pendiente |
+| **10c** | Liquidaciones | backend + adminweb | 🔲 Pendiente |
+| **10d** | Libros de IVA | backend + adminweb | 🔲 Pendiente |
+| **11** | Dashboard BI (ventas, inventario, compras, RRHH) | backend + adminweb | 🔲 Pendiente |
+
+---
+
+## Repositorios relacionados
+
+| Repositorio | README | Contenido |
 |---|---|---|
-| API base + auth JWT (`WebUsers`) | `FlexoCable-backend` | Pendiente |
-| CRUD empleados, PINs, expediente | backend + adminweb | Pendiente |
-| Planilla quincenal + exportes Beraka | backend | Pendiente |
-| Inventario admin + reportes | backend + adminweb | Pendiente |
-
-Plan detallado: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (Fases 8–10, sección 17).
+| `FlexoCable-backend` | [`../FlexoCable-backend/README.md`](../FlexoCable-backend/README.md) | API Node, Prisma, esquema BD, módulos planificados |
+| `FlexoCable-adminweb` | [`../FlexoCable-adminweb/README.md`](../FlexoCable-adminweb/README.md) | UI Next.js, rutas, auth admin, módulos por fase |
+| Plan maestro | [`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`](docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md) | Especificación completa v3.0 |
 
 ---
 
@@ -654,23 +762,29 @@ Plan detallado: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (Fases 8–10, secci�
 
 | Regla | Descripción |
 |---|---|
-| R-VTA-01 | Toda venta facturada es inmutable (estado CERRADA, sin edición) |
-| R-VTA-02 | El DTE debe confirmarse antes de imprimir el ticket |
-| R-VTA-03 | Si DTE falla, la venta queda en CONTINGENCIA con reintento automático cada 15 min |
-| R-VTA-04 | El ticket incluye QR con el código de generación DTE |
-| R-VTA-05 | Anulación requiere Nota de Crédito (DTE 05) — no se borran registros |
-| R-VTA-06 | El PIN que autoriza la venta corresponde al técnico seleccionado en la orden |
+| R-VTA-01 | Toda venta facturada es inmutable (`Orders.Status = COMPLETADA`, sin edición) |
+| R-VTA-02 | El DTE debe confirmarse o quedar en contingencia válida antes de imprimir ticket |
+| R-VTA-03 | Si MH no responde, `DteIssued.MhStatus = CONTINGENCIA` con reintento automático |
+| R-VTA-04 | El ticket incluye QR con código de generación DTE |
+| R-VTA-05 | Anulación requiere Nota de Crédito (DTE-05) — no se borran registros |
+| R-VTA-06 | El PIN de la sesión de caja identifica al cajero en cada factura (sin segundo PIN de técnico) |
+| R-VTA-07 | Stock se descuenta solo al completar la venta, no al crear orden de confección pendiente |
+| R-VTA-08 | `customerId` nunca es null en confección — usar Consumidor Final si no hay datos del cliente |
 
 ### Planilla El Salvador
 
-| Concepto | Porcentaje |
+Motor de cálculo a portar desde `beraka-core-api` (AFP/ISSS solo sobre salario ordinario):
+
+| Concepto | Regla |
 |---|---|
-| ISSS trabajador | 3% del salario |
-| ISSS patronal | 7.5% del salario |
-| AFP trabajador | 7.25% del salario |
-| AFP patronal | 8.75% del salario |
-| ISR | Tabla progresiva SV vigente |
-| Horas extras | 200% del salario base por hora |
+| AFP empleado | 7.25% sobre salario ordinario del periodo |
+| AFP patronal | 7.75% sobre salario ordinario |
+| ISSS empleado | 3% sobre salario ordinario, tope $1,000/mes prorrateado |
+| ISSS patronal | 7.5% sobre misma base ISSS |
+| ISR | Tabla progresiva `IsrBrackets` por año y tipo de periodo |
+| Horas extra diurnas/feriadas | ×2.0 del valor hora ordinaria |
+| Horas extra nocturnas | ×2.5 |
+| Honorarios | Retención ISR 10%; sin AFP/ISSS |
 
 ---
 
