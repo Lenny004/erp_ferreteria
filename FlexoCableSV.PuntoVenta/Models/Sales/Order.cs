@@ -31,6 +31,9 @@ public class Order
     public decimal TaxAmount { get; set; } = 0;
 
     [Column(TypeName = "numeric(12,2)")]
+    public decimal DiscountAmount { get; set; } = 0;
+
+    [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
 
     /// <summary>En confección puede incluir cliente/teléfono hasta tener campos dedicados.</summary>
@@ -47,6 +50,9 @@ public class Order
 
     [ForeignKey(nameof(CashSessionId))]
     public CashSession? CashSession { get; set; }
+
+    [ForeignKey(nameof(CustomerId))]
+    public Customer? Customer { get; set; }
 
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<DteIssued> DteIssued { get; set; } = new List<DteIssued>();

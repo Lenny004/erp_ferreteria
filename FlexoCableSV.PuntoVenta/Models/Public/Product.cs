@@ -21,6 +21,7 @@ public class Product
     public Guid FamilyId { get; set; }
     public Guid? SubfamilyId { get; set; }
     public Guid MeasurementTypeId { get; set; }
+    public Guid? SupplierId { get; set; }
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal SalePrice { get; set; } = 0;
@@ -40,6 +41,10 @@ public class Product
     [Column(TypeName = "numeric(12,3)")]
     public decimal? ReorderPoint { get; set; }
 
+    /// <summary>Clasificación de rotación ABC: ALTA | MEDIA | BAJA | NULA.</summary>
+    [MaxLength(10)]
+    public string? RotationClass { get; set; }
+
     public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
 
@@ -58,7 +63,12 @@ public class Product
     [ForeignKey(nameof(MeasurementTypeId))]
     public MeasurementType MeasurementType { get; set; } = null!;
 
+    [ForeignKey(nameof(SupplierId))]
+    public Supplier? Supplier { get; set; }
+
     public ICollection<InventoryMovement> InventoryMovements { get; set; } = new List<InventoryMovement>();
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<StockAlert> StockAlerts { get; set; } = new List<StockAlert>();
+    public ICollection<ProductSaleUnit> ProductSaleUnits { get; set; } = new List<ProductSaleUnit>();
+    public ICollection<VolumeDiscount> VolumeDiscounts { get; set; } = new List<VolumeDiscount>();
 }

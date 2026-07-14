@@ -41,6 +41,14 @@ public class FlexoDbContext : DbContext
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
     /// <summary>Alertas automáticas cuando el stock de un producto baja del mínimo configurado.</summary>
     public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
+    /// <summary>Unidades de venta / presentaciones (unidad, docena, caja, bulto...).</summary>
+    public DbSet<SaleUnit> SaleUnits => Set<SaleUnit>();
+    /// <summary>Presentaciones de venta por producto con factor de conversión y precio.</summary>
+    public DbSet<ProductSaleUnit> ProductSaleUnits => Set<ProductSaleUnit>();
+    /// <summary>Descuentos por volumen por producto o categoría.</summary>
+    public DbSet<VolumeDiscount> VolumeDiscounts => Set<VolumeDiscount>();
+    /// <summary>Clientes de la ferretería (datos fiscales básicos).</summary>
+    public DbSet<Customer> Customers => Set<Customer>();
 
     // ========================================================================
     //  ESQUEMA "sales" — Ventas y pedidos
@@ -187,7 +195,7 @@ public class FlexoDbContext : DbContext
             entity.Property(s => s.Department).HasColumnName("department");
             entity.Property(s => s.Country).HasColumnName("country");
             entity.Property(s => s.Notes).HasColumnName("notes");
-            entity.HasIndex(s => s.Nit).IsUnique().HasDatabaseName("IdxSuppliersNit");
+            entity.HasIndex(s => s.Nit).HasDatabaseName("IdxSuppliersNit");
         });
 
         // --- Product ---
@@ -218,6 +226,11 @@ public class FlexoDbContext : DbContext
             entity.HasOne(p => p.MeasurementType)
                 .WithMany()
                 .HasForeignKey(p => p.MeasurementTypeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(p => p.Supplier)
+                .WithMany()
+                .HasForeignKey(p => p.SupplierId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // El código de producto (Code) debe ser único en toda la tabla.
@@ -289,6 +302,75 @@ public class FlexoDbContext : DbContext
                 .HasFilter("\"IsResolved\" = FALSE");
         });
 
+        // --- SaleUnit ---
+        // Catálogo de presentaciones de venta (unidad, docena, caja, bulto...).
+        modelBuilder.Entity<SaleUnit>(entity =>
+        {
+            entity.ToTable("SaleUnits", "public");
+            entity.Property(s => s.Id).HasColumnName("id");
+            entity.Property(s => s.Code).HasColumnName("code");
+            entity.Property(s => s.Name).HasColumnName("name");
+            entity.HasIndex(s => s.Code).IsUnique();
+        });
+
+        // --- ProductSaleUnit ---
+        // Presentación de venta de un producto con factor de conversión y precio propio.
+        modelBuilder.Entity<ProductSaleUnit>(entity =>
+        {
+            entity.ToTable("ProductSaleUnits", "public");
+            entity.Property(p => p.Id).HasColumnName("id");
+            entity.Property(p => p.Barcode).HasColumnName("barcode");
+
+            entity.HasOne(p => p.Product)
+                .WithMany(p => p.ProductSaleUnits)
+                .HasForeignKey(p => p.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.SaleUnit)
+                .WithMany(s => s.ProductSaleUnits)
+                .HasForeignKey(p => p.SaleUnitId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(p => new { p.ProductId, p.SaleUnitId }).IsUnique();
+            entity.HasIndex(p => p.ProductId).HasDatabaseName("IdxProductSaleUnitsProduct");
+        });
+
+        // --- VolumeDiscount ---
+        // Descuento por volumen por producto o por categoría.
+        modelBuilder.Entity<VolumeDiscount>(entity =>
+        {
+            entity.ToTable("VolumeDiscounts", "public");
+            entity.Property(v => v.Id).HasColumnName("id");
+
+            entity.HasOne(v => v.Product)
+                .WithMany(p => p.VolumeDiscounts)
+                .HasForeignKey(v => v.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(v => v.Family)
+                .WithMany()
+                .HasForeignKey(v => v.FamilyId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(v => v.ProductId).HasDatabaseName("IdxVolumeDiscountsProduct");
+            entity.HasIndex(v => v.FamilyId).HasDatabaseName("IdxVolumeDiscountsFamily");
+        });
+
+        // --- Customer ---
+        // Clientes de la ferretería (datos fiscales básicos, sin cuentas por cobrar).
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("Customers", "public");
+            entity.Property(c => c.Id).HasColumnName("id");
+            entity.Property(c => c.Name).HasColumnName("name");
+            entity.Property(c => c.Phone).HasColumnName("phone");
+            entity.Property(c => c.Email).HasColumnName("email");
+            entity.Property(c => c.Address).HasColumnName("address");
+            entity.Property(c => c.Municipality).HasColumnName("municipality");
+            entity.Property(c => c.Department).HasColumnName("department");
+            entity.HasIndex(c => c.Nit).HasDatabaseName("IdxCustomersNit");
+        });
+
         // ====================================================================
         //  ESQUEMA "sales"
         // ====================================================================
@@ -313,6 +395,11 @@ public class FlexoDbContext : DbContext
             entity.HasOne(o => o.CashSession)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(o => o.CashSessionId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(o => o.Customer)
+                .WithMany(c => c.Orders)
+                .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Índices para consultas comunes:
@@ -349,6 +436,11 @@ public class FlexoDbContext : DbContext
             entity.HasOne(od => od.Product)
                 .WithMany(p => p.OrderDetails)
                 .HasForeignKey(od => od.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(od => od.SaleUnit)
+                .WithMany()
+                .HasForeignKey(od => od.SaleUnitId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Índice para acelerar consultas que traen todo el detalle de una orden.
