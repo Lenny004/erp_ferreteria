@@ -1,7 +1,7 @@
 ﻿using FlexoCableSV.PuntoVenta.Data;
 using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.Caja;
-using FlexoCableSV.PuntoVenta.Views.Confeccion;
+using FlexoCableSV.PuntoVenta.Views.Inventario;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
 using FlexoCableSV.PuntoVenta.Views.PIN;
 using FlexoCableSV.PuntoVenta.Views.Shell;
@@ -46,6 +46,11 @@ public partial class App : Application
                 services.AddSingleton<IPinAttemptService, PinAttemptService>();
                 services.AddSingleton<IInventoryService, InventoryService>();
                 services.AddSingleton<IOrderService, OrderService>();
+                services.AddSingleton<IProductCatalogService, ProductCatalogService>();
+                services.AddSingleton<ISupplierService, SupplierService>();
+                services.AddSingleton<IEmployeeService, EmployeeService>();
+                services.AddSingleton<ICustomerService, CustomerService>();
+                services.AddSingleton<IReportService, ReportService>();
                 services.AddSingleton<PinAuthService>();
 
                 services.AddTransient<PinWindow>();
@@ -54,9 +59,11 @@ public partial class App : Application
                 services.AddTransient<FacturacionView>();
                 services.AddTransient<HistorialFacturasView>();
                 services.AddTransient<ConsultarStockView>();
-                services.AddTransient<HistorialVentasView>();
-                services.AddTransient<OrdenesConfeccionView>();
-                services.AddTransient<VerCodigosView>();
+                services.AddTransient<ProductosView>();
+                services.AddTransient<ProveedoresView>();
+                services.AddTransient<MovimientosView>();
+                services.AddTransient<AlertasView>();
+                services.AddTransient<UsuariosView>();
             })
             .Build();
     }

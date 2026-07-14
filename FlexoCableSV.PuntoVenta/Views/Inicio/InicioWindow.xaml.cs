@@ -47,8 +47,8 @@ public partial class InicioWindow : Window
     {
         var pinWindow = ActivatorUtilities.CreateInstance<PinWindow>(
             _services,
-            OperationalModule.Confeccion,
-            NavSections.Ordenes);
+            OperationalModule.Inventario,
+            NavSections.Productos);
         pinWindow.Show();
         Close();
     }

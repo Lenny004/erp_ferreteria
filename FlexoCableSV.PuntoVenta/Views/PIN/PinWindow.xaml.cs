@@ -50,14 +50,14 @@ public partial class PinWindow : Window
         PinTitleText.Text = _module switch
         {
             OperationalModule.Caja => "Acceso a Caja",
-            OperationalModule.Confeccion => "Acceso a Confeccion",
+            OperationalModule.Inventario => "Acceso a Inventario",
             _ => "Ingrese su PIN"
         };
 
         PinSubtitleText.Text = _module switch
         {
             OperationalModule.Caja => "PIN de cajero autorizado",
-            OperationalModule.Confeccion => "PIN de tecnico autorizado",
+            OperationalModule.Inventario => "PIN de encargado de inventario",
             _ => "4 digitos"
         };
 
@@ -252,7 +252,7 @@ public partial class PinWindow : Window
         var roleHint = module switch
         {
             OperationalModule.Caja => "cajero",
-            OperationalModule.Confeccion => "tecnico de confeccion",
+            OperationalModule.Inventario => "encargado de inventario",
             _ => "usuario"
         };
 

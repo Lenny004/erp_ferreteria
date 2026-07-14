@@ -1,19 +1,24 @@
 namespace FlexoCableSV.PuntoVenta.Services;
 
 /// <summary>
-/// Secciones del panel lateral según el módulo activo (ver README — App de Escritorio).
+/// Secciones del panel lateral según el módulo activo (Caja o Inventario) de la ferretería.
 /// </summary>
 public static class NavSections
 {
+  // Módulo Caja
   public const string Stock = "Stock";
   public const string Facturacion = "Facturacion";
   public const string HistorialFacturas = "HistorialFacturas";
   public const string Impresoras = "Impresoras";
   public const string Devoluciones = "Devoluciones";
   public const string CorteCaja = "CorteCaja";
-  public const string HistorialVentas = "HistorialVentas";
-  public const string Ordenes = "Ordenes";
-  public const string Codigos = "Codigos";
+
+  // Módulo Inventario
+  public const string Productos = "Productos";
+  public const string Proveedores = "Proveedores";
+  public const string Movimientos = "Movimientos";
+  public const string Alertas = "Alertas";
+  public const string Usuarios = "Usuarios";
 
   private static readonly string[] CajaSections =
   [
@@ -25,18 +30,20 @@ public static class NavSections
     CorteCaja
   ];
 
-  private static readonly string[] ConfeccionSections =
+  private static readonly string[] InventarioSections =
   [
-    HistorialVentas,
-    Ordenes,
-    Codigos
+    Productos,
+    Proveedores,
+    Movimientos,
+    Alertas,
+    Usuarios
   ];
 
   public static IReadOnlyList<string> ForModule(OperationalModule module) =>
     module switch
     {
       OperationalModule.Caja => CajaSections,
-      OperationalModule.Confeccion => ConfeccionSections,
+      OperationalModule.Inventario => InventarioSections,
       _ => []
     };
 
@@ -44,7 +51,7 @@ public static class NavSections
     module switch
     {
       OperationalModule.Caja => Facturacion,
-      OperationalModule.Confeccion => Ordenes,
+      OperationalModule.Inventario => Productos,
       _ => Stock
     };
 

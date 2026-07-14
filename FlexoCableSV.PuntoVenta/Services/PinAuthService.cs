@@ -31,7 +31,7 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
         candidatesQuery = module switch
         {
             OperationalModule.Caja => candidatesQuery.Where(e => e.CanCashier),
-            OperationalModule.Confeccion => candidatesQuery.Where(e => e.CanSell),
+            OperationalModule.Inventario => candidatesQuery.Where(e => e.CanSell),
             _ => candidatesQuery.Where(_ => false)
         };
 

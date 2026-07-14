@@ -4,7 +4,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using FlexoCableSV.PuntoVenta.Services;
 using FlexoCableSV.PuntoVenta.Views.Caja;
-using ConfeccionViews = FlexoCableSV.PuntoVenta.Views.Confeccion;
+using InventarioViews = FlexoCableSV.PuntoVenta.Views.Inventario;
 using FlexoCableSV.PuntoVenta.Views.Inicio;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,9 +40,11 @@ public partial class MainShellWindow : Window
             [NavSections.Impresoras] = (BtnImpresoras, "Impresoras", () => new ImpresorasView()),
             [NavSections.Devoluciones] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
             [NavSections.CorteCaja] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
-            [NavSections.HistorialVentas] = (BtnHistorialVentas, "Historial de Ventas", () => _serviceProvider.GetRequiredService<ConfeccionViews.HistorialVentasView>()),
-            [NavSections.Ordenes] = (BtnOrdenes, "Ordenes de Confeccion", () => _serviceProvider.GetRequiredService<ConfeccionViews.OrdenesConfeccionView>()),
-            [NavSections.Codigos] = (BtnCodigos, "Ver Codigos", () => _serviceProvider.GetRequiredService<ConfeccionViews.VerCodigosView>())
+            [NavSections.Productos] = (BtnProductos, "Catalogo de Productos", () => _serviceProvider.GetRequiredService<InventarioViews.ProductosView>()),
+            [NavSections.Proveedores] = (BtnProveedores, "Proveedores", () => _serviceProvider.GetRequiredService<InventarioViews.ProveedoresView>()),
+            [NavSections.Movimientos] = (BtnMovimientos, "Entradas y Kardex", () => _serviceProvider.GetRequiredService<InventarioViews.MovimientosView>()),
+            [NavSections.Alertas] = (BtnAlertas, "Alertas de Stock", () => _serviceProvider.GetRequiredService<InventarioViews.AlertasView>()),
+            [NavSections.Usuarios] = (BtnUsuarios, "Usuarios y RRHH", () => _serviceProvider.GetRequiredService<InventarioViews.UsuariosView>())
         };
 
         ApplyModuleNavigation();
@@ -71,7 +73,7 @@ public partial class MainShellWindow : Window
 
             TxtNavSectionCaja.Visibility = Visibility.Collapsed;
             NavSectionDivider.Visibility = Visibility.Collapsed;
-            TxtNavSectionConfeccion.Visibility = Visibility.Collapsed;
+            TxtNavSectionInventario.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -79,7 +81,7 @@ public partial class MainShellWindow : Window
         var allowedSet = allowedSections.ToHashSet(StringComparer.Ordinal);
 
         var cajaVisible = false;
-        var confeccionVisible = false;
+        var inventarioVisible = false;
 
         foreach (var (sectionKey, section) in _sections)
         {
@@ -96,15 +98,15 @@ public partial class MainShellWindow : Window
                 cajaVisible = true;
             }
 
-            if (NavSections.ForModule(OperationalModule.Confeccion).Contains(sectionKey, StringComparer.Ordinal))
+            if (NavSections.ForModule(OperationalModule.Inventario).Contains(sectionKey, StringComparer.Ordinal))
             {
-                confeccionVisible = true;
+                inventarioVisible = true;
             }
         }
 
         TxtNavSectionCaja.Visibility = cajaVisible ? Visibility.Visible : Visibility.Collapsed;
-        TxtNavSectionConfeccion.Visibility = confeccionVisible ? Visibility.Visible : Visibility.Collapsed;
-        NavSectionDivider.Visibility = cajaVisible && confeccionVisible
+        TxtNavSectionInventario.Visibility = inventarioVisible ? Visibility.Visible : Visibility.Collapsed;
+        NavSectionDivider.Visibility = cajaVisible && inventarioVisible
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -210,7 +212,7 @@ public partial class MainShellWindow : Window
         var roleLabel = _currentSession.ActiveModule switch
         {
             OperationalModule.Caja => "Cajero",
-            OperationalModule.Confeccion => "Tecnico",
+            OperationalModule.Inventario => "Encargado",
             _ => "Usuario"
         };
 

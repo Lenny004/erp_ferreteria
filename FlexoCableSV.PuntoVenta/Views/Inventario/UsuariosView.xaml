@@ -1,0 +1,193 @@
+<UserControl
+    x:Class="FlexoCableSV.PuntoVenta.Views.Inventario.UsuariosView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:FlexoCableSV.PuntoVenta.Helpers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/FlexoStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="380" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Lista -->
+        <Grid Grid.Column="0" Margin="0,0,16,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,12">
+                <TextBlock Text="Usuarios y RRHH" Style="{StaticResource FlexoPanelTitleStyle}" />
+                <TextBlock Text="Empleados, permisos y PIN de acceso" Style="{StaticResource FlexoPanelSubtitleStyle}" />
+            </StackPanel>
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="120" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    x:Name="SearchTextBox"
+                    Style="{StaticResource FlexoFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="Buscar por nombre o DUI"
+                    TextChanged="OnSearchChanged" />
+                <Button
+                    Grid.Column="1"
+                    Margin="10,0,0,0"
+                    Style="{StaticResource FlexoSecondaryWideButtonStyle}"
+                    Click="OnNuevoClick">
+                    <TextBlock Text="NUEVO" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold" />
+                </Button>
+            </Grid>
+            <Border
+                Grid.Row="2"
+                Background="{StaticResource FlexoAzulMedio}"
+                BorderBrush="{StaticResource FlexoAzulClaro}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource FlexoRadius_MD}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="40" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Style="{StaticResource FlexoGridHeaderStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="90" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="NOMBRE" Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock Grid.Column="1" Text="CAJA" Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                        <TextBlock Grid.Column="2" Text="INVENT." Style="{StaticResource FlexoGridHeaderTextStyle}" />
+                    </Grid>
+                    <Grid Grid.Row="1">
+                        <TextBlock
+                            x:Name="EmptyStateText"
+                            Text="Sin usuarios para mostrar."
+                            Style="{StaticResource FlexoTableCellStyle}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="ItemsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource FlexoDataGridRowStyle}"
+                                                Cursor="Hand"
+                                                MouseLeftButtonUp="OnRowClick"
+                                                Tag="{Binding Id}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="90" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding FirstName}" Style="{StaticResource FlexoTableCellStyle}" />
+                                                    <TextBlock Text="{Binding LastName}" Foreground="{StaticResource FlexoGrisClaro}" FontSize="{StaticResource FlexoFontSize_XS}" Margin="8,0,0,4" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding CanCashier}" Style="{StaticResource FlexoTableCellStyle}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding CanSell}" Style="{StaticResource FlexoTableCellStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Formulario -->
+        <Border
+            Grid.Column="1"
+            Background="{StaticResource FlexoAzulMedio}"
+            BorderBrush="{StaticResource FlexoAzulClaro}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource FlexoRadius_MD}"
+            Padding="16">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock x:Name="FormTitle" Text="Nuevo usuario" Style="{StaticResource FlexoPanelTitleStyle}" Margin="0,0,0,12" />
+
+                    <TextBlock Text="Nombre *" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="FirstNameBox" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Apellido *" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="LastNameBox" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock Text="DUI" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="DuiBox" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Departamento" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <ComboBox x:Name="DepartmentCombo" Style="{StaticResource FlexoFieldComboBoxStyle}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id"
+                              SelectionChanged="OnDepartmentChanged" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Cargo" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <ComboBox x:Name="PositionCombo" Style="{StaticResource FlexoFieldComboBoxStyle}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Fecha de ingreso" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <DatePicker x:Name="HireDatePicker" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Salario base" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="SalaryBox" Text="0" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Tipo de contrato" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <ComboBox x:Name="ContractCombo" Style="{StaticResource FlexoFieldComboBoxStyle}" SelectedIndex="0" Margin="0,4,0,10">
+                        <ComboBoxItem Content="Plazo fijo" Tag="PLAZO_FIJO" />
+                        <ComboBoxItem Content="Tiempo parcial" Tag="TIEMPO_PARCIAL" />
+                        <ComboBoxItem Content="Honorarios" Tag="HONORARIOS" />
+                        <ComboBoxItem Content="Pasante" Tag="PASANTE" />
+                    </ComboBox>
+
+                    <TextBlock Text="Tipo de salario" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <ComboBox x:Name="SalaryTypeCombo" Style="{StaticResource FlexoFieldComboBoxStyle}" SelectedIndex="0" Margin="0,4,0,10">
+                        <ComboBoxItem Content="Mensual" Tag="MENSUAL" />
+                        <ComboBoxItem Content="Quincenal" Tag="QUINCENAL" />
+                        <ComboBoxItem Content="Semanal" Tag="SEMANAL" />
+                    </ComboBox>
+
+                    <TextBlock Text="Telefono" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="PhoneBox" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock Text="Correo" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="EmailBox" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <CheckBox x:Name="CanCashierCheck" Content="Puede operar Caja" Foreground="{StaticResource FlexoBlanco}" Margin="0,4,0,6" />
+                    <CheckBox x:Name="CanSellCheck" Content="Puede gestionar Inventario" Foreground="{StaticResource FlexoBlanco}" Margin="0,0,0,10" />
+
+                    <TextBlock x:Name="PinLabel" Text="PIN de acceso (4 digitos) *" Style="{StaticResource FlexoCardLabelStyle}" />
+                    <TextBox x:Name="PinBox" MaxLength="4" Style="{StaticResource FlexoFieldTextBoxStyle}" Margin="0,4,0,10" />
+
+                    <TextBlock x:Name="FormErrorText" Foreground="{StaticResource FlexoError}"
+                               TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,8" />
+
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Style="{StaticResource FlexoPrimaryWideButtonStyle}" Click="OnGuardarClick" Margin="0,0,6,0">
+                            <TextBlock Text="GUARDAR" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold" />
+                        </Button>
+                        <Button Grid.Column="1" Style="{StaticResource FlexoSecondaryWideButtonStyle}" Click="OnCancelarClick" Margin="6,0,0,0">
+                            <TextBlock Text="LIMPIAR" Foreground="{StaticResource FlexoBlanco}" FontWeight="Bold" />
+                        </Button>
+                    </Grid>
+                    <Button x:Name="DeactivateButton" Style="{StaticResource FlexoSecondaryWideButtonStyle}"
+                            Click="OnDesactivarClick" Margin="0,10,0,0" Visibility="Collapsed">
+                        <TextBlock Text="DESACTIVAR" Foreground="{StaticResource FlexoError}" FontWeight="Bold" />
+                    </Button>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

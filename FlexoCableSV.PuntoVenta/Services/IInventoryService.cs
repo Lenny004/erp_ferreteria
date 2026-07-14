@@ -18,6 +18,33 @@ public interface IInventoryService
         Guid employeeId,
         string reason,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Registra una entrada de inventario (compra o devolución) que incrementa el stock.</summary>
+    Task<StockMovementResult> RegisterEntryAsync(
+        Guid productId,
+        decimal quantity,
+        decimal unitCost,
+        Guid employeeId,
+        string movementType,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Ajusta el stock a un nuevo valor absoluto, registrando el movimiento de ajuste correspondiente.</summary>
+    Task<StockMovementResult> RegisterAdjustmentAsync(
+        Guid productId,
+        decimal newStock,
+        Guid employeeId,
+        string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Alertas de stock bajo o agotado sin resolver.</summary>
+    Task<IReadOnlyList<StockAlertResult>> GetActiveAlertsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Últimos movimientos de inventario (kardex), opcionalmente filtrados por producto.</summary>
+    Task<IReadOnlyList<InventoryMovementResult>> GetRecentMovementsAsync(
+        Guid? productId,
+        int take = 100,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Proyección de producto para vistas de inventario y confección.</summary>
@@ -55,3 +82,34 @@ public sealed record StockDecreaseResult(
     Guid InventoryMovementId,
     decimal StockBefore,
     decimal StockAfter);
+
+/// <summary>Resultado genérico de un movimiento de inventario (entrada o ajuste).</summary>
+public sealed record StockMovementResult(
+    Guid ProductId,
+    Guid InventoryMovementId,
+    string MovementType,
+    decimal StockBefore,
+    decimal StockAfter);
+
+/// <summary>Alerta de stock bajo/agotado para la vista de inventario.</summary>
+public sealed record StockAlertResult(
+    Guid Id,
+    Guid ProductId,
+    string ProductCode,
+    string ProductDescription,
+    string AlertType,
+    decimal CurrentStock,
+    decimal MinStock,
+    string UnitLabel,
+    DateTime CreatedAt);
+
+/// <summary>Movimiento de inventario proyectado para el kardex.</summary>
+public sealed record InventoryMovementResult(
+    Guid Id,
+    DateTime CreatedAt,
+    string ProductCode,
+    string ProductDescription,
+    string MovementType,
+    decimal Quantity,
+    decimal StockAfter,
+    string? Reason);
