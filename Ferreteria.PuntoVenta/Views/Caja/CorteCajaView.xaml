@@ -1,0 +1,273 @@
+<UserControl
+    x:Class="Ferreteria.PuntoVenta.Views.Caja.CorteCajaView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/AppStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="500" />
+            </Grid.RowDefinitions>
+            <StackPanel
+                Margin="0,0,0,16">
+                <TextBlock
+                    Text="Corte de Caja"
+                    Style="{StaticResource AppPanelTitleStyle}" />
+                <TextBlock
+                    Text="Resumen de turno, conciliacion e impresion de cierre"
+                    Style="{StaticResource AppPanelSubtitleStyle}" />
+            </StackPanel>
+            <UniformGrid
+                Grid.Row="1"
+                Columns="5"
+                Margin="0,0,0,16">
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Ventas"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="$2,846"
+                            Style="{StaticResource AppCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Efectivo"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="$1,210"
+                            Style="{StaticResource AppCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Tarjeta"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="$936"
+                            Style="{StaticResource AppCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Transferencia"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="$700"
+                            Style="{StaticResource AppCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="DTEs"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="31"
+                            Style="{StaticResource AppCardValueStyle}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+            <Grid
+                Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition
+                        Width="1.2*" />
+                    <ColumnDefinition
+                        Width="0.85*" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Background="{StaticResource AppAzulMedio}"
+                    BorderBrush="{StaticResource AppAzulClaro}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource AppRadius_MD}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <Grid
+                            Height="40"
+                            Style="{StaticResource AppGridHeaderStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition
+                                    Width="110" />
+                                <ColumnDefinition
+                                    Width="*" />
+                                <ColumnDefinition
+                                    Width="120" />
+                                <ColumnDefinition
+                                    Width="100" />
+                                <ColumnDefinition
+                                    Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                Text="HORA"
+                                Style="{StaticResource AppGridHeaderTextStyle}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="DOCUMENTO"
+                                Style="{StaticResource AppGridHeaderTextStyle}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="PAGO"
+                                Style="{StaticResource AppGridHeaderTextStyle}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="TOTAL"
+                                Style="{StaticResource AppGridHeaderTextStyle}" />
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="ESTADO"
+                                Style="{StaticResource AppGridHeaderTextStyle}" />
+                        </Grid>
+                        <Border
+                            Style="{StaticResource AppDataGridRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="110" />
+                                    <ColumnDefinition
+                                        Width="*" />
+                                    <ColumnDefinition
+                                        Width="120" />
+                                    <ColumnDefinition
+                                        Width="100" />
+                                    <ColumnDefinition
+                                        Width="100" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Text="09:14"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="DTE-01-000231"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="Efectivo"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="$86.45"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="OK"
+                                    Style="{StaticResource AppTableCellStyle}"
+                                    Foreground="{StaticResource AppSuccess}" />
+                            </Grid>
+                        </Border>
+                        <Border
+                            Style="{StaticResource AppDataGridRowStyle}"
+                            Background="{StaticResource AppAzulFilaAlt}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="110" />
+                                    <ColumnDefinition
+                                        Width="*" />
+                                    <ColumnDefinition
+                                        Width="120" />
+                                    <ColumnDefinition
+                                        Width="100" />
+                                    <ColumnDefinition
+                                        Width="100" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    Text="10:22"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="DTE-03-000232"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="2"
+                                    Text="Tarjeta"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="$245.00"
+                                    Style="{StaticResource AppTableCellStyle}" />
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="OK"
+                                    Style="{StaticResource AppTableCellStyle}"
+                                    Foreground="{StaticResource AppSuccess}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Style="{StaticResource AppStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Conciliacion"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="Cajero: Turno actual"
+                            Style="{StaticResource AppTableCellStyle}"
+                            Margin="0,12,0,4" />
+                        <TextBlock
+                            Text="Inicio: 08:00"
+                            Style="{StaticResource AppTableCellStyle}"
+                            Margin="0,0,0,12" />
+                        <TextBox
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Efectivo contado"
+                            Margin="0,0,0,8" />
+                        <TextBox
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Observaciones"
+                            Height="72"
+                            Margin="0,0,0,16" />
+                        <TextBlock
+                            Text="Diferencia: $0.00"
+                            Foreground="{StaticResource AppSuccess}"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            FontWeight="Bold"
+                            Margin="14,0,0,20" />
+                        <Button
+                            Style="{StaticResource AppSecondaryWideButtonStyle}"
+                            Margin="0,0,0,10">
+                            <TextBlock
+                                Text="CALCULAR"
+                                Foreground="{StaticResource AppBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                        <Button
+                            Style="{StaticResource AppPrimaryWideButtonStyle}">
+                            <TextBlock
+                                Text="CERRAR TURNO"
+                                Foreground="{StaticResource AppBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

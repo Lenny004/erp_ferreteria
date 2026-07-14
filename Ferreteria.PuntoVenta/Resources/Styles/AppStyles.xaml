@@ -1,0 +1,592 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers">
+
+    <!-- ════════════════════════════════════════════
+         PALETA OFICIAL FERRETERIA (DARK)
+         text #fedce5 | background #0e0103
+         primary #e60a2e | secondary #894c06 | accent #ab8507
+    ════════════════════════════════════════════ -->
+
+    <!-- Primary (rojo corporativo) -->
+    <SolidColorBrush x:Key="AppRojo" Color="#E60A2E"/>
+    <SolidColorBrush x:Key="AppRojoDark" Color="#A00820"/>
+    <SolidColorBrush x:Key="AppRojoHover" Color="#F5193E"/>
+
+    <!-- Neutros -->
+    <SolidColorBrush x:Key="AppNegro" Color="#0E0103"/>
+    <SolidColorBrush x:Key="AppBlanco" Color="#FEDCE5"/>
+    <SolidColorBrush x:Key="AppGris" Color="#894C06"/>
+    <SolidColorBrush x:Key="AppGrisClaro" Color="#AB8507"/>
+    <SolidColorBrush x:Key="AppGrisOscuro" Color="#5A3038"/>
+
+    <!-- Estados -->
+    <SolidColorBrush x:Key="AppSuccess" Color="#81c784"/>
+    <SolidColorBrush x:Key="AppWarning" Color="#AB8507"/>
+    <SolidColorBrush x:Key="AppError" Color="#E60A2E"/>
+    <SolidColorBrush x:Key="AppInfo" Color="#894C06"/>
+    <SolidColorBrush x:Key="AppSecondary" Color="#894C06"/>
+    <SolidColorBrush x:Key="AppAccent" Color="#AB8507"/>
+
+    <!-- Superficies (claves históricas AppAzul* → fondo rojo oscuro) -->
+    <SolidColorBrush x:Key="AppAzulOscuro" Color="#0E0103"/>
+    <SolidColorBrush x:Key="AppAzulMedio" Color="#1C080D"/>
+    <SolidColorBrush x:Key="AppAzulClaro" Color="#2A1016"/>
+    <SolidColorBrush x:Key="AppAzulFilaAlt" Color="#160507"/>
+
+    <!-- ════════════════════════════════════════════
+         TIPOGRAFÍA (OPTIMIZADA - 4 TAMAÑOS ESENCIALES)
+    ════════════════════════════════════════════ -->
+
+    <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
+    <sys:Double x:Key="AppFontSize_Display">40</sys:Double>
+    <sys:Double x:Key="AppFontSize_XL">24</sys:Double>
+    <sys:Double x:Key="AppFontSize_LG">16</sys:Double>
+    <sys:Double x:Key="AppFontSize_MD">14</sys:Double>
+    <sys:Double x:Key="AppFontSize_XS">11</sys:Double>
+
+    <FontWeight x:Key="AppFontWeight_Light">Light</FontWeight>
+    <FontWeight x:Key="AppFontWeight_Normal">Normal</FontWeight>
+    <FontWeight x:Key="AppFontWeight_Medium">Medium</FontWeight>
+    <FontWeight x:Key="AppFontWeight_Bold">Bold</FontWeight>
+
+    <!-- ════════════════════════════════════════════
+         ESPACIADOS (REDUCIDOS A 4 ESENCIALES)
+    ════════════════════════════════════════════ -->
+
+    <Thickness x:Key="AppSpacing_None">0</Thickness>
+    <Thickness x:Key="AppSpacing_XS">8</Thickness>
+    <Thickness x:Key="AppSpacing_MD">16</Thickness>
+    <Thickness x:Key="AppSpacing_LG">24</Thickness>
+
+    <!-- Espaciados direccionales (solo los usados) -->
+    <Thickness x:Key="AppSpacing_Top_XS">0,8,0,0</Thickness>
+    <Thickness x:Key="AppSpacing_Top_MD">0,16,0,0</Thickness>
+    <Thickness x:Key="AppSpacing_Bottom_MD">0,0,0,16</Thickness>
+
+    <!-- Padding específicos -->
+    <Thickness x:Key="AppPadding_Button">16,8</Thickness>
+    <Thickness x:Key="AppPadding_Card">16</Thickness>
+    <Thickness x:Key="AppPadding_Window">24</Thickness>
+    <Thickness x:Key="AppPadding_Input">12,8</Thickness>
+
+    <!-- Margenes comunes -->
+    <Thickness x:Key="AppMargin_Section">0,0,0,24</Thickness>
+    <Thickness x:Key="AppMargin_Card">0,0,0,16</Thickness>
+
+    <!-- ════════════════════════════════════════════
+         TAMAÑOS NUMÉRICOS (OPTIMIZADOS)
+    ════════════════════════════════════════════ -->
+
+    <!-- Alturas -->
+    <sys:Double x:Key="AppHeight_Button">36</sys:Double>
+    <sys:Double x:Key="AppHeight_Input">36</sys:Double>
+    <sys:Double x:Key="AppHeight_Header">48</sys:Double>
+    <sys:Double x:Key="AppHeight_Tab">40</sys:Double>
+
+    <!-- Anchos -->
+    <GridLength x:Key="AppWidth_Sidebar">200</GridLength>
+    <!-- REDUCIDO: 240→200 -->
+    <sys:Double x:Key="AppWidth_Button">120</sys:Double>
+    <sys:Double x:Key="AppWidth_Icon">18</sys:Double>
+    <!-- REDUCIDO: 24→18 -->
+
+    <!-- Bordes redondeados (como CornerRadius, no Double, para evitar error de conversion) -->
+    <CornerRadius x:Key="AppRadius_SM">4</CornerRadius>
+    <CornerRadius x:Key="AppRadius_MD">8</CornerRadius>
+    <CornerRadius x:Key="AppRadius_LG">12</CornerRadius>
+    <CornerRadius x:Key="AppRadius_XL">20</CornerRadius>
+
+    <!-- Opacidades -->
+    <sys:Double x:Key="AppOpacity_Disabled">0.5</sys:Double>
+    <sys:Double x:Key="AppOpacity_Pressed">0.7</sys:Double>
+
+    <!-- Border Thickness -->
+    <Thickness x:Key="AppBorder_None">0</Thickness>
+    <Thickness x:Key="AppBorder_Thin">1</Thickness>
+
+    <!-- ════════════════════════════════════════════
+         GRADIENTES
+    ════════════════════════════════════════════ -->
+
+    <LinearGradientBrush x:Key="FondoVentana" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#0E0103" Offset="0"/>
+        <GradientStop Color="#1A0508" Offset="0.5"/>
+        <GradientStop Color="#2A1016" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="GradienteBoton" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#E60A2E" Offset="0"/>
+        <GradientStop Color="#A00820" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="GradienteBotonHover" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F5193E" Offset="0"/>
+        <GradientStop Color="#E60A2E" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ════════════════════════════════════════════
+         ESTILO BASE: BOTÓN DE NAVEGACIÓN
+         (Consolida AppNavButtonStyle + AppNavItemTemplate)
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppNavButtonBaseStyle" TargetType="Button">
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Margin" Value="6,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource AppRadius_SM}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center"
+                                          Margin="10,0,0,0"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AppAzulClaro}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Pressed}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Disabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Botón de nav normal (hereda del base) -->
+    <Style x:Key="AppNavButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource AppNavButtonBaseStyle}"/>
+
+    <!-- Botón de nav ACTIVO (solo cambia el fondo, sin indicador lateral) -->
+    <Style x:Key="AppNavButtonActiveStyle" TargetType="Button"
+           BasedOn="{StaticResource AppNavButtonBaseStyle}">
+        <Setter Property="Background" Value="{StaticResource AppRojo}"/>
+    </Style>
+
+    <!-- Botón de logout (hereda del base, cambia colores) -->
+    <Style x:Key="AppNavLogoutStyle" TargetType="Button"
+           BasedOn="{StaticResource AppNavButtonBaseStyle}">
+        <Setter Property="Foreground" Value="{StaticResource AppError}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource AppRadius_SM}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AppAzulClaro}"/>
+                            <Setter Property="Foreground" Value="{StaticResource AppRojoHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Pressed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE VENTANA Y HEADER
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppWindowButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="42"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Foreground" Value="{StaticResource AppGrisClaro}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource AppRadius_SM}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AppAzulClaro}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Pressed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppHeaderCloseHover" TargetType="Button"
+           BasedOn="{StaticResource AppWindowButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource AppRadius_SM}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AppRojo}"/>
+                            <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AppRojoDark}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppHeaderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource AppAzulMedio}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <Style x:Key="AppHeaderTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Medium}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="16,0,0,0"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE SIDENAV
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppNavSectionTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppGrisClaro}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Bold}"/>
+        <Setter Property="Margin" Value="16,14,0,6"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppNavDividerStyle" TargetType="Rectangle">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="12,4,12,4"/>
+        <Setter Property="Fill" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="RadiusX" Value="1"/>
+        <Setter Property="RadiusY" Value="1"/>
+        <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         NUEVO: ESTILOS DE TABS
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppTabBaseStyle" TargetType="Button">
+        <Setter Property="Height" Value="{StaticResource AppHeight_Tab}"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="Foreground" Value="{StaticResource AppGris}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Medium}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppTabActiveStyle" TargetType="Button"
+           BasedOn="{StaticResource AppTabBaseStyle}">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppRojo}"/>
+    </Style>
+
+    <Style x:Key="AppTabInactiveStyle" TargetType="Button"
+           BasedOn="{StaticResource AppTabBaseStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE STAT CARDS
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppStatCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource AppAzulMedio}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource AppRadius_MD}"/>
+        <Setter Property="Padding" Value="{StaticResource AppPadding_Card}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE DATA GRID / TABLA
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppGridHeaderStyle" TargetType="Grid">
+        <Setter Property="Background" Value="{StaticResource AppAzulClaro}"/>
+    </Style>
+
+    <Style x:Key="AppGridHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Bold}"/>
+        <Setter Property="Margin" Value="14,0"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <!-- NUEVO: Estilo para filas de tabla con alternancia -->
+    <Style x:Key="AppDataGridRowStyle" TargetType="Border">
+        <Setter Property="Height" Value="44"/>
+        <Setter Property="Background" Value="{StaticResource AppAzulMedio}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource AppAzulClaro}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- NUEVO: Estilo para badges de estado (OK, Bajo, Agotado) -->
+    <Style x:Key="AppBadgeStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource AppRadius_LG}"/>
+        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE STATUSBAR
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppStatusBarStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource AppAzulMedio}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    </Style>
+
+    <Style x:Key="AppStatusBarTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Light}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="16,0,0,0"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS DE BOTÓN DE ACCIÓN (ENTRADA, AJUSTE)
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppActionButtonBaseStyle" TargetType="Button">
+        <Setter Property="Width" Value="112"/>
+        <Setter Property="Height" Value="{StaticResource AppHeight_Button}"/>
+        <Setter Property="Margin" Value="4,0"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulOscuro}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource AppRadius_SM}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.9"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Pressed}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Disabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppActionButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource AppActionButtonBaseStyle}">
+        <Setter Property="Background" Value="{StaticResource AppSuccess}"/>
+    </Style>
+
+    <Style x:Key="AppActionButtonSecondaryStyle" TargetType="Button"
+           BasedOn="{StaticResource AppActionButtonBaseStyle}">
+        <Setter Property="Background" Value="{StaticResource AppAzulClaro}"/>
+    </Style>
+
+    <!-- ════════════════════════════════════════════
+         ESTILOS COMPARTIDOS PARA PANELES
+    ════════════════════════════════════════════ -->
+
+    <Style x:Key="AppPanelTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XL}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Bold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppPanelSubtitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppGrisClaro}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppCardLabelStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppGrisClaro}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppCardValueStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XL}"/>
+        <Setter Property="FontWeight" Value="{StaticResource AppFontWeight_Bold}"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppFieldTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="12,7"/>
+        <Setter Property="Background" Value="{StaticResource AppAzulOscuro}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border
+						Background="{TemplateBinding Background}"
+						BorderBrush="{TemplateBinding BorderBrush}"
+						BorderThickness="{TemplateBinding BorderThickness}"
+						CornerRadius="{StaticResource AppRadius_SM}">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost"
+										  Padding="{TemplateBinding Padding}" />
+                            <TextBlock x:Name="Watermark"
+									   Text="{Binding (helpers:WatermarkService.Watermark), RelativeSource={RelativeSource TemplatedParent}}"
+									   Foreground="{StaticResource AppGris}"
+									   FontFamily="{TemplateBinding FontFamily}"
+									   FontSize="{TemplateBinding FontSize}"
+									   Padding="{TemplateBinding Padding}"
+									   VerticalAlignment="Center"
+									   IsHitTestVisible="False"
+									   Visibility="Collapsed" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Text" Value="" />
+                                <Condition Property="IsFocused" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Visible" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppFieldComboBoxStyle" TargetType="ComboBox">
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Background" Value="{StaticResource AppAzulOscuro}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppAzulClaro}"/>
+        <Setter Property="Foreground" Value="{StaticResource AppNegro}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+    </Style>
+
+    <Style x:Key="AppTableCellStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="14,0"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_XS}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+    </Style>
+
+    <Style x:Key="AppPrimaryWideButtonStyle" TargetType="Button"
+		   BasedOn="{StaticResource AppActionButtonStyle}">
+        <Setter Property="Width" Value="150"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Background" Value="{StaticResource AppRojo}"/>
+    </Style>
+
+    <Style x:Key="AppSecondaryWideButtonStyle" TargetType="Button"
+		   BasedOn="{StaticResource AppActionButtonSecondaryStyle}">
+        <Setter Property="Width" Value="150"/>
+        <Setter Property="Height" Value="40"/>
+    </Style>
+
+</ResourceDictionary>

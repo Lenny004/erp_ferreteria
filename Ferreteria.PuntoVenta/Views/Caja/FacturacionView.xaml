@@ -1,0 +1,289 @@
+<UserControl
+    x:Class="Ferreteria.PuntoVenta.Views.Caja.FacturacionView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/AppStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="Auto" />
+                <RowDefinition
+                    Height="500" />
+            </Grid.RowDefinitions>
+            <StackPanel
+                Margin="0,0,0,16">
+                <TextBlock
+                    Text="Facturacion"
+                    Style="{StaticResource AppPanelTitleStyle}" />
+                <TextBlock
+                    Text="Crear orden, emitir DTE y preparar impresion de ticket"
+                    Style="{StaticResource AppPanelSubtitleStyle}" />
+            </StackPanel>
+            <UniformGrid
+                Grid.Row="1"
+                Columns="3"
+                Margin="0,0,0,16">
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Tipo DTE"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <ComboBox
+                            x:Name="DteTypeCombo"
+                            Style="{StaticResource AppFieldComboBoxStyle}"
+                            SelectedIndex="0"
+                            Margin="0,8,0,0">
+                            <ComboBoxItem
+                                Content="01 Consumidor Final" />
+                            <ComboBoxItem
+                                Content="03 Credito Fiscal" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Metodo de pago"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <ComboBox
+                            x:Name="PaymentMethodCombo"
+                            Style="{StaticResource AppFieldComboBoxStyle}"
+                            SelectedIndex="0"
+                            Margin="0,8,0,0">
+                            <ComboBoxItem
+                                Content="Efectivo"
+                                Tag="EFECTIVO" />
+                            <ComboBoxItem
+                                Content="Tarjeta"
+                                Tag="TARJETA" />
+                            <ComboBoxItem
+                                Content="Transferencia"
+                                Tag="TRANSFERENCIA" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Total a facturar"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            x:Name="HeaderTotalText"
+                            Text="$0.00"
+                            Style="{StaticResource AppCardValueStyle}"
+                            Foreground="{StaticResource AppSuccess}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+            <Grid
+                Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition
+                        Width="1.05*" />
+                    <ColumnDefinition
+                        Width="1.4*" />
+                    <ColumnDefinition
+                        Width="0.9*" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Buscar producto"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBox
+                            x:Name="ProductSearchTextBox"
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Codigo o descripcion"
+                            Margin="0,8,0,8"
+                            TextChanged="OnProductSearchChanged" />
+                        <TextBox
+                            x:Name="QuantityTextBox"
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Cantidad"
+                            Text="1"
+                            Margin="0,0,0,12" />
+                        <Button
+                            Style="{StaticResource AppActionButtonStyle}"
+                            Click="OnAgregarClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition
+                                        Width="18" />
+                                    <ColumnDefinition
+                                        Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image
+                                    Source="pack://application:,,,/Ferreteria.PuntoVenta;component/Resources/Images/add-blue.png"
+                                    Width="14"
+                                    Height="14"
+                                    Stretch="Uniform"
+                                    VerticalAlignment="Center" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="AGREGAR"
+                                    Foreground="{StaticResource AppAzulOscuro}"
+                                    FontWeight="Bold"
+                                    VerticalAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Button>
+                        <Rectangle
+                            Height="1"
+                            Fill="{StaticResource AppAzulClaro}"
+                            Margin="0,16" />
+                        <TextBlock
+                            Text="Resultados"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <ListBox
+                            x:Name="ProductResultsListBox"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            MaxHeight="220"
+                            Margin="0,10,0,0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,4">
+                                        <TextBlock
+                                            Text="{Binding Code}"
+                                            Style="{StaticResource AppTableCellStyle}"
+                                            Foreground="{StaticResource AppRojo}" />
+                                        <TextBlock
+                                            Text="{Binding Description}"
+                                            Style="{StaticResource AppTableCellStyle}" />
+                                        <TextBlock
+                                            Text="{Binding FormattedStock}"
+                                            Style="{StaticResource AppTableCellStyle}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="1"
+                    Style="{StaticResource AppStatCardStyle}"
+                    Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Detalle de orden"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <ItemsControl
+                            x:Name="CartItemsControl"
+                            Margin="0,12,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource AppDataGridRowStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="36" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Text="{Binding Description}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Text="{Binding QuantityText}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Text="{Binding UnitPriceText}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <TextBlock
+                                                Grid.Column="3"
+                                                Text="{Binding SubtotalText}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <Button
+                                                Grid.Column="4"
+                                                Content="X"
+                                                Width="26"
+                                                Height="24"
+                                                Style="{StaticResource AppWindowButtonStyle}"
+                                                Click="OnRemoveCartLineClick" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Column="2"
+                    Style="{StaticResource AppStatCardStyle}">
+                    <StackPanel>
+                        <TextBlock
+                            Text="Datos del cliente"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBox
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Nombre cliente"
+                            Margin="0,8,0,8" />
+                        <TextBox
+                            Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="NIT / NRC"
+                            Margin="0,0,0,16" />
+                        <TextBlock
+                            x:Name="SubtotalText"
+                            Text="Subtotal: $0.00"
+                            Style="{StaticResource AppTableCellStyle}"
+                            Margin="0,0,0,6" />
+                        <TextBlock
+                            x:Name="TaxText"
+                            Text="IVA: $0.00"
+                            Style="{StaticResource AppTableCellStyle}"
+                            Margin="0,0,0,6" />
+                        <TextBlock
+                            x:Name="TotalText"
+                            Text="Total: $0.00"
+                            Foreground="{StaticResource AppSuccess}"
+                            FontSize="{StaticResource AppFontSize_XL}"
+                            FontWeight="Bold"
+                            Margin="14,6,0,20" />
+                        <Button
+                            Style="{StaticResource AppPrimaryWideButtonStyle}"
+                            Click="OnFacturarClick">
+                            <TextBlock
+                                Text="REGISTRAR VENTA"
+                                Foreground="{StaticResource AppBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                        <Button
+                            Style="{StaticResource AppSecondaryWideButtonStyle}"
+                            Margin="0,10,0,0"
+                            Click="OnLimpiarClick">
+                            <TextBlock
+                                Text="LIMPIAR"
+                                Foreground="{StaticResource AppBlanco}"
+                                FontWeight="Bold" />
+                        </Button>
+                        <TextBlock
+                            x:Name="StatusText"
+                            Text=""
+                            Style="{StaticResource AppTableCellStyle}"
+                            Margin="0,12,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

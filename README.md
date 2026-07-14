@@ -1,14 +1,14 @@
-﻿# erp_ferreteria
+# erp_ferreteria
 
-> **Nombre:** FlexoCable SV — Sistema Integrado de Punto de Venta y Gestión  
+> **Nombre:** Ferreteria — Sistema Integrado de Punto de Venta y Gestión  
 > **Descripción:** Aplicación de escritorio (C# WPF) para punto de venta táctil con facturación electrónica DTE, confección de cables y consulta de stock. Forma parte del ecosistema ERP Ferretería junto con `ferreteria_backend` y `ferreteria_adminweb`.
 
 > **Código interno:** FCSV-2026 · **Versión:** 1.0.0-MVP · **Plan:** v3.0 (Junio 2026)  
-> **Cliente:** FlexoCable El Salvador, S.A. de C.V. · **Matriz:** FlexoCable Panamá  
+> **Cliente:** Ferreteria · **Matriz:** Ferreteria  
 > **Ubicación:** San Salvador, El Salvador  
-> **Plan de desarrollo:** [`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`](docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md)
+> **Plan de desarrollo:** [`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`](docs/FERRETERIA_PLAN_FINALIZACION_APP.md)
 
-Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta táctil con facturación electrónica DTE, control de inventario y gestión de planillas. Diseñado específicamente para personal mayor con experiencia tecnológica limitada.
+Sistema integral para la sucursal salvadoreña de Ferreteria: punto de venta táctil con facturación electrónica DTE, control de inventario y gestión de planillas. Diseñado específicamente para personal mayor con experiencia tecnológica limitada.
 
 ---
 
@@ -37,7 +37,7 @@ Sistema integral para la sucursal salvadoreña de FlexoCable: punto de venta tá
 
 ## Contexto del Negocio
 
-FlexoCable es una empresa panameña con más de 20 años fabricando cables de control para vehículos comerciales e industriales. En 2026 abre sucursal en San Salvador combinando:
+Ferreteria es una empresa panameña con más de 20 años fabricando cables de control para vehículos comerciales e industriales. En 2026 abre sucursal en San Salvador combinando:
 
 - **Venta de repuestos** — componentes sueltos (boquillas, terminales, resortes, cables)
 - **Fabricación custom** — cables ensamblados a medida según especificación del cliente
@@ -56,16 +56,16 @@ FlexoCable es una empresa panameña con más de 20 años fabricando cables de co
 
 ## Arquitectura del Sistema
 
-FlexoCable son **tres repositorios** con responsabilidades separadas. La base de datos PostgreSQL es **una sola estructura** (UUID, esquemas `public` / `purchasing` / `sales` / `dte` / `fiscal` / `hr` / `system`); las diferencias entre caja y administración se resuelven en **código**, no con tablas distintas por tecnología.
+Ferreteria son **tres repositorios** con responsabilidades separadas. La base de datos PostgreSQL es **una sola estructura** (UUID, esquemas `public` / `purchasing` / `sales` / `dte` / `fiscal` / `hr` / `system`); las diferencias entre caja y administración se resuelven en **código**, no con tablas distintas por tecnología.
 
 **Fuente de verdad del esquema (v3.0):** `ferreteria_backend/prisma/schema.prisma`. WPF (EF Core) y el API Node consumen la misma BD.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                     FLEXOCABLE SV — ARQUITECTURA                         │
+│                     FERRETERIA — ARQUITECTURA                            │
 ├─────────────────────────────┬────────────────────────────────────────────┤
 │  CAJA (C# WPF)              │  ADMINISTRACIÓN (Node + Next.js)          │
-│  FlexoCableSV.PuntoVenta    │  ferreteria_backend  +  ferreteria_adminweb│
+│  Ferreteria.PuntoVenta    │  ferreteria_backend  +  ferreteria_adminweb│
 │                             │                                            │
 │  • Pantalla táctil          │  • Dashboard, KPIs, reportes               │
 │  • Caja + DTE + impresión   │  • RRHH: empleados, expediente, PINs       │
@@ -100,13 +100,13 @@ FlexoCable son **tres repositorios** con responsabilidades separadas. La base de
 | **Local (ahora)** | PC de desarrollo | Aún no implementado | PostgreSQL en Docker (`ferreteria_backend/docker-compose.yml`, puerto `55432`) |
 | **Producción (después)** | PC en sucursal | Navegador → API en servidor | Supabase PostgreSQL (mismo esquema) |
 
-La caja **no** implementa módulos de planilla, RRHH ni inventario administrativo. Eso vive **solo** en `ferreteria_backend` + `ferreteria_adminweb` (Node/Next), según `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`.
+La caja **no** implementa módulos de planilla, RRHH ni inventario administrativo. Eso vive **solo** en `ferreteria_backend` + `ferreteria_adminweb` (Node/Next), según `docs/FERRETERIA_PLAN_FINALIZACION_APP.md`.
 
 ### Qué va en cada repositorio
 
 | Repositorio | Tecnología | Responsabilidad |
 |---|---|---|
-| `erp_ferreteria` / `FlexoCableSV.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
+| `erp_ferreteria` / `Ferreteria.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
 | [`ferreteria_backend`](../ferreteria_backend/README.md) | Node.js, Express, Prisma | API REST: empleados, planilla, compras, libros IVA, BI, Excel/PDF |
 | [`ferreteria_adminweb`](../ferreteria_adminweb/README.md) | Next.js | UI administrativa; consume **solo** la API Node |
 
@@ -130,7 +130,7 @@ La pantalla de inicio **no es un login tradicional**. Es una pantalla de selecci
 
 ```
 ┌─────────────────────────────────────────┐
-│          FLEXOCABLE EL SALVADOR         │
+│          FERRETERIA EL SALVADOR         │
 │              [Logo]                     │
 │                                         │
 │   ┌──────────────┐  ┌──────────────┐   │
@@ -395,7 +395,7 @@ Los nombres de tablas/columnas en PostgreSQL y modelos C# están en **inglés** 
 | `hr` | `Employees`, `PayrollPeriods`, `PayrollRuns`, `PayrollDetails`, … | Admin (Node): RRHH y planilla. WPF: solo lectura empleado/PIN |
 | `system` | `Settings`, `Printers`, `WebUsers`, `AuditLog` | `WebUsers`: solo admin Node. `Printers`: WPF. Resto según módulo |
 
-Detalle completo de planilla/RRHH: `docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md` (sección 17).
+Detalle completo de planilla/RRHH: `docs/FERRETERIA_PLAN_FINALIZACION_APP.md` (sección 17).
 
 ### Catálogo de Productos
 
@@ -410,7 +410,7 @@ ZZZ  = Correlativo (ej: 01)
 Ejemplos:
   02-AC-01      → Boquilla Acelerador #1
   01-Cga-03     → Cable Galvanizado Acero #3
-  FLV-CCG-U-101 → Flexoindustrial VLD, CCG Universal #101
+  TOR-CLA-001 → Tornilleria, Clavos 2 pulgadas #001
 ```
 
 **Tipos de medida:**
@@ -469,7 +469,7 @@ Los PINs se asignan y cambian desde **`ferreteria_adminweb`** (API Node). La app
 
 ## UX/UI — Diseño para Personas Mayores
 
-El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitada. El diseño se llama internamente **"Flexo Simple"**.
+El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitada. El diseño se llama internamente **"App Simple"**.
 
 ### Principios
 
@@ -487,14 +487,14 @@ El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitad
 ### Paleta de Colores Oficial
 
 ```css
---flexo-rojo:        #D22533;  /* Botones principales, acciones críticas */
---flexo-negro:       #080808;  /* Headers, textos principales */
---flexo-blanco:      #FFFFFF;  /* Fondo de todas las pantallas */
---flexo-gris-claro:  #F5F5F5;  /* Inputs, áreas secundarias, filas tabla */
---flexo-gris-medio:  #9E9E9E;  /* Bordes, botones secundarios, deshabilitado */
---flexo-verde:       #4CAF50;  /* Guardar borrador, éxito, stock OK */
---flexo-naranja:     #FF9800;  /* DTE pendiente, stock bajo mínimo */
---flexo-rojo-claro:  #F44336;  /* Cancelar, stock agotado, error DTE */
+--primary:           #f5193e;  /* Botones principales, acciones críticas */
+--text:              #23010a;  /* Headers, textos principales (claro) */
+--background:        #fef1f3;  /* Fondo claro */
+--secondary:         #f9bc76;  /* Áreas secundarias */
+--accent:            #f8d254;  /* Destacados */
+--success:           #4CAF50;  /* Guardar, éxito, stock OK */
+--warning:           #f9bc76;  /* Pendiente, stock bajo mínimo */
+--primary-dark:      #e60a2e;  /* Primary en dark mode */
 ```
 
 ### Tipografía
@@ -513,7 +513,7 @@ El 70% del equipo operativo tiene 45+ años con experiencia tecnológica limitad
 
 ## Stack Tecnológico
 
-### App de Escritorio — Caja (`FlexoCableSV.PuntoVenta`)
+### App de Escritorio — Caja (`Ferreteria.PuntoVenta`)
 
 | Tecnología | Versión | Propósito |
 |---|---|---|
@@ -570,15 +570,15 @@ El frontend **no** conecta a PostgreSQL; solo llama a `ferreteria_backend`.
 Ferreteria/
 │
 ├── erp_ferreteria/                      ← Repo WPF (caja) — este README
-│   ├── FlexoCableSV.PuntoVenta/
+│   ├── Ferreteria.PuntoVenta/
 │   │   ├── Views/                       ← Shell, Inicio, Caja, Confección, PIN
 │   │   ├── Models/                      ← EF Core (dominio operativo)
 │   │   ├── Services/                    ← PIN, inventario, órdenes, DTE, impresión
-│   │   ├── Data/FlexoDbContext.cs
+│   │   ├── Data/FerreteriaDbContext.cs
 │   │   └── Config/appsettings.json
-│   ├── tools/FlexoCable.DbApply/        ← Legacy/diagnóstico (no fuente de verdad)
+│   ├── tools/Ferreteria.DbApply/        ← Legacy/diagnóstico (no fuente de verdad)
 │   └── docs/
-│       └── FLEXOCABLE_PLAN_FINALIZACION_APP.md
+│       └── FERRETERIA_PLAN_FINALIZACION_APP.md
 │
 ├── ferreteria_backend/                  ← API Node — ver README propio
 │   ├── prisma/schema.prisma             ← Fuente de verdad BD v3.0
@@ -643,9 +643,9 @@ npm run db:push
 npm run db:seed
 ```
 
-`FlexoCableSV.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto).
+`Ferreteria.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto).
 
-`tools/FlexoCable.DbApply` queda como herramienta legacy/diagnóstico. **No** es la fuente de verdad: usar Prisma (`ferreteria_backend/prisma/schema.prisma`).
+`tools/Ferreteria.DbApply` queda como herramienta legacy/diagnóstico. **No** es la fuente de verdad: usar Prisma (`ferreteria_backend/prisma/schema.prisma`).
 
 **Empleados demo (solo desarrollo)** — ver [`ferreteria_backend/README.md`](../ferreteria_backend/README.md):
 
@@ -658,7 +658,7 @@ npm run db:seed
 ### 2. App de Escritorio (WPF)
 
 ```bash
-cd erp_ferreteria/FlexoCableSV.PuntoVenta
+cd erp_ferreteria/Ferreteria.PuntoVenta
 dotnet restore
 dotnet build
 dotnet run
@@ -699,7 +699,7 @@ Cuando `ferreteria_adminweb` esté disponible:
 
 ## Estado del desarrollo
 
-Resumen alineado al plan v3.0 (`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`):
+Resumen alineado al plan v3.0 (`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`):
 
 ### WPF — vistas existentes
 
@@ -744,7 +744,7 @@ Resumen alineado al plan v3.0 (`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`):
 
 ## Roadmap por fases
 
-Roadmap completo según `FLEXOCABLE_PLAN_FINALIZACION_APP.md`. Las fases WPF (0–7) preceden o corren en paralelo a la administración web (8–11).
+Roadmap completo según `FERRETERIA_PLAN_FINALIZACION_APP.md`. Las fases WPF (0–7) preceden o corren en paralelo a la administración web (8–11).
 
 ### Caja WPF
 
@@ -781,7 +781,7 @@ Roadmap completo según `FLEXOCABLE_PLAN_FINALIZACION_APP.md`. Las fases WPF (0�
 |---|---|---|
 | `ferreteria_backend` | [`../ferreteria_backend/README.md`](../ferreteria_backend/README.md) | API Node, Prisma, esquema BD, módulos planificados |
 | `ferreteria_adminweb` | [`../ferreteria_adminweb/README.md`](../ferreteria_adminweb/README.md) | UI Next.js, rutas, auth admin, módulos por fase |
-| Plan maestro | [`docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md`](docs/FLEXOCABLE_PLAN_FINALIZACION_APP.md) | Especificación completa v3.0 |
+| Plan maestro | [`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`](docs/FERRETERIA_PLAN_FINALIZACION_APP.md) | Especificación completa v3.0 |
 
 ---
 
@@ -820,10 +820,10 @@ Motor de cálculo a portar desde `beraka-core-api` (AFP/ISSS solo sobre salario 
 ## Licencia
 
 ```
-Copyright (c) 2026 FlexoCable El Salvador, S.A. de C.V.
+Copyright (c) 2026 Ferreteria
 Todos los derechos reservados.
 
-Este software es propiedad exclusiva de FlexoCable El Salvador.
+Este software es propiedad exclusiva de Ferreteria.
 Queda estrictamente prohibida su reproducción, distribución
 o uso sin autorización expresa por escrito del propietario.
 ```
@@ -834,8 +834,8 @@ o uso sin autorización expresa por escrito del propietario.
 
 | Departamento | Contacto |
 |---|---|
-| Soporte Técnico | soporte@flexocable.com.sv |
-| Administración | admin@flexocable.com.sv |
-| Desarrollo | dev@flexocable.com.sv |
+| Soporte Técnico | soporte@ferreteria.com.sv |
+| Administración | admin@ferreteria.com.sv |
+| Desarrollo | dev@ferreteria.com.sv |
 
 **Dirección:** San Salvador, El Salvador
