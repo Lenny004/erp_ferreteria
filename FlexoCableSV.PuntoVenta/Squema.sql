@@ -789,7 +789,8 @@ INSERT INTO public."MeasurementTypes" ("code","name","UnitLabel","decimals") VAL
     ('LITRO',  'Litros',            'L',        2),
     ('SACO',   'Sacos',             'sacos',    0),
     ('ROLLO',  'Rollos',            'rollos',   0),
-    ('JUEGO',  'Juegos / sets',     'juegos',   0)
+    ('JUEGO',  'Juegos / sets',     'juegos',   0),
+    ('PAR',    'Pares',             'pares',    0)
 ON CONFLICT ("code") DO UPDATE SET
     "name" = EXCLUDED."name", "UnitLabel" = EXCLUDED."UnitLabel", "decimals" = EXCLUDED."decimals";
 
@@ -846,9 +847,9 @@ WHERE NOT EXISTS (SELECT 1 FROM purchasing."Suppliers" WHERE "name"='Importadora
 -- Productos de ferretería (usa funciones auxiliares por código de familia/medida)
 INSERT INTO public."Products" ("code","description","FamilyId","SubfamilyId","MeasurementTypeId","SalePrice","CostPrice","CurrentStock","MinStock","MaxStock")
 SELECT v.code, v.description,
-       (SELECT "id" FROM public."Families" WHERE "code"=v.fam),
-       (SELECT "id" FROM public."Subfamilies" sf JOIN public."Families" f ON sf."FamilyId"=f."id" WHERE f."code"=v.fam AND sf."code"=v.sub),
-       (SELECT "id" FROM public."MeasurementTypes" WHERE "code"=v.mt),
+       (SELECT f2."id" FROM public."Families" f2 WHERE f2."code"=v.fam),
+       (SELECT sf."id" FROM public."Subfamilies" sf JOIN public."Families" f ON sf."FamilyId"=f."id" WHERE f."code"=v.fam AND sf."code"=v.sub),
+       (SELECT mt2."id" FROM public."MeasurementTypes" mt2 WHERE mt2."code"=v.mt),
        v.price, v.cost, v.stock, v.minst, v.maxst
 FROM (VALUES
     ('CL-CLA-001','Clavo de acero 2 pulgadas','CL','CLA','LIBRA', 0.90, 0.55, 250, 40, 800),
@@ -967,20 +968,15 @@ ON CONFLICT ("Username") DO NOTHING;
 -- PERMISOS
 -- =============================================================================
 DO $$
+DECLARE
+    v_role text := 'ferreteria_user';
+    v_schema text;
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'flexo_user') THEN
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA public     TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public     TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA purchasing TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA purchasing TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA sales      TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA sales      TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA dte        TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA dte        TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA hr         TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA hr         TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA system     TO flexo_user';
-        EXECUTE 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA system     TO flexo_user';
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = v_role) THEN
+        FOREACH v_schema IN ARRAY ARRAY['public','purchasing','sales','dte','hr','system'] LOOP
+            EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA %I TO %I', v_schema, v_role);
+            EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', v_schema, v_role);
+        END LOOP;
     END IF;
 END $$;
 
