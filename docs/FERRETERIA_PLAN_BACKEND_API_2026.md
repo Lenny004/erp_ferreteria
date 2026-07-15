@@ -1,6 +1,6 @@
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
-> **Estado:** Fases 8, 8b y 9 hechas; siguientes: 9b compras / 10 planilla  
+> **Estado:** Fases 8, 8b, 9, 9b y 10 MVP hechas; siguiente: 10-export (Excel/PDF) y 10b (aguinaldo/vacaciones)  
 > **Fecha:** 2026-07-14  
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
@@ -27,9 +27,12 @@
 | API Express `/api/v1` (Fase 8) | ✅ Auth + CRUD base |
 | UI login + directorio empleados (8b) | ✅ |
 | Inventario admin (Fase 9) | ✅ movimientos + alertas + UI |
-| Planilla desde erp-core-api | 🔲 Fase 10 |
+| Compras (Fase 9b) | ✅ proveedores + OC + costo promedio + valuación |
+| Planilla — motor + períodos + corridas + UI básica (Fase 10 MVP) | ✅ |
+| Planilla — exports Excel/PDF (Fase 10-export) | 🔲 |
+| Planilla — aguinaldo/vacaciones/liquidaciones (Fase 10b/10c) | 🔲 |
 
-La capa de datos y el **scaffold HTTP de Fase 8** ya existen. Sigue portar UI y el motor de planilla.
+La API admin cubre auth, RRHH base, inventario, compras y planilla MVP. Siguiente: exports Excel/PDF y módulos 10b/10c.
 
 ---
 
@@ -257,18 +260,56 @@ Pendiente: import Excel nativo (ExcelJS) y Kardex valorado fino en Fase 9b con c
 
 ---
 
-### Fase 9b — Compras
+### Fase 9b — Compras — ✅ HECHO (MVP)
 
-Proveedores, OC, costo promedio ponderado.
+**Backend:**
+
+- `GET/POST/PATCH /api/v1/suppliers` — maestro proveedores (NIT/NRC, país, crédito)
+- `GET/POST/PATCH /api/v1/purchase-orders` — OC con líneas
+- `POST .../confirm` | `.../receive` | `.../cancel` — flujo BORRADOR → CONFIRMADA → RECIBIDA | CANCELADA
+- Al recibir: `InventoryMovement` `ENTRADA_COMPRA` + stock + **costo promedio ponderado**
+- `GET /api/v1/inventory/valuation` — valuación total (stock × costo)
+- Kardex con saldo valorado aproximado por movimiento
+- Seed: `WebUser` admin vinculado a Employee Administrador
+
+**Adminweb:**
+
+- `/compras/proveedores` — CRUD
+- `/compras/ordenes` — crear, confirmar, recibir, cancelar
+- `/inventario` — bloque de valuación a costo promedio
 
 ---
 
-### Fase 10 — Planilla (portar `erp-core-api`)
+### Fase 10 — Planilla (portar `erp-core-api`) — ✅ HECHO (MVP)
 
-1. Copiar/adaptar `payroll.constants.ts`, `payroll.calculator.ts`, `payroll.builder.ts`
-2. `payroll-periods` + `payroll-runs` service
-3. Exports Excel/PDF desde `payroll-exports.service.ts`
-4. UI: portar `planilla/generar` y `periodos` desde `erp-admin-web`
+**Backend** (`ferreteria_backend/src/modules/`):
+
+- `payroll-runs/payroll.{constants,utils,types,calculator,builder,mapper}.ts` — motor AFP/ISSS/ISR/INSAFORP
+  portado de `erp-core-api`, adaptado a los modelos `hr.PayrollDetail` de ferreteria (sin desglose de horas
+  extra por columna; `overtimeAmount` combinado). Sin lógica de hotel/pasantías.
+- `GET/POST/PATCH /api/v1/payroll-periods` + `POST .../close` + `POST .../reopen`
+- `GET/POST /api/v1/payroll-runs` (filtros `periodId`/`status`), `GET /:id` con `details[]`
+- `POST /api/v1/payroll-runs` genera detalles por empleado activo (excluye `PASANTE`; incluye
+  `PLAZO_FIJO`, `TIEMPO_PARCIAL`, `HONORARIOS`) usando permisos aprobados no liquidados del período
+- `POST /:id/approve`, `POST /:id/pay`, `POST /:id/void` — máquina de estados `EN_REVISION → APROBADA → PAGADA`
+  (o `ANULADA`), en transacción Prisma; totales de `PayrollRun` siempre recalculados desde `PayrollDetail`
+- `PATCH /payroll-runs/details/:id` — edita horas extra/bonos/deducciones y recalcula la línea + totales
+- Seed: tabla `IsrBracket` 2026 mensual/quincenal (base exenta $550/$275, reforma abr-2025 vigente)
+
+**Adminweb** (`src/app/(admin)/planilla/`):
+
+- `src/lib/api/payroll.ts` + `src/hooks/use-payroll.ts`
+- `/planilla/periodos` — listar, crear, editar, cerrar/reabrir período
+- `/planilla/corridas` — listar (filtro período/estado), generar corrida, aprobar, pagar, anular, ver
+  detalle de líneas por empleado
+
+**Pendiente (siguientes fases):**
+
+- **10-export:** Excel/PDF de planilla, boletas de pago, comprobantes de retención honorarios,
+  Planilla Única AFP/ISSS (portar `payroll-exports.service.ts`)
+- **10b:** Aguinaldo (`AguinaldoRun`/`AguinaldoDetail` ya en schema) y vacaciones (`VacationBalance`)
+- **10c:** Liquidaciones (`EmployeeTermination`)
+- Edición de horas extra/bonos por línea vía UI (hoy solo backend `PATCH .../details/:id`)
 
 ---
 
@@ -298,7 +339,9 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 4. ~~Employees + banks + document-types + customers + products~~
 5. ~~Smoke: `db:push` + `db:seed` + login real contra PostgreSQL~~
 6. ~~Portar UI RRHH login + directorio (Fase 8b)~~
-7. ~~Fase 9 inventario~~ → **Siguiente:** Fase 9b compras / Fase 10 planilla
+7. ~~Fase 9 inventario~~
+8. ~~Fase 9b compras~~
+9. ~~Fase 10 planilla MVP (motor AFP/ISSS/ISR + períodos + corridas + UI básica)~~ → **Siguiente:** Fase 10-export (Excel/PDF)
 
 ---
 
@@ -321,12 +364,12 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 | Datos | Schema + seed + Docker (✅) |
 | API mínima (Fase 8) | Login + CRUD empleados/clientes/productos + CORS (✅) |
 | UI RRHH base (8b) | Directorio/bancos/docs portados desde erp-admin-web |
-| API planilla (10) | Motor + corridas + export desde erp-core-api |
+| Compras (9b) | Proveedores + OC + recepción con costo promedio (✅) |
+| API planilla (10 MVP) | Motor + períodos + corridas + UI básica (✅); exports Excel/PDF en 10-export |
 | Ecosistema web completo | Adminweb + (futuro) tienda pública |
 
 ---
 
 ## 12. Próximo paso inmediato
 
-**Fase 9b:** proveedores + órdenes de compra + costo promedio ponderado.  
-**Fase 10:** portar motor `payroll.*` desde `erp-core-api` + pantallas planilla.
+**Fase 10-export:** portar `payroll-exports.service.ts` (Excel/PDF, boletas, Planilla Única AFP/ISSS) y luego Fase 10b (aguinaldo/vacaciones).
