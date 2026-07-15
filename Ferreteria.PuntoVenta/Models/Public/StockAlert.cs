@@ -17,6 +17,7 @@ public class StockAlert
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; }
 
+    /// <summary>True cuando la alerta ya fue atendida o el stock se recuperó.</summary>
     public bool IsResolved { get; set; } = false;
 
     [Column(TypeName = "timestamptz")]

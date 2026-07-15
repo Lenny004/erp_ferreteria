@@ -1,6 +1,6 @@
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
-> **Estado:** borrador de plan (listo para implementar por fases)  
+> **Estado:** Fases 8, 8b y 9 hechas; siguientes: 9b compras / 10 planilla  
 > **Fecha:** 2026-07-14  
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
@@ -8,20 +8,28 @@
 > **Documento de estado previo:** [`estado_ferreteria_backend_779de8a2.plan.md`](./estado_ferreteria_backend_779de8a2.plan.md)  
 > **Fuente técnica:** [`../../ferreteria_backend/README.md`](../../ferreteria_backend/README.md)
 
+### Plantillas de referencia (proyectos propios)
+
+| Proyecto | Ruta local | Uso en ferreteria |
+|---|---|---|
+| **erp-core-api** | `C:\Users\lenny\Documents\ERP\erp-core-api` | Plantilla de API: Express + Prisma + auth + motor RRHH/planilla SV |
+| **erp-admin-web** | `C:\Users\lenny\Documents\ERP\erp-admin-web` | Plantilla UI: pantallas RRHH/planilla para portar a `ferreteria_adminweb` |
+
+> **Nota:** referencias antiguas a `beraka-core-api` se sustituyen por **`erp-core-api`** (es el mismo trabajo, nombre correcto del repo).
+
 ---
 
 ## 1. Veredicto actual
 
-Hoy **no hay API HTTP** en `ferreteria_backend`.
-
-| Existe | No existe |
+| Capa | Estado |
 |---|---|
-| `prisma/schema.prisma` v3.0 (~45 modelos) | Carpeta `src/` |
-| `prisma/seed.ts` | Express / rutas `/api/v1` |
-| Docker PostgreSQL (`:55432`) + `database/init.sql` | Auth JWT, Zod, middlewares |
-| Scripts npm solo de Prisma/Docker | `tsconfig.json`, `npm run dev` / `start` |
+| Prisma schema + seed + Docker | ✅ |
+| API Express `/api/v1` (Fase 8) | ✅ Auth + CRUD base |
+| UI login + directorio empleados (8b) | ✅ |
+| Inventario admin (Fase 9) | ✅ movimientos + alertas + UI |
+| Planilla desde erp-core-api | 🔲 Fase 10 |
 
-La capa de datos está lista. Lo que falta es el **servidor REST** que expondrá el apartado privado/admin.
+La capa de datos y el **scaffold HTTP de Fase 8** ya existen. Sigue portar UI y el motor de planilla.
 
 ---
 
@@ -35,7 +43,7 @@ API REST Node.js (**Express 5 + Prisma 6 + TypeScript**) en `ferreteria_backend`
 - RRHH: empleados, bancos, expediente documental, PIN hasheado
 - Inventario administrativo: entradas, ajustes, Kardex, alertas
 - Compras: proveedores, órdenes de compra, recepción, costo promedio
-- Planilla: periodos, corridas, Excel/PDF (referencia `beraka-core-api`)
+- Planilla: periodos, corridas, Excel/PDF (**portar de `erp-core-api`**)
 - Fiscal: libros de IVA, consulta DTE (sin exponer certificados)
 - Dashboard BI y reportes
 - Import/export Excel (solo en backend)
@@ -45,8 +53,8 @@ API REST Node.js (**Express 5 + Prisma 6 + TypeScript**) en `ferreteria_backend`
 | Repo | Rol |
 |---|---|
 | `erp_ferreteria` | Caja WPF: ventas, DTE, impresión, PIN de caja — escribe **directo** a PostgreSQL en MVP |
-| `ferreteria_adminweb` | UI Next.js del panel privado — consume esta API |
-| Tienda pública cliente (4.º repo, futuro) | Compras B2C — **no implementada aún**; se documenta como consumidor futuro de endpoints públicos/catálogo |
+| `ferreteria_adminweb` | UI Next.js del panel privado — consume esta API; **UI RRHH/planilla se porta desde `erp-admin-web`** |
+| Tienda pública cliente (4.º repo, futuro) | Compras B2C — **no implementada aún** |
 
 ---
 
@@ -55,26 +63,91 @@ API REST Node.js (**Express 5 + Prisma 6 + TypeScript**) en `ferreteria_backend`
 ```mermaid
 flowchart TB
   adminweb[ferreteria_adminweb Next.js]
+  erpAdmin[erp-admin-web plantilla UI]
   store[Tienda publica cliente - 4to repo]
   api[ferreteria_backend Express API]
+  erpApi[erp-core-api plantilla API]
   db[(PostgreSQL UUID)]
   wpf[erp_ferreteria WPF caja]
 
+  erpApi -.->|"copiar/adaptar modulos"| api
+  erpAdmin -.->|"portar pantallas RRHH"| adminweb
   adminweb -->|"REST /api/v1 + JWT"| api
   store -.->|"futuro: catalogo y checkout"| api
   api --> db
   wpf -->|"EF Core directo MVP"| db
 ```
 
-| Consumidor | Estado en docs | En este plan |
+---
+
+## 4. Inventario reutilizable — `erp-core-api`
+
+### Copiar / adaptar (alto valor)
+
+| Pieza | Ruta en erp-core-api | Fase ferreteria |
 |---|---|---|
-| `ferreteria_adminweb` | Documentado | Cliente principal; contrato `/api/v1` |
-| Tienda pública | No documentada antes | Reservar módulos públicos futuros; **no construir en Fases 8–11** |
-| Caja WPF | Documentado | Comparte BD; no consume la API en MVP |
+| Infra Express (CORS, helmet, error handler) | `src/app.ts`, `src/server.ts`, `src/shared/` | **8** |
+| JWT + bcrypt login | `src/modules/auth/`, `src/shared/jwt.ts` | **8** (simplificar a `WebUsers`; sin RBAC BD completo al inicio) |
+| Errores / respuestas JSON | `src/shared/errors.ts`, `api-response.ts` | **8** |
+| Validación SV (DUI, NIT, etc.) | `src/shared/validation.ts` | **8** |
+| CRUD empleados, bancos, docs, depts, puestos | `src/modules/employees/`, `banks/`, `employee-bank-accounts/`, `employee-documents/`, `departments/`, `positions/`, `required-document-types/` | **8** |
+| Motor planilla AFP/ISSS/ISR | `payroll-runs/payroll.calculator.ts`, `payroll.builder.ts`, `payroll.constants.ts` | **10** |
+| Orquestación corridas | `payroll-runs/payroll-runs.service.ts` | **10** |
+| Export Excel/PDF | `payroll-runs/payroll-exports.service.ts` | **10** |
+| Periodos, aguinaldo, ISR brackets | `payroll-periods/`, `aguinaldo/`, `isr-brackets/` | **10 / 10b** |
+| Vacaciones / permisos / liquidaciones | `leave-*`, `vacation-balances/`, `employee-terminations/` | **10b / 10c** |
+
+### Omitir (no aplica a ferreteria)
+
+- Hotel: `rooms`, `reservations`, `hotel-*`, `customers` (huéspedes)
+- Pasantías: `internship-*`, `intern-requests`
+- `work-certificates` / DOCX (salvo requisito explícito)
+- `public/` (API pública hotel)
+- Schemas inventory/billing de erp-core (ferreteria ya tiene Prisma v3 propio)
+- Auth con refresh tokens + RBAC por permisos en BD: **simplificar** a roles `ADMIN` \| `ACCOUNTANT` \| `OWNER` en `WebUser.role` (MVP)
+
+### Reglas al portar
+
+1. Prefijo `/api/*` → `/api/v1/*`
+2. Mapear a modelos de `ferreteria_backend/prisma/schema.prisma` (no copiar schema Prisma de erp-core)
+3. Login contra `system.WebUsers` (no `User` + `Role` de erp-core)
+4. PIN de caja: hashear con bcrypt; nunca devolver `pinHash`
+5. Portar primero motor (`calculator` + `builder` + `service`); exports Excel/PDF después
 
 ---
 
-## 4. Stack y convenciones
+## 5. Inventario reutilizable — `erp-admin-web`
+
+### Prioridad 1 — pantallas a portar a `ferreteria_adminweb`
+
+| Destino ferreteria | Plantilla erp-admin-web | Cuándo |
+|---|---|---|
+| `/empleados` | `empleados/directorio/directorio-content.tsx` | Tras Fase 8 API |
+| `/empleados/[id]/ficha` | `empleados/ficha/` | Tras Fase 8 |
+| `/empleados/[id]/bancos` | `empleados/bancos/` | Tras Fase 8 |
+| `/empleados/[id]/documentos` | `empleados/documentos/` | Tras Fase 8 |
+| `/rrhh/bancos`, tipos-doc, feriados | `configuracion/bancos|tipos-documentos|feriados` | Tras Fase 8 |
+| `/planilla/periodos` | `planilla/periodos/` | Fase 10 |
+| `/planilla/corridas` | `planilla/generar/generar-content.tsx` | Fase 10 |
+| `/planilla/aguinaldo` | `planilla/aguinaldo/` | Fase 10b |
+| `/planilla/vacaciones` | `planilla/vacaciones/` | Fase 10b |
+| `/planilla/liquidaciones` | `empleados/liquidaciones/` | Fase 10c |
+
+### Infra UI a portar
+
+- Patrón `lib/api/<entidad>.ts` + hooks React Query
+- `AuthGuard` + contexto de sesión
+- Tabla / Modal / DatePicker / PageHeader
+- Elevación del cliente HTTP de ferreteria (hoy `apiRequest` simple) hacia el patrón de `erp-admin-web` (`ApiClient` + 401)
+
+### Omitir en UI
+
+- Pasantías, constancias Word, salud ocupacional, ISR declaraciones MH (fase inicial)
+- Todo el módulo Hotel / Asistencia / Facturación hotel
+
+---
+
+## 6. Stack y convenciones
 
 | Tecnología | Uso |
 |---|---|
@@ -83,35 +156,35 @@ flowchart TB
 | Prisma 6 | ORM (schema ya existente) |
 | Zod | Validación de entradas |
 | JWT + bcrypt | Auth admin / hash de PINs |
-| ExcelJS + PDFKit | Exportes planilla |
+| ExcelJS + PDFKit | Exportes planilla (Fase 10, desde erp-core-api) |
 | TypeScript 5.x | Lenguaje |
 
 ### Reglas obligatorias
 
 - Toda entrada HTTP validada con Zod antes de Prisma
-- JWT obligatorio excepto `POST /api/v1/auth/login`
+- JWT obligatorio excepto `POST /api/v1/auth/login` y `GET /health`
 - Roles: `ADMIN`, `ACCOUNTANT`, `OWNER`
 - PIN de empleado: hashear aquí; **nunca** devolver hash al cliente
 - Inventario y compras en **transacciones Prisma**
-- Errores consistentes: `code`, `message`, `details`, `requestId`
+- Errores consistentes: `success`, `error`/`code`, `message`, `details`
 - No exponer `DteConfig.CertificateKey` ni secretos
 
 ### Puerto local
 
 - API: `http://localhost:3001` → prefijo `/api/v1`
-- Admin web ya usa `NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1`
+- Admin web: `NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1`
 
 ---
 
-## 5. Estructura objetivo
+## 7. Estructura objetivo
 
 ```
 ferreteria_backend/
-├── package.json              # + scripts dev/start/build
+├── package.json
 ├── tsconfig.json
-├── .env.example              # + PORT, JWT_SECRET, CORS_ORIGIN
-├── prisma/                   # ✅ ya existe
-├── database/                 # ✅ ya existe
+├── .env.example
+├── prisma/
+├── database/
 └── src/
     ├── server.ts
     ├── app.ts
@@ -119,146 +192,141 @@ ferreteria_backend/
     ├── modules/
     │   ├── auth/
     │   ├── employees/
+    │   ├── banks/
     │   ├── products/
     │   ├── customers/
-    │   ├── inventory/
-    │   ├── purchasing/
-    │   ├── payroll-runs/
-    │   ├── fiscal/
-    │   ├── dashboard/
-    │   └── ...
+    │   ├── inventory/          # Fase 9
+    │   ├── purchasing/         # Fase 9b
+    │   ├── payroll-runs/       # Fase 10 ← erp-core-api
+    │   ├── fiscal/             # Fase 10d
+    │   └── dashboard/          # Fase 11
     ├── middleware/
-    ├── lib/                  # prisma client, errors, jwt
-    └── schemas/              # Zod
+    ├── lib/
+    └── shared/                 # errores, jwt, responses (patrón erp-core-api)
 ```
 
-Cada módulo tipico: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, `*.schema.ts`.
+Cada módulo: `*.routes.ts`, `*.controller.ts`, `*.service.ts` (+ Zod en controller o `*.schema.ts`).
 
 ---
 
-## 6. Roadmap de implementación
+## 8. Roadmap de implementación
 
-### Fase 8 — Scaffold + auth + CRUD base (prioridad 1)
+### Fase 8 — Scaffold + auth + CRUD base (prioridad 1) — ✅ HECHO
 
-**Entregables**
+**Plantilla:** `erp-core-api` infra + auth simplificado + CRUD HR/catálogo.
 
-1. `tsconfig.json`, dependencias Express/Zod/JWT/bcrypt/cors/helmet
-2. `src/app.ts` + `src/server.ts` con health check `GET /health`
-3. Middleware: auth JWT, roles, error handler, `requestId`
-4. Módulo `auth`: `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
-5. CRUD: `employees`, `banks`, `document-types`, cuentas/docs de empleado
-6. CRUD: `customers`, `products` (catálogo básico)
-7. Variables en `.env.example`: `PORT`, `JWT_SECRET`, `CORS_ORIGIN`, `DATABASE_URL`
-8. Scripts: `dev`, `build`, `start`
+**Entregado**
 
-**Criterio de hecho**
-
-- `npm run dev` levanta API en `:3001`
-- Login admin contra `WebUsers` (o seed de usuario web si falta)
-- Adminweb puede apuntar a `NEXT_PUBLIC_API_URL` y autenticarse
+1. `tsconfig.json`, dependencias Express/Zod/JWT/bcrypt/cors/helmet/tsx
+2. `src/app.ts` + `src/server.ts` + `GET /health`
+3. Shared: prisma client, errors, jwt, api-response, authenticate, requireRole, errorHandler
+4. `POST /api/v1/auth/login`, `GET /api/v1/auth/me` contra `WebUsers`
+5. CRUD/list: employees, banks, document-types, departments, positions
+6. CRUD: customers, products
+7. Seed de `WebUser` admin (`admin` / `admin123`)
+8. `.env.example`: `PORT`, `JWT_SECRET`, `CORS_ORIGIN`, `DATABASE_URL`
+9. Scripts: `dev`, `build`, `start`
 
 ---
 
-### Fase 9 — Inventario administrativo
+### Fase 8b — UI RRHH base en adminweb — ✅ HECHO (MVP)
 
-**Entregables**
+Portado desde patrones de `erp-admin-web`:
 
-- `POST/GET /api/v1/inventory` — entradas, ajustes, listado de movimientos
-- Alertas de stock (`StockAlert`)
-- Import Excel catálogo/entradas (`/api/v1/import`)
+- Login real (`/login`) + `AuthGuard` + sesión
+- Cliente API con unwrap `{ success, data }` + token en sessionStorage
+- React Query + Sonner
+- Directorio `/empleados`: listado, alta/edición, filtros, link a ficha
 
-**Criterio de hecho**
+Pendiente en 8b ampliado: ficha/bancos/documentos con UI completa (aún placeholders).
 
-- Movimientos actualizan stock en transacción
-- Kardex consultable por producto
+---
+
+### Fase 9 — Inventario administrativo — ✅ HECHO (MVP)
+
+**Backend** (`/api/v1/inventory`):
+
+- `GET/POST /movements` — listar y crear (ENTRADA_COMPRA, AJUSTE_ENTRADA, AJUSTE_SALIDA) en transacción
+- `GET /kardex/:productId` — historial por producto
+- `GET /alerts` + `PATCH /alerts/:id/resolve` — stock bajo mínimo
+- `POST /import` — importación masiva JSON por código de producto
+
+**Adminweb:** pantalla `/inventario` con formulario de movimiento, alertas y tabla reciente.
+
+Pendiente: import Excel nativo (ExcelJS) y Kardex valorado fino en Fase 9b con compras.
 
 ---
 
 ### Fase 9b — Compras
 
-**Entregables**
-
-- CRUD `suppliers`
-- Órdenes de compra: `BORRADOR` → `CONFIRMADA` → `RECIBIDA` / `CANCELADA`
-- Al recibir: stock + **costo promedio ponderado** en `Product.costPrice`
+Proveedores, OC, costo promedio ponderado.
 
 ---
 
-### Fase 10 — Planilla y RRHH avanzado
+### Fase 10 — Planilla (portar `erp-core-api`)
 
-**Entregables**
-
-- Periodos y corridas (`payroll/periods`, `payroll/runs`)
-- Cálculo legal AFP/ISSS/ISR (portar de `beraka-core-api`)
-- Export Excel multi-hoja + PDF comprobantes
-- Aguinaldo, vacaciones/permisos, liquidaciones (10b/10c)
+1. Copiar/adaptar `payroll.constants.ts`, `payroll.calculator.ts`, `payroll.builder.ts`
+2. `payroll-periods` + `payroll-runs` service
+3. Exports Excel/PDF desde `payroll-exports.service.ts`
+4. UI: portar `planilla/generar` y `periodos` desde `erp-admin-web`
 
 ---
 
-### Fase 10d — Fiscal
+### Fase 10b/10c — Aguinaldo, vacaciones, liquidaciones
 
-**Entregables**
-
-- Libros de IVA desde DTEs y compras
-- Consulta DTE sin exponer certificados
+Misma fuente: módulos erp-core-api + pantallas erp-admin-web.
 
 ---
 
-### Fase 11 — Dashboard BI
+### Fase 10d — Fiscal / Fase 11 — Dashboard
 
-**Entregables**
-
-- `/api/v1/dashboard` — KPIs ventas, inventario, compras, RRHH
-- Endpoints de reportes generales
+Sin plantilla HR; dominio ferreteria (DTE, IVA, KPIs).
 
 ---
 
-### Futuro (fuera de Fases 8–11) — Tienda pública
+### Futuro — Tienda pública
 
-Cuando exista el 4.º repo:
-
-- Endpoints públicos de catálogo (solo lectura, sin JWT admin)
-- Flujo de carrito/checkout / órdenes web (definir si escribe en `sales` o esquema aparte)
-- Auth de cliente final (separada de `WebUsers`)
-
-No se implementa en este plan; solo se reserva el contrato para no acoplar el admin a supuestos B2C.
+Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de Fases 8–11.
 
 ---
 
-## 7. Orden de trabajo recomendado (primer sprint)
+## 9. Orden de trabajo (siguientes sprints)
 
-1. Scaffold TypeScript + Express + health
-2. Prisma client compartido en `src/lib/prisma.ts`
-3. Auth JWT + seed/`WebUser` de desarrollo
-4. Employees + customers + products (lectura/escritura mínima)
-5. Documentar contrato OpenAPI o tabla de endpoints en el README del backend
-6. Conectar una pantalla real de `ferreteria_adminweb` (login) como smoke test
+1. ~~Actualizar este plan con plantillas erp-core-api / erp-admin-web~~
+2. ~~Scaffold TypeScript + Express + health (Fase 8)~~
+3. ~~Auth JWT + seed `WebUser`~~
+4. ~~Employees + banks + document-types + customers + products~~
+5. ~~Smoke: `db:push` + `db:seed` + login real contra PostgreSQL~~
+6. ~~Portar UI RRHH login + directorio (Fase 8b)~~
+7. ~~Fase 9 inventario~~ → **Siguiente:** Fase 9b compras / Fase 10 planilla
 
 ---
 
-## 8. Riesgos y notas
+## 10. Riesgos y notas
 
 | Riesgo | Mitigación |
 |---|---|
-| Credenciales Docker vs `.env.example` inconsistentes | Unificar `ferreteria_user` / BD `ferreteria` (o alinear compose) antes de Fase 8 |
-| WPF y API escribiendo las mismas tablas | Transacciones y mismas reglas de stock/costo; no duplicar lógica contradictoria |
-| Migraciones Prisma vacías | Seguir con `db:push` en dev; congelar migraciones antes de staging/prod |
-| Tienda pública prematura | No mezclar endpoints B2C en Fase 8; mantener JWT admin estricto |
+| Copiar ciego schema/auth de erp-core | Mapear a `WebUsers` + schema ferreteria v3 |
+| `payroll-exports.service.ts` (~3000 líneas) | Portar motor primero; exports por entregables |
+| UI monolítica (`*-content.tsx` 500–1400 líneas) | Portar pantalla a pantalla; no un big-bang |
+| WPF y API en mismas tablas | Transacciones y mismas reglas de stock/costo |
+| Tienda pública prematura | No mezclar B2C en Fase 8 |
 
 ---
 
-## 9. Definición de “listo” por capa
+## 11. Definición de “listo” por capa
 
 | Capa | Listo cuando… |
 |---|---|
-| Datos | Schema + seed + Docker (✅ hoy) |
-| API mínima (Fase 8) | Login + CRUD empleados/clientes/productos + CORS hacia adminweb |
-| API operativa | Inventario + compras transaccionales |
-| API completa admin | Planilla + IVA + dashboard |
-| Ecosistema web completo | Adminweb consumiendo API + (futuro) tienda pública |
+| Datos | Schema + seed + Docker (✅) |
+| API mínima (Fase 8) | Login + CRUD empleados/clientes/productos + CORS (✅) |
+| UI RRHH base (8b) | Directorio/bancos/docs portados desde erp-admin-web |
+| API planilla (10) | Motor + corridas + export desde erp-core-api |
+| Ecosistema web completo | Adminweb + (futuro) tienda pública |
 
 ---
 
-## 10. Próximo paso
+## 12. Próximo paso inmediato
 
-Al aprobar este plan, **empezar por Fase 8** en `ferreteria_backend` sin tocar aún la tienda pública ni la caja WPF.
+**Fase 9b:** proveedores + órdenes de compra + costo promedio ponderado.  
+**Fase 10:** portar motor `payroll.*` desde `erp-core-api` + pantallas planilla.

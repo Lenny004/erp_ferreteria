@@ -13,13 +13,21 @@ using System.Windows;
 
 namespace Ferreteria.PuntoVenta;
 
+/// <summary>
+/// Punto de entrada WPF del punto de venta. Configura el host genérico, DI, EF Core (PostgreSQL)
+/// y abre la ventana de inicio tras verificar conectividad.
+/// </summary>
 public partial class App : Application
 {
     private readonly IHost _host;
 
+    /// <summary>Proveedor de servicios del host (acceso estático para ventanas resueltas fuera del ctor).</summary>
     public static IServiceProvider Services =>
         ((App)Current)._host.Services;
 
+    /// <summary>
+    /// Construye el host: carga <c>Config/appsettings.json</c>, registra DbContext y servicios de negocio/UI.
+    /// </summary>
     public App()
     {
         if (ResourceAssembly is null)
@@ -68,6 +76,7 @@ public partial class App : Application
             .Build();
     }
 
+    /// <summary>Arranca el host, verifica PostgreSQL y muestra <see cref="InicioWindow"/>.</summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
         try
@@ -97,6 +106,7 @@ public partial class App : Application
         }
     }
 
+    /// <summary>Detiene y libera el host genérico al cerrar la aplicación.</summary>
     protected override async void OnExit(ExitEventArgs e)
     {
         try
@@ -110,6 +120,10 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Comprueba conectividad a la base de datos antes de abrir la UI.
+    /// </summary>
+    /// <returns>True si PostgreSQL responde; false si se mostró error y debe cerrarse la app.</returns>
     private async Task<bool> VerifyDatabaseConnectionAsync()
     {
         try

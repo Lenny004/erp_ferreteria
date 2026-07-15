@@ -7,7 +7,8 @@ using Ferreteria.PuntoVenta.Services.Domain;
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
 /// <summary>
-/// Punto de venta de mostrador: búsqueda de productos, carrito y registro de venta.
+/// Punto de venta de mostrador (módulo Caja): búsqueda de Product, carrito temporal
+/// y registro de venta vía Order / CreateCashSale (CashSession opcional en Fase posterior).
 /// </summary>
 public partial class FacturacionView : UserControl
 {
@@ -17,6 +18,7 @@ public partial class FacturacionView : UserControl
     private readonly ObservableCollection<CartLineItem> _cartLineItems = new();
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
+    /// <summary>Inicializa la vista de facturación y enlaza el carrito a la UI.</summary>
     public FacturacionView(
         IInventoryService inventoryService,
         IOrderService orderService,
@@ -33,21 +35,25 @@ public partial class FacturacionView : UserControl
         RenderSaleTotals();
     }
 
+    /// <summary>Al cargar, ejecuta la primera búsqueda de productos.</summary>
     private async void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
     {
         await SearchProductsAsync();
     }
 
+    /// <summary>Libera el coordinador de búsquedas asíncronas al salir de la vista.</summary>
     private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
     {
         _searchCoordinator.Dispose();
     }
 
+    /// <summary>Handler de cambio en el cuadro de búsqueda de productos.</summary>
     private async void OnProductSearchChanged(object sender, TextChangedEventArgs e)
     {
         await SearchProductsAsync();
     }
 
+    /// <summary>Busca productos en inventario (cancela búsquedas previas en curso).</summary>
     private async Task SearchProductsAsync()
     {
         var cancellationToken = _searchCoordinator.BeginNewSearch();
@@ -69,6 +75,7 @@ public partial class FacturacionView : UserControl
         }
     }
 
+    /// <summary>Agrega el producto seleccionado al carrito con la cantidad indicada.</summary>
     private void OnAgregarClick(object sender, System.Windows.RoutedEventArgs e)
     {
         if (ProductResultsListBox.SelectedItem is not InventoryProductResult selectedProduct)
@@ -117,6 +124,9 @@ public partial class FacturacionView : UserControl
         RenderSaleTotals();
     }
 
+    /// <summary>
+    /// Registra la venta (Order + Payments) con el Employee cajero de la sesión actual.
+    /// </summary>
     private async void OnFacturarClick(object sender, System.Windows.RoutedEventArgs e)
     {
         if (_currentSession.CurrentEmployee is null)
@@ -157,6 +167,7 @@ public partial class FacturacionView : UserControl
         }
     }
 
+    /// <summary>Vacía el carrito sin registrar venta.</summary>
     private void OnLimpiarClick(object sender, System.Windows.RoutedEventArgs e)
     {
         _cartLineItems.Clear();
@@ -164,6 +175,7 @@ public partial class FacturacionView : UserControl
         SetStatusMessage("Orden limpiada.");
     }
 
+    /// <summary>Quita una línea concreta del carrito.</summary>
     private void OnRemoveCartLineClick(object sender, System.Windows.RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: CartLineItem cartLine })
@@ -176,22 +188,26 @@ public partial class FacturacionView : UserControl
         SetStatusMessage("Linea removida.");
     }
 
+    /// <summary>Fuerza refresco visual del ItemsControl del carrito.</summary>
     private void RefreshCartItems()
     {
         CartItemsControl.ItemsSource = null;
         CartItemsControl.ItemsSource = _cartLineItems;
     }
 
+    /// <summary>Suma de líneas (precio × cantidad) antes de IVA.</summary>
     private decimal CalculateSubtotal()
     {
         return _cartLineItems.Sum(line => line.Subtotal);
     }
 
+    /// <summary>Total con IVA incluido.</summary>
     private decimal CalculateGrandTotal()
     {
         return TaxAmountCalculator.CalculateGrandTotal(CalculateSubtotal());
     }
 
+    /// <summary>Actualiza subtotal, IVA y total en la cabecera y pie de la vista.</summary>
     private void RenderSaleTotals()
     {
         var subtotal = CalculateSubtotal();
@@ -204,13 +220,14 @@ public partial class FacturacionView : UserControl
         TotalText.Text = $"Total: {grandTotal:C2}";
     }
 
+    /// <summary>Escribe un mensaje de estado (éxito o error) en la barra inferior.</summary>
     private void SetStatusMessage(string message, bool isError = false)
     {
         StatusText.Text = message;
         StatusText.Foreground = (System.Windows.Media.Brush)FindResource(isError ? "AppError" : "AppSuccess");
     }
 
-    /// <summary>Línea temporal del carrito de venta en mostrador.</summary>
+    /// <summary>Línea temporal del carrito de venta en mostrador (no persistida hasta facturar).</summary>
     private sealed class CartLineItem(InventoryProductResult product, decimal quantity)
     {
         public Guid ProductId { get; } = product.Id;

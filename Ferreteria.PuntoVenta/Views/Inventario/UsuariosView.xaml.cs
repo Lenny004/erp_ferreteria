@@ -6,12 +6,17 @@ using Ferreteria.PuntoVenta.Services;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
+/// <summary>
+/// ABM de Employee (usuarios / RRHH): datos laborales, permisos de caja/venta y PIN de acceso.
+/// Seguridad: el PIN se captura en PasswordBox, nunca se lee desde BD al editar ni se registra en logs.
+/// </summary>
 public partial class UsuariosView : UserControl
 {
     private readonly IEmployeeService _employees;
     private readonly ICurrentSessionService _currentSession;
     private Guid? _selectedId;
 
+    /// <summary>Inicializa la vista e hidrata departamentos/puestos al Loaded.</summary>
     public UsuariosView(IEmployeeService employees, ICurrentSessionService currentSession)
     {
         _employees = employees;
@@ -20,8 +25,10 @@ public partial class UsuariosView : UserControl
         Loaded += async (_, _) => await InitializeAsync();
     }
 
+    /// <summary>Id del Employee en sesión (auditoría de cambios).</summary>
     private Guid CurrentUserId => _currentSession.CurrentEmployee?.Id ?? Guid.Empty;
 
+    /// <summary>Carga combos de departamento/puesto y la lista de empleados.</summary>
     private async Task InitializeAsync()
     {
         try
@@ -37,6 +44,7 @@ public partial class UsuariosView : UserControl
         }
     }
 
+    /// <summary>Recarga empleados según el filtro de búsqueda.</summary>
     private async Task ReloadAsync()
     {
         var items = await _employees.GetEmployeesAsync(SearchTextBox.Text);
@@ -44,18 +52,26 @@ public partial class UsuariosView : UserControl
         EmptyStateText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>Handler de búsqueda por nombre/DUI.</summary>
     private async void OnSearchChanged(object sender, TextChangedEventArgs e) => await ReloadAsync();
 
+    /// <summary>Prepara el formulario para un usuario nuevo (PIN obligatorio).</summary>
     private void OnNuevoClick(object sender, RoutedEventArgs e) => ClearForm();
 
+    /// <summary>Cancela la edición y limpia el formulario.</summary>
     private void OnCancelarClick(object sender, RoutedEventArgs e) => ClearForm();
 
+    /// <summary>Al cambiar departamento, filtra los puestos disponibles.</summary>
     private async void OnDepartmentChanged(object sender, SelectionChangedEventArgs e)
     {
         var depId = DepartmentCombo.SelectedValue as Guid?;
         PositionCombo.ItemsSource = await _employees.GetPositionsAsync(depId);
     }
 
+    /// <summary>
+    /// Selecciona un Employee y rellena el formulario.
+    /// El PasswordBox de PIN queda vacío a propósito (no se recupera el hash).
+    /// </summary>
     private async void OnRowClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: Guid id })
@@ -85,12 +101,15 @@ public partial class UsuariosView : UserControl
         EmailBox.Text = employee.Email;
         CanCashierCheck.IsChecked = employee.CanCashier;
         CanSellCheck.IsChecked = employee.CanSell;
-        PinBox.Text = string.Empty;
+        PinBox.Password = string.Empty;
         PinLabel.Text = "Nuevo PIN (dejar vacio para no cambiar)";
         DeactivateButton.Visibility = Visibility.Visible;
         HideError();
     }
 
+    /// <summary>
+    /// Crea o actualiza Employee; el PIN solo se envía si el PasswordBox tiene valor (alta o cambio).
+    /// </summary>
     private async void OnGuardarClick(object sender, RoutedEventArgs e)
     {
         HideError();
@@ -107,7 +126,7 @@ public partial class UsuariosView : UserControl
             return;
         }
 
-        var pin = PinBox.Text?.Trim() ?? string.Empty;
+        var pin = PinBox.Password?.Trim() ?? string.Empty;
         if (!string.IsNullOrEmpty(pin) && (pin.Length != 4 || !pin.All(char.IsDigit)))
         {
             ShowError("El PIN debe tener 4 digitos.");
@@ -163,6 +182,7 @@ public partial class UsuariosView : UserControl
         }
     }
 
+    /// <summary>Desactiva el Employee seleccionado tras confirmación.</summary>
     private async void OnDesactivarClick(object sender, RoutedEventArgs e)
     {
         if (_selectedId is not { } id)
@@ -188,6 +208,7 @@ public partial class UsuariosView : UserControl
         }
     }
 
+    /// <summary>Limpia el formulario y vuelve al modo "nuevo usuario".</summary>
     private void ClearForm()
     {
         _selectedId = null;
@@ -201,12 +222,13 @@ public partial class UsuariosView : UserControl
         SalaryTypeCombo.SelectedIndex = 0;
         CanCashierCheck.IsChecked = false;
         CanSellCheck.IsChecked = false;
-        PinBox.Text = string.Empty;
+        PinBox.Password = string.Empty;
         PinLabel.Text = "PIN de acceso (4 digitos) *";
         DeactivateButton.Visibility = Visibility.Collapsed;
         HideError();
     }
 
+    /// <summary>Selecciona un ComboBoxItem por su Tag.</summary>
     private static void SelectByTag(ComboBox combo, string tag)
     {
         foreach (var item in combo.Items)
@@ -219,21 +241,26 @@ public partial class UsuariosView : UserControl
         }
     }
 
+    /// <summary>Lee el Tag del ítem seleccionado o un valor por defecto.</summary>
     private static string TagOf(ComboBox combo, string fallback) =>
         (combo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? fallback;
 
+    /// <summary>Muestra un error en el formulario.</summary>
     private void ShowError(string message)
     {
         FormErrorText.Text = message;
         FormErrorText.Visibility = Visibility.Visible;
     }
 
+    /// <summary>Oculta el mensaje de error.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
 
+    /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
     private static bool TryParseDecimal(string? text, out decimal value) =>
         decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) ||
         decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
 
+    /// <summary>Convierte cadena vacía en null para campos opcionales.</summary>
     private static string? NullIfEmpty(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -10,6 +10,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ferreteria.PuntoVenta.Views.Shell;
 
+/// <summary>
+/// Shell principal post-login: navegación lateral entre módulos Caja e Inventario
+/// según el <see cref="OperationalModule"/> de la sesión (Employee autenticado por PIN).
+/// </summary>
 public partial class MainShellWindow : Window
 {
     private readonly Dictionary<string, (Button Button, string Title, Func<UserControl> CreateView)> _sections;
@@ -19,6 +23,9 @@ public partial class MainShellWindow : Window
     private readonly IServiceProvider _serviceProvider;
     private readonly DispatcherTimer _connectivityTimer;
 
+    /// <summary>
+    /// Construye el shell, registra secciones de navegación y muestra la sección inicial de la sesión.
+    /// </summary>
     public MainShellWindow(
         IConnectivityService connectivityService,
         ICurrentSessionService currentSession,
@@ -62,6 +69,9 @@ public partial class MainShellWindow : Window
         Closed += OnClosed;
     }
 
+    /// <summary>
+    /// Muestra u oculta botones de navegación según el módulo activo (Caja u Inventario).
+    /// </summary>
     private void ApplyModuleNavigation()
     {
         if (_currentSession.ActiveModule is not OperationalModule activeModule)
@@ -111,21 +121,25 @@ public partial class MainShellWindow : Window
             : Visibility.Collapsed;
     }
 
+    /// <summary>Al cargar, consulta el estado de conectividad con la base de datos.</summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await RefreshConnectivityStatusAsync();
     }
 
+    /// <summary>Timer periódico de conectividad (cada 15 s).</summary>
     private async void OnConnectivityTimerTick(object? sender, EventArgs e)
     {
         await RefreshConnectivityStatusAsync();
     }
 
+    /// <summary>Detiene el timer al cerrar la ventana.</summary>
     private void OnClosed(object? sender, EventArgs e)
     {
         _connectivityTimer.Stop();
     }
 
+    /// <summary>Actualiza el indicador visual de conexión online/offline.</summary>
     private async Task RefreshConnectivityStatusAsync()
     {
         var status = await _connectivityService.GetStatusAsync();
@@ -133,6 +147,7 @@ public partial class MainShellWindow : Window
         ConnectivityText.Foreground = (Brush)FindResource(status.IsOnline ? "AppSuccess" : "AppError");
     }
 
+    /// <summary>Handler de clic en un botón del menú lateral (Tag = clave de sección).</summary>
     private void OnNavClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string sectionKey })
@@ -141,6 +156,9 @@ public partial class MainShellWindow : Window
         }
     }
 
+    /// <summary>
+    /// Cambia el contenido central a la vista de la sección indicada, si pertenece al módulo activo.
+    /// </summary>
     private void ShowSection(string sectionKey)
     {
         if (_currentSession.ActiveModule is OperationalModule activeModule
@@ -169,6 +187,9 @@ public partial class MainShellWindow : Window
         MainContent.Content = activeSection.CreateView();
     }
 
+    /// <summary>
+    /// Cierra sesión del Employee, registra auditoría de logout y vuelve a InicioWindow.
+    /// </summary>
     private async void OnLogoutClick(object sender, RoutedEventArgs e)
     {
         if (_currentSession.CurrentEmployee is not null)
@@ -182,11 +203,13 @@ public partial class MainShellWindow : Window
         Close();
     }
 
+    /// <summary>Minimiza la ventana del shell.</summary>
     private void OnMinimizarClick(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
     }
 
+    /// <summary>Alterna maximizar / restaurar.</summary>
     private void OnMaximizarClick(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState == WindowState.Maximized
@@ -194,11 +217,13 @@ public partial class MainShellWindow : Window
             : WindowState.Maximized;
     }
 
+    /// <summary>Cierra la aplicación (ventana shell).</summary>
     private void OnCerrarClick(object sender, RoutedEventArgs e)
     {
         Close();
     }
 
+    /// <summary>Muestra en el encabezado el rol, nombre del empleado y hora de inicio de sesión.</summary>
     private void RenderCurrentSession()
     {
         if (!_currentSession.IsActive || _currentSession.CurrentEmployee is null)

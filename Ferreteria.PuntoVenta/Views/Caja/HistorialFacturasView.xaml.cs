@@ -6,13 +6,15 @@ using Ferreteria.PuntoVenta.Services.Domain;
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
 /// <summary>
-/// Historial de ventas completadas (mostrador y taller facturado).
+/// Historial de ventas completadas (Order en estado facturado): mostrador y taller.
+/// Permite buscar y ver totales del día para el módulo Caja.
 /// </summary>
 public partial class HistorialFacturasView : UserControl
 {
     private readonly IOrderService _orderService;
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
+    /// <summary>Inicializa el historial con el servicio de órdenes.</summary>
     public HistorialFacturasView(IOrderService orderService)
     {
         _orderService = orderService;
@@ -21,21 +23,27 @@ public partial class HistorialFacturasView : UserControl
         Unloaded += OnUnloaded;
     }
 
+    /// <summary>Carga ventas completadas al entrar a la vista.</summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await LoadCompletedSalesAsync();
     }
 
+    /// <summary>Libera el coordinador de búsquedas al salir.</summary>
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         _searchCoordinator.Dispose();
     }
 
+    /// <summary>Handler de búsqueda por texto (número, cliente, etc.).</summary>
     private async void OnSearchChanged(object sender, TextChangedEventArgs e)
     {
         await LoadCompletedSalesAsync();
     }
 
+    /// <summary>
+    /// Obtiene ventas completadas y actualiza contadores (hoy, total facturado, mostrados).
+    /// </summary>
     private async Task LoadCompletedSalesAsync()
     {
         var cancellationToken = _searchCoordinator.BeginNewSearch();

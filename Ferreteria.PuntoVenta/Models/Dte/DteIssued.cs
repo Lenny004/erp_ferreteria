@@ -39,12 +39,15 @@ public class DteIssued
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalExenta { get; set; }
 
+    /// <summary>Base gravada sujeta a IVA (El Salvador).</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalGravada { get; set; }
 
+    /// <summary>IVA retenido/calculado del documento (típicamente 13%).</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalIva { get; set; }
 
+    /// <summary>Total a pagar del DTE.</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal TotalPagar { get; set; }
 

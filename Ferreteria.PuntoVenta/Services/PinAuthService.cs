@@ -6,13 +6,27 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
-/// Valida PIN contra hr.Employees.PinHash (bcrypt) según el módulo operativo elegido.
+/// Valida el PIN de 4 dígitos contra <c>hr.Employees.PinHash</c> (bcrypt) según el módulo operativo.
+/// Riesgo: el PIN llega en claro solo en memoria durante la verificación; nunca se persiste ni se registra en auditoría.
 /// </summary>
 public class PinAuthService(IServiceScopeFactory scopeFactory)
 {
+    /// <summary>
+    /// Valida el PIN para el módulo de caja (requiere <see cref="Employee.CanCashier"/>).
+    /// </summary>
+    /// <param name="pin">PIN de 4 dígitos en claro (solo tránsito en memoria).</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>El <see cref="Employee"/> autenticado, o null si el PIN es inválido.</returns>
     public Task<Employee?> ValidatePinAsync(string pin, CancellationToken cancellationToken = default) =>
         ValidatePinAsync(pin, OperationalModule.Caja, cancellationToken);
 
+    /// <summary>
+    /// Valida el PIN filtrando candidatos activos con permiso del módulo (caja o inventario).
+    /// </summary>
+    /// <param name="pin">PIN de 4 dígitos; cualquier otro formato se rechaza sin consultar BD.</param>
+    /// <param name="module">Módulo operativo: Caja → CanCashier; Inventario → CanSell.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Empleado autenticado o null.</returns>
     public async Task<Employee?> ValidatePinAsync(
         string pin,
         OperationalModule module,

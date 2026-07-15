@@ -16,6 +16,7 @@ internal sealed class AsyncSearchCoordinator : IDisposable
         return _currentSearch.Token;
     }
 
+    /// <summary>Cancela y libera el <see cref="CancellationTokenSource"/> en curso.</summary>
     public void Dispose()
     {
         _currentSearch?.Cancel();

@@ -4,8 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ferreteria.PuntoVenta.Services;
 
+/// <summary>
+/// Implementación de <see cref="IConnectivityService"/> mediante un ping ligero a PostgreSQL.
+/// </summary>
 public sealed class ConnectivityService(IServiceScopeFactory scopeFactory) : IConnectivityService
 {
+    /// <inheritdoc />
     public async Task<ConnectivityStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -18,8 +22,13 @@ public sealed class ConnectivityService(IServiceScopeFactory scopeFactory) : ICo
                 ? new ConnectivityStatus(true, "Base de datos conectada")
                 : new ConnectivityStatus(false, "Sin conexion a la base de datos");
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception)
+        {
+            // El detalle de la excepción no se muestra al usuario (evita filtrar datos de red/servidor).
             return new ConnectivityStatus(false, "Sin conexion a la base de datos");
         }
     }

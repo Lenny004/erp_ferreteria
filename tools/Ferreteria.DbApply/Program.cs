@@ -1,3 +1,6 @@
+// Aplicador legacy de schema/migraciones SQL contra PostgreSQL del POS.
+// Preferir Prisma (ferreteria_backend) como fuente de verdad; este tool solo aplica
+// Squema.sql + migraciones si se fuerza --force-legacy-sql o no existe schema.prisma.
 using System.Text.Json;
 using Npgsql;
 
@@ -15,6 +18,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     return 2;
 }
 
+// Seguridad: enmascarar password antes de imprimir la cadena de conexión.
 Console.WriteLine($"Conexion: {MaskConnectionString(connectionString)}");
 
 try
@@ -70,6 +74,7 @@ catch (Exception ex)
     return 1;
 }
 
+/// <summary>Obtiene el valor del argumento nombrado (ej. --connection valor).</summary>
 static string? GetArg(string[] args, string name)
 {
     for (var i = 0; i < args.Length - 1; i++)
@@ -83,11 +88,13 @@ static string? GetArg(string[] args, string name)
     return null;
 }
 
+/// <summary>Indica si el flag booleano está presente en la línea de comandos.</summary>
 static bool HasFlag(string[] args, string name)
 {
     return args.Any(arg => string.Equals(arg, name, StringComparison.OrdinalIgnoreCase));
 }
 
+/// <summary>Sube directorios hasta encontrar la raíz del repo (.git).</summary>
 static string FindRepositoryRoot()
 {
     var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -104,6 +111,7 @@ static string FindRepositoryRoot()
     return Directory.GetCurrentDirectory();
 }
 
+/// <summary>Lee ConnectionStrings:FerreteriaDB desde appsettings.json del POS.</summary>
 static string? ReadConnectionString(string appsettingsPath)
 {
     using var stream = File.OpenRead(appsettingsPath);
@@ -115,6 +123,9 @@ static string? ReadConnectionString(string appsettingsPath)
         .GetString();
 }
 
+/// <summary>
+/// Comprueba si ya existe el núcleo sales.Orders (schema aplicado previamente).
+/// </summary>
 static async Task<bool> CoreSchemaExistsAsync(NpgsqlConnection connection)
 {
     const string sql = """
@@ -130,6 +141,7 @@ static async Task<bool> CoreSchemaExistsAsync(NpgsqlConnection connection)
     return (bool)(await command.ExecuteScalarAsync() ?? false);
 }
 
+/// <summary>Ejecuta un archivo .sql completo contra la conexión abierta.</summary>
 static async Task ExecuteScriptAsync(NpgsqlConnection connection, string scriptPath, string root)
 {
     Console.WriteLine($"Script: {Path.GetRelativePath(root, scriptPath)}");
@@ -143,6 +155,10 @@ static async Task ExecuteScriptAsync(NpgsqlConnection connection, string scriptP
     await command.ExecuteNonQueryAsync();
 }
 
+/// <summary>
+/// Imprime checks de tablas/columnas clave (CashSessions, Payments, seed PIN, etc.).
+/// No revela valores de PIN ni secretos; solo EXISTS booleanos.
+/// </summary>
 static async Task PrintVerificationAsync(NpgsqlConnection connection)
 {
     const string sql = """
@@ -185,6 +201,7 @@ static async Task PrintVerificationAsync(NpgsqlConnection connection)
     }
 }
 
+/// <summary>Enmascara la contraseña de la connection string para logs seguros.</summary>
 static string MaskConnectionString(string connectionString)
 {
     var builder = new NpgsqlConnectionStringBuilder(connectionString);

@@ -1,26 +1,32 @@
 namespace Ferreteria.PuntoVenta.Services;
 
+/// <summary>
+/// Implementación en memoria de <see cref="IPinAttemptService"/>.
+/// Política: 5 fallos → bloqueo de 2 minutos (UTC). Thread-safe con lock.
+/// </summary>
 public sealed class PinAttemptService : IPinAttemptService
 {
     private const int MaxAttempts = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(2);
 
-    private readonly object _lock = new();
+    private readonly object _syncRoot = new();
     private int _failedAttempts;
     private DateTime? _lockedUntilUtc;
 
+    /// <inheritdoc />
     public PinAttemptStatus GetStatus()
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             ClearExpiredLockout();
             return BuildStatus();
         }
     }
 
+    /// <inheritdoc />
     public PinAttemptStatus RegisterFailedAttempt()
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             ClearExpiredLockout();
 
@@ -39,15 +45,17 @@ public sealed class PinAttemptService : IPinAttemptService
         }
     }
 
+    /// <inheritdoc />
     public void Reset()
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             _failedAttempts = 0;
             _lockedUntilUtc = null;
         }
     }
 
+    /// <summary>Si el bloqueo ya venció, reinicia contadores.</summary>
     private void ClearExpiredLockout()
     {
         if (_lockedUntilUtc is null || _lockedUntilUtc > DateTime.UtcNow)

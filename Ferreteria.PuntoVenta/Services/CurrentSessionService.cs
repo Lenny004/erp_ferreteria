@@ -3,16 +3,28 @@ using Ferreteria.PuntoVenta.Models;
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
-/// Sesión local del empleado autenticado en el punto de venta (PIN + módulo activo).
+/// Sesión local del <see cref="Employee"/> autenticado en el punto de venta (PIN + módulo activo).
 /// </summary>
 public sealed class CurrentSessionService : ICurrentSessionService
 {
+    private string? _initialSection;
+
+    /// <inheritdoc />
     public Employee? CurrentEmployee { get; private set; }
+
+    /// <inheritdoc />
     public OperationalModule? ActiveModule { get; private set; }
+
+    /// <inheritdoc />
     public string? CurrentModule { get; private set; }
+
+    /// <inheritdoc />
     public DateTime? StartedAtUtc { get; private set; }
+
+    /// <inheritdoc />
     public bool IsActive => CurrentEmployee is not null && ActiveModule is not null;
 
+    /// <inheritdoc />
     public void StartSession(Employee employee, OperationalModule module, string initialSection)
     {
         CurrentEmployee = employee;
@@ -22,8 +34,7 @@ public sealed class CurrentSessionService : ICurrentSessionService
         _initialSection = initialSection;
     }
 
-    private string? _initialSection;
-
+    /// <inheritdoc />
     public string ResolveInitialSection()
     {
         if (ActiveModule is not OperationalModule module)
@@ -40,6 +51,7 @@ public sealed class CurrentSessionService : ICurrentSessionService
         return NavSections.DefaultSection(module);
     }
 
+    /// <inheritdoc />
     public void EndSession()
     {
         CurrentEmployee = null;

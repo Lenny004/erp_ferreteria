@@ -6,6 +6,10 @@ using Ferreteria.PuntoVenta.Services.Domain;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
+/// <summary>
+/// Entradas y kardex (InventoryMovement): registra ingresos de compra/otro y ajustes de stock,
+/// y muestra los movimientos recientes del inventario.
+/// </summary>
 public partial class MovimientosView : UserControl
 {
     private readonly IInventoryService _inventory;
@@ -13,6 +17,7 @@ public partial class MovimientosView : UserControl
     private readonly ICurrentSessionService _currentSession;
     private List<ProductPickItem> _products = [];
 
+    /// <summary>Inicializa la vista de movimientos e hidrata el combo de productos al Loaded.</summary>
     public MovimientosView(
         IInventoryService inventory,
         IProductCatalogService catalog,
@@ -25,8 +30,10 @@ public partial class MovimientosView : UserControl
         Loaded += async (_, _) => await InitializeAsync();
     }
 
+    /// <summary>Id del Employee en sesión (quién registra el movimiento).</summary>
     private Guid CurrentUserId => _currentSession.CurrentEmployee?.Id ?? Guid.Empty;
 
+    /// <summary>Carga productos para el combo y la lista de movimientos recientes.</summary>
     private async Task InitializeAsync()
     {
         try
@@ -44,6 +51,7 @@ public partial class MovimientosView : UserControl
         }
     }
 
+    /// <summary>Recarga los últimos InventoryMovement.</summary>
     private async Task ReloadAsync()
     {
         var items = await _inventory.GetRecentMovementsAsync(null, 150);
@@ -51,8 +59,10 @@ public partial class MovimientosView : UserControl
         EmptyStateText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>Botón Actualizar: refresca el kardex.</summary>
     private async void OnActualizarClick(object sender, RoutedEventArgs e) => await ReloadAsync();
 
+    /// <summary>Al elegir producto, muestra el stock actual.</summary>
     private void OnProductSelected(object sender, SelectionChangedEventArgs e)
     {
         if (ProductCombo.SelectedValue is Guid id)
@@ -62,6 +72,9 @@ public partial class MovimientosView : UserControl
         }
     }
 
+    /// <summary>
+    /// Cambia etiquetas del formulario según tipo: entrada (cantidad + costo) o ajuste (stock final).
+    /// </summary>
     private void OnTypeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (QuantityLabel is null || CostPanel is null)
@@ -74,6 +87,9 @@ public partial class MovimientosView : UserControl
         CostPanel.Visibility = isAdjustment ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    /// <summary>
+    /// Registra un InventoryMovement: ajuste de stock o entrada con costo unitario.
+    /// </summary>
     private async void OnRegistrarClick(object sender, RoutedEventArgs e)
     {
         HideError();
@@ -123,20 +139,25 @@ public partial class MovimientosView : UserControl
         }
     }
 
+    /// <summary>Lee el tipo de movimiento seleccionado en el combo (Tag).</summary>
     private string SelectedType() =>
         (TypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? SalesDomainConstants.InventoryMovementTypes.PurchaseInflow;
 
+    /// <summary>Muestra un error en el formulario.</summary>
     private void ShowError(string message)
     {
         FormErrorText.Text = message;
         FormErrorText.Visibility = Visibility.Visible;
     }
 
+    /// <summary>Oculta el mensaje de error.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
 
+    /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
     private static bool TryParseDecimal(string? text, out decimal value) =>
         decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) ||
         decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
 
+    /// <summary>Ítem del combo de productos (Id, texto visible y stock).</summary>
     private sealed record ProductPickItem(Guid Id, string Display, decimal Stock);
 }

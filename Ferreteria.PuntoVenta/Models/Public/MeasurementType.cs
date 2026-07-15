@@ -18,5 +18,6 @@ public class MeasurementType
     [Required, MaxLength(20)]
     public string UnitLabel { get; set; } = string.Empty;
 
+    /// <summary>Decimales permitidos al capturar cantidades (0 = solo enteros).</summary>
     public short Decimals { get; set; } = 0;
 }

@@ -6,12 +6,16 @@ using Ferreteria.PuntoVenta.Services;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
+/// <summary>
+/// ABM de Supplier (proveedores): alta, edición y desactivación para el módulo Inventario.
+/// </summary>
 public partial class ProveedoresView : UserControl
 {
     private readonly ISupplierService _supplierService;
     private readonly ICurrentSessionService _currentSession;
     private Guid? _selectedId;
 
+    /// <summary>Inicializa la vista y carga la lista al Loaded.</summary>
     public ProveedoresView(ISupplierService supplierService, ICurrentSessionService currentSession)
     {
         _supplierService = supplierService;
@@ -20,8 +24,10 @@ public partial class ProveedoresView : UserControl
         Loaded += async (_, _) => await ReloadAsync();
     }
 
+    /// <summary>Id del Employee en sesión (auditoría).</summary>
     private Guid CurrentUserId => _currentSession.CurrentEmployee?.Id ?? Guid.Empty;
 
+    /// <summary>Recarga proveedores según el filtro de búsqueda.</summary>
     private async Task ReloadAsync()
     {
         try
@@ -36,12 +42,16 @@ public partial class ProveedoresView : UserControl
         }
     }
 
+    /// <summary>Handler de búsqueda por nombre/NIT.</summary>
     private async void OnSearchChanged(object sender, TextChangedEventArgs e) => await ReloadAsync();
 
+    /// <summary>Prepara el formulario para un proveedor nuevo.</summary>
     private void OnNuevoClick(object sender, RoutedEventArgs e) => ClearForm();
 
+    /// <summary>Cancela la edición y limpia el formulario.</summary>
     private void OnCancelarClick(object sender, RoutedEventArgs e) => ClearForm();
 
+    /// <summary>Selecciona un proveedor de la lista y rellena el formulario.</summary>
     private async void OnRowClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: Guid id })
@@ -71,6 +81,7 @@ public partial class ProveedoresView : UserControl
         HideError();
     }
 
+    /// <summary>Crea o actualiza el Supplier con los datos del formulario.</summary>
     private async void OnGuardarClick(object sender, RoutedEventArgs e)
     {
         HideError();
@@ -125,6 +136,7 @@ public partial class ProveedoresView : UserControl
         }
     }
 
+    /// <summary>Desactiva el proveedor seleccionado tras confirmación.</summary>
     private async void OnDesactivarClick(object sender, RoutedEventArgs e)
     {
         if (_selectedId is not { } id)
@@ -150,6 +162,7 @@ public partial class ProveedoresView : UserControl
         }
     }
 
+    /// <summary>Limpia el formulario y vuelve al modo "nuevo proveedor".</summary>
     private void ClearForm()
     {
         _selectedId = null;
@@ -161,14 +174,17 @@ public partial class ProveedoresView : UserControl
         HideError();
     }
 
+    /// <summary>Muestra un error en el formulario.</summary>
     private void ShowError(string message)
     {
         FormErrorText.Text = message;
         FormErrorText.Visibility = Visibility.Visible;
     }
 
+    /// <summary>Oculta el mensaje de error.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
 
+    /// <summary>Convierte cadena vacía en null para campos opcionales.</summary>
     private static string? NullIfEmpty(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -6,20 +6,26 @@ using Microsoft.Extensions.Logging;
 
 namespace Ferreteria.PuntoVenta.Services;
 
+/// <summary>
+/// Persistencia de eventos de auditoría en <c>system.AuditLogs</c>.
+/// </summary>
 public sealed class AuditService(
     IServiceScopeFactory scopeFactory,
     ILogger<AuditService> logger) : IAuditService
 {
+    /// <inheritdoc />
     public Task RecordLoginAsync(Employee employee, string module, CancellationToken cancellationToken = default)
     {
         return RecordSessionEventAsync("LOGIN", employee, module, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task RecordLogoutAsync(Employee employee, string? module, CancellationToken cancellationToken = default)
     {
         return RecordSessionEventAsync("LOGOUT", employee, module, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task RecordChangeAsync(
         string action,
         string tableName,
@@ -54,6 +60,9 @@ public sealed class AuditService(
         }
     }
 
+    /// <summary>
+    /// Inserta un evento de sesión (LOGIN/LOGOUT) vinculado a <c>hr.Employees</c>.
+    /// </summary>
     private async Task RecordSessionEventAsync(
         string action,
         Employee employee,

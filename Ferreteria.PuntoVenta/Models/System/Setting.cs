@@ -10,6 +10,10 @@ public class Setting
     [MaxLength(100)]
     public string Key { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Valor del parámetro. Riesgo: puede contener secretos de integración;
+    /// no registrar en logs ni en <see cref="AuditLog"/> en claro.
+    /// </summary>
     [Required]
     public string Value { get; set; } = string.Empty;
 

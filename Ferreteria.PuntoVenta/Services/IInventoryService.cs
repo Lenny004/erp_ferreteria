@@ -62,17 +62,21 @@ public sealed record InventoryProductResult(
     decimal SalePrice,
     bool IsActive)
 {
+    /// <summary>OK / BAJO / AGOTADO según stock vs mínimo.</summary>
     public string Status => CurrentStock <= 0
         ? Domain.SalesDomainConstants.StockFilters.Depleted
         : CurrentStock <= MinStock
             ? Domain.SalesDomainConstants.StockFilters.Low
             : Domain.SalesDomainConstants.StockFilters.Sufficient;
 
+    /// <summary>Stock con decimales de la unidad y etiqueta (ej. "12.5 m").</summary>
     public string FormattedStock =>
         $"{Math.Round(CurrentStock, Decimals).ToString($"N{Decimals}")} {UnitLabel}".Trim();
 
+    /// <summary>Precio de venta formateado.</summary>
     public string PriceText => SalePrice.ToString("C2");
 
+    /// <summary>Estado compuesto para listados (activo/inactivo + nivel de stock).</summary>
     public string DetailStatus => IsActive ? $"ACTIVO / STOCK {Status}" : "INACTIVO";
 }
 

@@ -165,7 +165,16 @@
                     <CheckBox x:Name="CanSellCheck" Content="Puede gestionar Inventario" Foreground="{StaticResource AppBlanco}" Margin="0,0,0,10" />
 
                     <TextBlock x:Name="PinLabel" Text="PIN de acceso (4 digitos) *" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="PinBox" MaxLength="4" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <!-- PasswordBox: el PIN no debe mostrarse en claro (antes era TextBox). -->
+                    <PasswordBox x:Name="PinBox" MaxLength="4" Height="36" Padding="12,7"
+                                 Background="{StaticResource AppAzulOscuro}"
+                                 BorderBrush="{StaticResource AppAzulClaro}"
+                                 BorderThickness="1"
+                                 Foreground="{StaticResource AppBlanco}"
+                                 CaretBrush="{StaticResource AppBlanco}"
+                                 FontFamily="{StaticResource AppFontFamily}"
+                                 FontSize="{StaticResource AppFontSize_MD}"
+                                 Margin="0,4,0,10" />
 
                     <TextBlock x:Name="FormErrorText" Foreground="{StaticResource AppError}"
                                TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,8" />

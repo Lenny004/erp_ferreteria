@@ -23,9 +23,11 @@ public class ProductSaleUnit
     [Column(TypeName = "numeric(12,2)")]
     public decimal SalePrice { get; set; } = 0;
 
+    /// <summary>Código de barras propio de esta presentación (si difiere del producto).</summary>
     [MaxLength(50)]
     public string? Barcode { get; set; }
 
+    /// <summary>Presentación por defecto al vender el producto.</summary>
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
 

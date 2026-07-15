@@ -35,6 +35,7 @@ public class OrderDetail
     [Column(TypeName = "numeric(12,2)")]
     public decimal DiscountAmount { get; set; } = 0;
 
+    /// <summary>Importe de la línea (Quantity × UnitPrice − DiscountAmount).</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal Subtotal { get; set; }
 

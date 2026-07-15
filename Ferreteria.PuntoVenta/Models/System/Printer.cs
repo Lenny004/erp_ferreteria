@@ -20,7 +20,10 @@ public class Printer
     public string? IpAddress { get; set; }
 
     public int? NetworkPort { get; set; }
+    /// <summary>Ancho de papel en mm (58 o 80 típicos en tiquetes).</summary>
     public short PaperWidth { get; set; } = 80;
+
+    /// <summary>Impresora predeterminada del POS.</summary>
     public bool IsDefault { get; set; } = false;
     public bool IsActive { get; set; } = true;
 

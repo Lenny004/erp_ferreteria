@@ -1,4 +1,4 @@
-using Ferreteria.PuntoVenta.Data;
+﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +12,7 @@ public sealed class CustomerService(
 {
     private const string TableName = "public.Customers";
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Customer>> GetCustomersAsync(
         string? searchText,
         bool includeInactive = false,
@@ -39,6 +40,7 @@ public sealed class CustomerService(
         return await query.OrderBy(c => c.Name).Take(500).ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -46,6 +48,7 @@ public sealed class CustomerService(
         return await db.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Guid> CreateAsync(CustomerInput input, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -86,6 +89,7 @@ public sealed class CustomerService(
         return customer.Id;
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(Guid id, CustomerInput input, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -122,6 +126,7 @@ public sealed class CustomerService(
             before, new { customer.Name, customer.CustomerType, customer.Nit }, userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();

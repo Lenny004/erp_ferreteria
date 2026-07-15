@@ -22,9 +22,11 @@ public class Employee
     [MaxLength(20)]
     public string? Nit { get; set; }
 
+    /// <summary>Número de afiliación ISSS (planilla El Salvador).</summary>
     [MaxLength(20)]
     public string? IsssNumber { get; set; }
 
+    /// <summary>Número Único Previsional / AFP (planilla El Salvador).</summary>
     [MaxLength(20)]
     public string? Nup { get; set; }
 
@@ -94,14 +96,22 @@ public class Employee
     public string? AcademicLevel { get; set; }
 
     // Acceso punto de venta
-    /// <summary>Hash bcrypt del PIN. Validado por <see cref="Services.PinAuthService"/>.</summary>
+    /// <summary>
+    /// Hash bcrypt del PIN (nunca el PIN en claro). Validado por <see cref="Services.PinAuthService"/>.
+    /// Riesgo: no serializar este campo en logs, auditoría ni APIs públicas.
+    /// </summary>
     public string? PinHash { get; set; }
 
+    /// <summary>Última vez que se actualizó el PIN (UTC).</summary>
     [Column(TypeName = "timestamptz")]
     public DateTime? PinUpdatedAt { get; set; }
 
     public bool AttendanceEnabled { get; set; } = true;
+
+    /// <summary>Permiso de módulo Inventario / operaciones de stock y catálogo.</summary>
     public bool CanSell { get; set; } = false;
+
+    /// <summary>Permiso de módulo Caja / facturación en mostrador.</summary>
     public bool CanCashier { get; set; } = false;
 
     // Baja y período de prueba

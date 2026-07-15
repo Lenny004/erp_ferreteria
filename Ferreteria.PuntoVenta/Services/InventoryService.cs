@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
@@ -20,6 +20,7 @@ public sealed class InventoryService(
         SalesDomainConstants.InventoryMovementTypes.ReturnInflow
     ];
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<InventoryProductResult>> SearchProductsAsync(
         string? searchText,
         string? stockStatus,
@@ -81,6 +82,7 @@ public sealed class InventoryService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<StockDecreaseResult> DecreaseStockAsync(
         Guid productId,
         decimal quantity,
@@ -142,6 +144,7 @@ public sealed class InventoryService(
         return new StockDecreaseResult(product.Id, movement.Id, stockBefore, stockAfter);
     }
 
+    /// <inheritdoc />
     public async Task<StockMovementResult> RegisterEntryAsync(
         Guid productId,
         decimal quantity,
@@ -209,6 +212,7 @@ public sealed class InventoryService(
         return new StockMovementResult(product.Id, movement.Id, movementType, stockBefore, stockAfter);
     }
 
+    /// <inheritdoc />
     public async Task<StockMovementResult> RegisterAdjustmentAsync(
         Guid productId,
         decimal newStock,
@@ -285,6 +289,7 @@ public sealed class InventoryService(
         return new StockMovementResult(product.Id, movement.Id, movement.MovementType, stockBefore, newStock);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<StockAlertResult>> GetActiveAlertsAsync(CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -310,6 +315,7 @@ public sealed class InventoryService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<InventoryMovementResult>> GetRecentMovementsAsync(
         Guid? productId,
         int take = 100,

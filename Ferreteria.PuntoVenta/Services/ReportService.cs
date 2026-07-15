@@ -1,4 +1,4 @@
-using Ferreteria.PuntoVenta.Data;
+﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +11,7 @@ namespace Ferreteria.PuntoVenta.Services;
 /// </summary>
 public sealed class ReportService(IServiceScopeFactory scopeFactory) : IReportService
 {
+    /// <inheritdoc />
     public async Task<SalesReport> GetSalesReportAsync(
         DateTime fromUtc,
         DateTime toUtc,
@@ -70,6 +71,7 @@ public sealed class ReportService(IServiceScopeFactory scopeFactory) : IReportSe
             byPayment);
     }
 
+    /// <inheritdoc />
     public async Task<PurchasesReport> GetPurchasesReportAsync(
         DateTime fromUtc,
         DateTime toUtc,
@@ -108,6 +110,7 @@ public sealed class ReportService(IServiceScopeFactory scopeFactory) : IReportSe
             byProduct);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<TopProductRow>> GetTopProductsAsync(
         DateTime fromUtc,
         DateTime toUtc,

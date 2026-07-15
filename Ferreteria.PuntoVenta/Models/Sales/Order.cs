@@ -27,12 +27,14 @@ public class Order
     [Column(TypeName = "numeric(12,2)")]
     public decimal Subtotal { get; set; } = 0;
 
+    /// <summary>IVA El Salvador (13%) calculado sobre el subtotal gravado.</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal TaxAmount { get; set; } = 0;
 
     [Column(TypeName = "numeric(12,2)")]
     public decimal DiscountAmount { get; set; } = 0;
 
+    /// <summary>Total a pagar = Subtotal + TaxAmount − DiscountAmount (según reglas del servicio).</summary>
     [Column(TypeName = "numeric(12,2)")]
     public decimal Total { get; set; } = 0;
 

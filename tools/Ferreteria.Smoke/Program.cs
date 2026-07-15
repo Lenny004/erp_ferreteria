@@ -1,3 +1,6 @@
+// Herramienta de smoke test del POS: verifica conectividad EF, seed mínimo y que el PIN demo
+// del cajero coincida con BCrypt (Employee.PinHash). No forma parte del flujo de UI.
+// Seguridad: nunca imprimir el PIN en claro; solo el resultado booleano de la verificación.
 using System.Text.Json;
 using Ferreteria.PuntoVenta.Data;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +27,13 @@ var measurementTypes = await db.MeasurementTypes.CountAsync();
 var families = await db.Families.CountAsync();
 var settings = await db.Settings.CountAsync();
 var employees = await db.Employees.CountAsync();
-var cashiers = await db.Employees.CountAsync(e => e.IsActive && e.CanCashier && e.PinHash != null);
+var cashiersWithPin = await db.Employees.CountAsync(e => e.IsActive && e.CanCashier && e.PinHash != null);
 
 Console.WriteLine($"MeasurementTypes: {measurementTypes}");
 Console.WriteLine($"Families: {families}");
 Console.WriteLine($"Settings: {settings}");
 Console.WriteLine($"Employees: {employees}");
-Console.WriteLine($"Cashiers with PIN: {cashiers}");
+Console.WriteLine($"Cashiers with PIN: {cashiersWithPin}");
 
 var cashier = await db.Employees
     .AsNoTracking()
@@ -44,10 +47,16 @@ if (cashier is null)
     return 1;
 }
 
-var validDemoPin = BCrypt.Net.BCrypt.Verify(cashier.Dui == "00000003-0" ? "0000" : "1234", cashier.PinHash!);
-Console.WriteLine($"PIN demo valida: {validDemoPin}");
+// PINs de seed/demo: solo para verificar hash en local. Nunca loguear estos valores.
+const string DemoPinSeedSpecial = "0000";
+const string DemoPinSeedDefault = "1234";
+const string SpecialCashierDui = "00000003-0";
 
-if (!validDemoPin)
+var expectedDemoPin = cashier.Dui == SpecialCashierDui ? DemoPinSeedSpecial : DemoPinSeedDefault;
+var isDemoPinValid = BCrypt.Net.BCrypt.Verify(expectedDemoPin, cashier.PinHash!);
+Console.WriteLine($"PIN demo valida: {isDemoPinValid}");
+
+if (!isDemoPinValid)
 {
     return 1;
 }
@@ -55,6 +64,9 @@ if (!validDemoPin)
 Console.WriteLine("Smoke OK");
 return 0;
 
+/// <summary>
+/// Sube directorios desde BaseDirectory hasta encontrar la raíz del repo (.git).
+/// </summary>
 static string FindRepositoryRoot()
 {
     var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -71,6 +83,9 @@ static string FindRepositoryRoot()
     return Directory.GetCurrentDirectory();
 }
 
+/// <summary>
+/// Lee ConnectionStrings:FerreteriaDB desde appsettings.json del POS.
+/// </summary>
 static string? ReadConnectionString(string appsettingsPath)
 {
     using var stream = File.OpenRead(appsettingsPath);

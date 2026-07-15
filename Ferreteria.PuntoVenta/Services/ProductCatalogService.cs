@@ -1,4 +1,4 @@
-using Ferreteria.PuntoVenta.Data;
+﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +15,7 @@ public sealed class ProductCatalogService(
 {
     private const string TableName = "public.Products";
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Product>> GetProductsAsync(
         string? searchText,
         bool includeInactive = false,
@@ -52,6 +53,7 @@ public sealed class ProductCatalogService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -66,6 +68,7 @@ public sealed class ProductCatalogService(
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Guid> CreateProductAsync(ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -115,6 +118,7 @@ public sealed class ProductCatalogService(
         return product.Id;
     }
 
+    /// <inheritdoc />
     public async Task UpdateProductAsync(Guid id, ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -159,11 +163,13 @@ public sealed class ProductCatalogService(
             userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task DeactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
         await SetActiveAsync(id, false, userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task ReactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
         await SetActiveAsync(id, true, userId, cancellationToken);
@@ -192,6 +198,7 @@ public sealed class ProductCatalogService(
             userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Family>> GetFamiliesAsync(CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -202,6 +209,7 @@ public sealed class ProductCatalogService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Subfamily>> GetSubfamiliesAsync(Guid familyId, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -212,6 +220,7 @@ public sealed class ProductCatalogService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<MeasurementType>> GetMeasurementTypesAsync(CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();

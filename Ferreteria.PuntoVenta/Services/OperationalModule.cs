@@ -2,10 +2,12 @@ namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
 /// Módulo operativo elegido en la pantalla de inicio de la ferretería.
-/// <c>Caja</c> = punto de venta; <c>Inventario</c> = gestión de stock, catálogo y proveedores.
 /// </summary>
 public enum OperationalModule
 {
-  Caja,
-  Inventario
+    /// <summary>Punto de venta / facturación (requiere <see cref="Models.Employee.CanCashier"/>).</summary>
+    Caja,
+
+    /// <summary>Gestión de stock, catálogo, proveedores y usuarios (requiere <see cref="Models.Employee.CanSell"/>).</summary>
+    Inventario
 }

@@ -9,13 +9,20 @@ public class DteContingency
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>DTE en contingencia (<see cref="DteIssued"/>).</summary>
     public Guid DteId { get; set; }
+
+    /// <summary>Cantidad de reintentos de envío al Ministerio de Hacienda.</summary>
     public int AttemptCount { get; set; } = 0;
+
+    /// <summary>Último error reportado por el transmisor o la API del MH.</summary>
     public string? LastError { get; set; }
 
+    /// <summary>Próximo intento programado (UTC).</summary>
     [Column(TypeName = "timestamptz")]
     public DateTime? NextRetryAt { get; set; }
 
+    /// <summary>Momento en que se resolvió la contingencia; null si sigue abierta.</summary>
     [Column(TypeName = "timestamptz")]
     public DateTime? ResolvedAt { get; set; }
 

@@ -10,6 +10,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ferreteria.PuntoVenta.Views.PIN;
 
+/// <summary>
+/// Pantalla de autenticación por PIN de Employee (4 dígitos).
+/// Valida acceso al módulo Caja o Inventario y, si es correcto, abre <see cref="MainShellWindow"/>.
+/// Seguridad: el PIN nunca se escribe en logs ni en MessageBox; solo se muestran dots y mensajes de error genéricos.
+/// </summary>
 public partial class PinWindow : Window
 {
     private const int PinLength = 4;
@@ -23,9 +28,14 @@ public partial class PinWindow : Window
     private readonly IPinAttemptService _pinAttemptService;
     private readonly OperationalModule _module;
     private readonly string _initialSection;
-    private string _pinActual = string.Empty;
+    private string _pinIngresado = string.Empty;
     private bool _validando;
 
+    /// <summary>
+    /// Crea la ventana PIN para el módulo indicado (Caja → facturación, Inventario → productos, etc.).
+    /// </summary>
+    /// <param name="module">Módulo operativo al que se intenta entrar.</param>
+    /// <param name="initialSection">Sección inicial del shell tras login (opcional).</param>
     public PinWindow(
         PinAuthService pinAuth,
         IServiceProvider services,
@@ -65,6 +75,7 @@ public partial class PinWindow : Window
         KeyDown += OnTeclaFisica;
     }
 
+    /// <summary>Permite arrastrar la ventana sin borde.</summary>
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
@@ -73,11 +84,13 @@ public partial class PinWindow : Window
         }
     }
 
+    /// <summary>Minimiza la ventana de PIN.</summary>
     private void OnMinimizarClick(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
     }
 
+    /// <summary>Cancela el login y regresa a InicioWindow.</summary>
     private void OnCerrarClick(object sender, RoutedEventArgs e)
     {
         var inicio = _services.GetRequiredService<InicioWindow>();
@@ -85,6 +98,7 @@ public partial class PinWindow : Window
         Close();
     }
 
+    /// <summary>Handler del teclado numérico en pantalla (Tag = dígito).</summary>
     private void OnDigitoClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button button)
@@ -93,16 +107,19 @@ public partial class PinWindow : Window
         }
     }
 
+    /// <summary>Borra el último dígito del PIN ingresado.</summary>
     private void OnBorrarClick(object sender, RoutedEventArgs e)
     {
         BorrarUltimoDigito();
     }
 
+    /// <summary>Confirma el PIN cuando ya hay 4 dígitos (o muestra error si faltan).</summary>
     private void OnConfirmarClick(object sender, RoutedEventArgs e)
     {
         _ = ValidarPinAsync();
     }
 
+    /// <summary>Acepta dígitos, Backspace/Delete y Enter desde el teclado físico.</summary>
     private void OnTeclaFisica(object sender, KeyEventArgs e)
     {
         if (e.Key >= Key.D0 && e.Key <= Key.D9)
@@ -123,6 +140,7 @@ public partial class PinWindow : Window
         }
     }
 
+    /// <summary>Agrega un dígito y dispara validación automática al completar 4 caracteres.</summary>
     private void AgregarDigito(string digito)
     {
         if (_validando)
@@ -133,20 +151,21 @@ public partial class PinWindow : Window
 
         OcultarError();
 
-        if (_pinActual.Length >= PinLength || string.IsNullOrEmpty(digito))
+        if (_pinIngresado.Length >= PinLength || string.IsNullOrEmpty(digito))
         {
             return;
         }
 
-        _pinActual += digito;
+        _pinIngresado += digito;
         ActualizarDots();
 
-        if (_pinActual.Length == PinLength)
+        if (_pinIngresado.Length == PinLength)
         {
             _ = ValidarPinAsync();
         }
     }
 
+    /// <summary>Elimina el último dígito y actualiza los dots.</summary>
     private void BorrarUltimoDigito()
     {
         if (_validando)
@@ -154,15 +173,19 @@ public partial class PinWindow : Window
 
         OcultarError();
 
-        if (_pinActual.Length == 0)
+        if (_pinIngresado.Length == 0)
         {
             return;
         }
 
-        _pinActual = _pinActual[..^1];
+        _pinIngresado = _pinIngresado[..^1];
         ActualizarDots();
     }
 
+    /// <summary>
+    /// Valida el PIN contra PinAuthService, aplica lockout por intentos fallidos
+    /// e inicia sesión + auditoría de login si es correcto.
+    /// </summary>
     private async Task ValidarPinAsync()
     {
         if (_validando)
@@ -171,7 +194,7 @@ public partial class PinWindow : Window
         if (MostrarBloqueoSiAplica())
             return;
 
-        if (_pinActual.Length < PinLength)
+        if (_pinIngresado.Length < PinLength)
         {
             MostrarError("Ingresa los 4 digitos completos.");
             return;
@@ -180,7 +203,7 @@ public partial class PinWindow : Window
         _validando = true;
         try
         {
-            var employee = await _pinAuth.ValidatePinAsync(_pinActual, _module);
+            var employee = await _pinAuth.ValidatePinAsync(_pinIngresado, _module);
             if (employee is null)
             {
                 var status = _pinAttemptService.RegisterFailedAttempt();
@@ -200,6 +223,7 @@ public partial class PinWindow : Window
         }
         catch (Exception ex)
         {
+            // No incluir el PIN en el mensaje: solo el error técnico.
             MostrarError($"Error al validar PIN: {ex.Message}");
             LimpiarPin();
         }
@@ -209,26 +233,30 @@ public partial class PinWindow : Window
         }
     }
 
+    /// <summary>Vacía el PIN en memoria y reinicia los dots.</summary>
     private void LimpiarPin()
     {
-        _pinActual = string.Empty;
+        _pinIngresado = string.Empty;
         ActualizarDots();
     }
 
+    /// <summary>Pinta los 4 dots según cuántos dígitos hay (sin mostrar el valor).</summary>
     private void ActualizarDots()
     {
-        Dot1.Fill = _pinActual.Length >= 1 ? ColorRelleno : ColorVacio;
-        Dot2.Fill = _pinActual.Length >= 2 ? ColorRelleno : ColorVacio;
-        Dot3.Fill = _pinActual.Length >= 3 ? ColorRelleno : ColorVacio;
-        Dot4.Fill = _pinActual.Length >= 4 ? ColorRelleno : ColorVacio;
+        Dot1.Fill = _pinIngresado.Length >= 1 ? ColorRelleno : ColorVacio;
+        Dot2.Fill = _pinIngresado.Length >= 2 ? ColorRelleno : ColorVacio;
+        Dot3.Fill = _pinIngresado.Length >= 3 ? ColorRelleno : ColorVacio;
+        Dot4.Fill = _pinIngresado.Length >= 4 ? ColorRelleno : ColorVacio;
     }
 
+    /// <summary>Muestra un mensaje de error en el panel de la UI.</summary>
     private void MostrarError(string mensaje)
     {
         ErrorMsg.Text = mensaje;
         ErrorPanel.Visibility = Visibility.Visible;
     }
 
+    /// <summary>Si hay lockout activo por intentos fallidos, muestra el mensaje y limpia el PIN.</summary>
     private bool MostrarBloqueoSiAplica()
     {
         var status = _pinAttemptService.GetStatus();
@@ -242,6 +270,7 @@ public partial class PinWindow : Window
         return true;
     }
 
+    /// <summary>Arma el mensaje de PIN incorrecto (sin revelar el valor ingresado).</summary>
     private static string BuildFailedAttemptMessage(PinAttemptStatus status, OperationalModule module)
     {
         if (status.IsLocked)
@@ -259,17 +288,20 @@ public partial class PinWindow : Window
         return $"PIN incorrecto o sin permiso de {roleHint}. Intentos restantes: {status.RemainingAttempts}.";
     }
 
+    /// <summary>Mensaje de bloqueo temporal tras demasiados intentos.</summary>
     private static string BuildLockoutMessage(PinAttemptStatus status)
     {
         var seconds = Math.Max(1, (int)Math.Ceiling(status.RemainingLockout.TotalSeconds));
         return $"Demasiados intentos. Espere {seconds} segundos.";
     }
 
+    /// <summary>Oculta el panel de error.</summary>
     private void OcultarError()
     {
         ErrorPanel.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>Animación de sacudida del panel de error.</summary>
     private void AnimarError()
     {
         var transform = new TranslateTransform();

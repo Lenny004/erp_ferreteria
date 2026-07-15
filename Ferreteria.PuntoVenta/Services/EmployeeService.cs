@@ -1,4 +1,4 @@
-using Ferreteria.PuntoVenta.Data;
+﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +17,7 @@ public sealed class EmployeeService(
     private static readonly string[] ValidContractTypes = ["PLAZO_FIJO", "TIEMPO_PARCIAL", "HONORARIOS", "PASANTE"];
     private static readonly string[] ValidSalaryTypes = ["MENSUAL", "QUINCENAL", "SEMANAL"];
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Employee>> GetEmployeesAsync(
         string? searchText,
         bool includeInactive = false,
@@ -50,6 +51,7 @@ public sealed class EmployeeService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -60,6 +62,7 @@ public sealed class EmployeeService(
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Guid> CreateAsync(EmployeeInput input, string? pin, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -110,6 +113,7 @@ public sealed class EmployeeService(
         return employee.Id;
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(Guid id, EmployeeInput input, Guid userId, CancellationToken cancellationToken = default)
     {
         Validate(input);
@@ -149,6 +153,7 @@ public sealed class EmployeeService(
             before, new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task SetPinAsync(Guid id, string pin, Guid userId, CancellationToken cancellationToken = default)
     {
         ValidatePin(pin);
@@ -169,6 +174,7 @@ public sealed class EmployeeService(
             null, new { PinChanged = true }, userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -190,6 +196,7 @@ public sealed class EmployeeService(
             new { employee.FirstName, employee.LastName, IsActive = true }, new { IsActive = false }, userId, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
@@ -200,6 +207,7 @@ public sealed class EmployeeService(
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Position>> GetPositionsAsync(Guid? departmentId, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();

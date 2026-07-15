@@ -60,8 +60,13 @@ public sealed record ConfectionOrderSummary(
     int ItemCount,
     decimal Total)
 {
+    /// <summary>Número corto de orden para UI (# + 8 hex).</summary>
     public string OrderNumber => $"#{OrderId.ToString()[..8].ToUpperInvariant()}";
+
+    /// <summary>Fecha/hora local de creación.</summary>
     public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+
+    /// <summary>Total formateado como moneda.</summary>
     public string TotalText => Total.ToString("C2");
 }
 
@@ -75,10 +80,17 @@ public sealed record SalesOrderSummary(
     string Status,
     decimal Total)
 {
+    /// <summary>Fecha/hora local de la venta.</summary>
     public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+
+    /// <summary>Control corto derivado del Id de orden.</summary>
     public string ControlNumberText => $"ORD-{OrderId.ToString()[..8].ToUpperInvariant()}";
+
+    /// <summary>Etiqueta de canal (TALLER o CAJA).</summary>
     public string ChannelLabel => OrderType == Domain.SalesDomainConstants.OrderTypes.ConfectionWorkOrder
         ? Domain.SalesDomainConstants.OrderChannelLabels.ConfectionShop
         : Domain.SalesDomainConstants.OrderChannelLabels.CashRegister;
+
+    /// <summary>Total formateado como moneda.</summary>
     public string TotalText => Total.ToString("C2");
 }

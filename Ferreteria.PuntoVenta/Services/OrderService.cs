@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
@@ -13,6 +13,7 @@ namespace Ferreteria.PuntoVenta.Services;
 /// </summary>
 public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderService
 {
+    /// <inheritdoc />
     public async Task<CashSaleResult> CreateCashSaleAsync(
         CreateCashSaleRequest request,
         CancellationToken cancellationToken = default)
@@ -69,6 +70,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return MapToCashSaleResult(order);
     }
 
+    /// <inheritdoc />
     public async Task<WorkOrderResult> CreateConfectionOrderAsync(
         CreateConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
@@ -119,6 +121,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return MapToWorkOrderResult(order);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ConfectionOrderSummary>> GetConfectionOrdersAsync(
         string? status,
         string? searchText,
@@ -171,6 +174,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<CashSaleResult> CompleteConfectionOrderAsync(
         CompleteConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
@@ -232,6 +236,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return MapToCashSaleResult(order);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SalesOrderSummary>> GetCompletedSalesAsync(
         string? searchText,
         int take = 100,

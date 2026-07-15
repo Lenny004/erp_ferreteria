@@ -29,15 +29,19 @@ public class Product
     [Column(TypeName = "numeric(12,4)")]
     public decimal CostPrice { get; set; } = 0;
 
+    /// <summary>Existencias actuales en unidad base.</summary>
     [Column(TypeName = "numeric(12,3)")]
     public decimal CurrentStock { get; set; } = 0;
 
+    /// <summary>Umbral de alerta de stock bajo.</summary>
     [Column(TypeName = "numeric(12,3)")]
     public decimal MinStock { get; set; } = 0;
 
+    /// <summary>Tope de stock opcional.</summary>
     [Column(TypeName = "numeric(12,3)")]
     public decimal? MaxStock { get; set; }
 
+    /// <summary>Nivel de reorden sugerido para compras.</summary>
     [Column(TypeName = "numeric(12,3)")]
     public decimal? ReorderPoint { get; set; }
 
