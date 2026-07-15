@@ -1,6 +1,6 @@
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
-> **Estado:** Fases 8–11 hechas (MVP completo del plan admin API); futuro: tienda pública  
+> **Estado:** Fases 8–11 + refinamiento 8b ampliado (ficha/RRHH/clientes/edición planilla); futuro: tienda pública  
 > **Fecha:** 2026-07-14  
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
@@ -25,15 +25,16 @@
 |---|---|
 | Prisma schema + seed + Docker | ✅ |
 | API Express `/api/v1` (Fase 8) | ✅ Auth + CRUD base |
-| UI login + directorio empleados (8b) | ✅ |
+| UI RRHH base (8b) | ✅ Directorio + ficha/bancos/docs + catálogos RRHH |
 | Inventario admin (Fase 9) | ✅ movimientos + alertas + UI |
 | Compras (Fase 9b) | ✅ proveedores + OC + costo promedio + valuación |
 | Planilla — motor + períodos + corridas + UI básica (Fase 10 MVP) | ✅ |
 | Planilla — exports Excel/PDF (Fase 10-export) | ✅ |
 | Planilla — aguinaldo/vacaciones/liquidaciones (Fase 10b/10c) | ✅ |
 | Fiscal IVA / Dashboard (Fase 10d / 11) | ✅ |
+| Refinamiento: clientes + feriados + edición líneas planilla | ✅ |
 
-La API admin cubre el alcance de Fases 8–11 (MVP). Fuera de plan: tienda pública B2C.
+La API admin cubre el alcance de Fases 8–11 (MVP) más el cierre de placeholders 8b. Fuera de plan: tienda pública B2C.
 
 ---
 
@@ -394,4 +395,12 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 
 ## 12. Próximo paso inmediato
 
-**Fuera de Fases 8–11:** tienda pública B2C, o refinamientos (UI edición de líneas de planilla, exports honorarios, Excel por sección del dashboard).
+**Fuera de Fases 8–11:** tienda pública B2C, o mejoras opcionales (Excel nativo de importaciones, exports honorarios PDF, Excel por sección del dashboard).
+
+### Refinamiento post-11 (hecho)
+
+- Clientes UI (`/clientes`)
+- RRHH: bancos, tipos documento, feriados (`/api/v1/holidays`)
+- Ficha empleado + cuentas bancarias + documentos
+- Edición de líneas de corrida (extras/bonos/deducciones)
+- Hub `/reportes` con enlaces a reportes existentes
