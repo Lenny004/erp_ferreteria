@@ -59,7 +59,7 @@ API REST Node.js (**Express 5 + Prisma 6 + TypeScript**) en `ferreteria_backend`
 |---|---|
 | `erp_ferreteria` | Caja WPF: ventas, DTE, impresión, PIN de caja — escribe **directo** a PostgreSQL en MVP |
 | `ferreteria_adminweb` | UI Next.js del panel privado — consume esta API; **UI RRHH/planilla se porta desde `erp-admin-web`** |
-| Tienda pública cliente (4.º repo, futuro) | Compras B2C — **no implementada aún** |
+| Tienda pública (MVP en adminweb + API) | Catálogo público, auth `ShopCustomer`, favoritos, contacto, legales — **checkout aún pendiente** |
 
 ---
 
@@ -355,9 +355,17 @@ Pendiente: import Excel nativo (ExcelJS) y Kardex valorado fino en Fase 9b con c
 
 ---
 
-### Futuro — Tienda pública
+### Futuro — Tienda pública / e-commerce
 
-Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de Fases 8–11.
+**MVP 2026-07 (parcial, en `ferreteria_backend` + rutas `/tienda` de adminweb):**
+- Catálogo público (`/api/v1/public/catalog`) con búsqueda y filtros
+- Auth cliente `ShopCustomer` (registro, login, perfil, forgot/reset) distinta de `WebUsers`
+- Favoritos (`ProductFavorite`)
+- Contáctanos → `ContactMessage` → bandeja admin `/mensajes-contacto`
+- Términos / privacidad vía `Settings` públicos (`TermsOfService`, `PrivacyPolicy`)
+- Recuperación de contraseña también para admin (`WebUsers`)
+
+**Pendiente:** carrito, checkout, pagos, envíos, SMTP real para reset, rate-limit en contacto. Puede evolucionar a 4.º repo dedicado.
 
 ---
 
