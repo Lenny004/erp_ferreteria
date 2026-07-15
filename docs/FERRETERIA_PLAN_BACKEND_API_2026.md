@@ -1,6 +1,6 @@
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
-> **Estado:** Fases 8–10c hechas (incl. 10-export); siguiente: 10d fiscal / 11 dashboard  
+> **Estado:** Fases 8–11 hechas (MVP completo del plan admin API); futuro: tienda pública  
 > **Fecha:** 2026-07-14  
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
@@ -31,9 +31,9 @@
 | Planilla — motor + períodos + corridas + UI básica (Fase 10 MVP) | ✅ |
 | Planilla — exports Excel/PDF (Fase 10-export) | ✅ |
 | Planilla — aguinaldo/vacaciones/liquidaciones (Fase 10b/10c) | ✅ |
-| Fiscal IVA / Dashboard (Fase 10d / 11) | 🔲 |
+| Fiscal IVA / Dashboard (Fase 10d / 11) | ✅ |
 
-La API admin cubre auth, RRHH, inventario, compras y planilla completa (MVP). Siguiente: fiscal y dashboard.
+La API admin cubre el alcance de Fases 8–11 (MVP). Fuera de plan: tienda pública B2C.
 
 ---
 
@@ -334,9 +334,23 @@ Pendiente: import Excel nativo (ExcelJS) y Kardex valorado fino en Fase 9b con c
 
 ---
 
-### Fase 10d — Fiscal / Fase 11 — Dashboard
+### Fase 10d — Fiscal / Fase 11 — Dashboard — ✅ HECHO (MVP)
 
-Sin plantilla HR; dominio ferreteria (DTE, IVA, KPIs).
+**Fiscal (`/api/v1/fiscal`):**
+
+- Libros IVA: `VENTAS_CF` (DTE 01), `VENTAS_CCF` (DTE 03), `COMPRAS` (OC `RECIBIDA`)
+- `GET /iva-reports`, `GET /iva-reports/period/:year/:month`, `POST /iva-reports/generate`
+- `POST /iva-reports/:id/close` (exige cuadre con live), `GET /iva-reports/:id/export` (Excel)
+- `GET /dte` — consulta DTE sin payload/certificados
+- Adminweb: `/fiscal/libros-iva` (+ detalle mes)
+
+**Dashboard (`/api/v1/dashboard/summary`):**
+
+- Ventas (hoy/semana/mes, MoM, ticket, top productos, por tipo orden)
+- Inventario (valor, bajo mínimo, alertas, movimientos hoy)
+- Compras (OC pendientes, total mes, top proveedores)
+- RRHH (headcount, docs por vencer, planillas pendientes)
+- Adminweb: `/dashboard` con KPIs + gráfica Recharts
 
 ---
 
@@ -348,7 +362,7 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 
 ## 9. Orden de trabajo (siguientes sprints)
 
-1. ~~… Fases 8–10c~~ → **Siguiente:** Fase 10d libros IVA / consulta DTE + Fase 11 dashboard KPIs
+1. ~~Fases 8–11~~ → **Siguiente (fuera de este plan):** tienda pública / refinamientos (edición horas en UI planilla, exports honorarios, Excel por sección dashboard)
 
 ---
 
@@ -360,7 +374,7 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 | `payroll-exports.service.ts` (~3000 líneas) | MVP: 3 exports; honorarios PDF avanzado después |
 | UI monolítica (`*-content.tsx` 500–1400 líneas) | Portar pantalla a pantalla; no un big-bang |
 | WPF y API en mismas tablas | Transacciones y mismas reglas de stock/costo |
-| Tienda pública prematura | No mezclar B2C en Fase 8 |
+| Tienda pública prematura | No mezclar B2C en Fase 8–11 |
 
 ---
 
@@ -373,12 +387,11 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 | UI RRHH base (8b) | Directorio/bancos/docs portados desde erp-admin-web |
 | Compras (9b) | Proveedores + OC + recepción con costo promedio (✅) |
 | API planilla (10) | Motor + períodos + corridas + exports + aguinaldo/vacaciones/liquidaciones (✅) |
-| Fiscal / Dashboard | Libros IVA + KPIs (🔲 10d/11) |
+| Fiscal / Dashboard | Libros IVA + KPIs (✅ 10d/11) |
 | Ecosistema web completo | Adminweb + (futuro) tienda pública |
 
 ---
 
 ## 12. Próximo paso inmediato
 
-**Fase 10d:** libros de IVA (compras/ventas) desde `PurchaseOrders` recibidas + `DteIssued`.  
-**Fase 11:** dashboard BI (ventas, inventario valorado, planilla, alertas).
+**Fuera de Fases 8–11:** tienda pública B2C, o refinamientos (UI edición de líneas de planilla, exports honorarios, Excel por sección del dashboard).
