@@ -1,6 +1,6 @@
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
-> **Estado:** Fases 8, 8b, 9, 9b y 10 MVP hechas; siguiente: 10-export (Excel/PDF) y 10b (aguinaldo/vacaciones)  
+> **Estado:** Fases 8–10c hechas (incl. 10-export); siguiente: 10d fiscal / 11 dashboard  
 > **Fecha:** 2026-07-14  
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
@@ -29,10 +29,11 @@
 | Inventario admin (Fase 9) | ✅ movimientos + alertas + UI |
 | Compras (Fase 9b) | ✅ proveedores + OC + costo promedio + valuación |
 | Planilla — motor + períodos + corridas + UI básica (Fase 10 MVP) | ✅ |
-| Planilla — exports Excel/PDF (Fase 10-export) | 🔲 |
-| Planilla — aguinaldo/vacaciones/liquidaciones (Fase 10b/10c) | 🔲 |
+| Planilla — exports Excel/PDF (Fase 10-export) | ✅ |
+| Planilla — aguinaldo/vacaciones/liquidaciones (Fase 10b/10c) | ✅ |
+| Fiscal IVA / Dashboard (Fase 10d / 11) | 🔲 |
 
-La API admin cubre auth, RRHH base, inventario, compras y planilla MVP. Siguiente: exports Excel/PDF y módulos 10b/10c.
+La API admin cubre auth, RRHH, inventario, compras y planilla completa (MVP). Siguiente: fiscal y dashboard.
 
 ---
 
@@ -305,17 +306,31 @@ Pendiente: import Excel nativo (ExcelJS) y Kardex valorado fino en Fase 9b con c
 
 **Pendiente (siguientes fases):**
 
-- **10-export:** Excel/PDF de planilla, boletas de pago, comprobantes de retención honorarios,
-  Planilla Única AFP/ISSS (portar `payroll-exports.service.ts`)
-- **10b:** Aguinaldo (`AguinaldoRun`/`AguinaldoDetail` ya en schema) y vacaciones (`VacationBalance`)
-- **10c:** Liquidaciones (`EmployeeTermination`)
 - Edición de horas extra/bonos por línea vía UI (hoy solo backend `PATCH .../details/:id`)
+- Honorarios: Excel/PDF de retención (export avanzado)
 
 ---
 
-### Fase 10b/10c — Aguinaldo, vacaciones, liquidaciones
+### Fase 10-export — Excel/PDF — ✅ HECHO (MVP)
 
-Misma fuente: módulos erp-core-api + pantallas erp-admin-web.
+- `GET /api/v1/payroll-runs/:id/export/excel` — detalle por empleado + totales
+- `GET .../export/receipts-pdf` — boletas multi-página (PDFKit)
+- `GET .../export/planilla-unica` — Excel AFP/ISSS
+- Adminweb: `/planilla/corridas/[id]/export` + botón Exportar en listado
+- Deps: `exceljs`, `pdfkit`; env `COMPANY_NAME` / `COMPANY_NIT` / `COMPANY_ADDRESS`
+
+---
+
+### Fase 10b/10c — Aguinaldo, vacaciones, liquidaciones — ✅ HECHO (MVP)
+
+**Backend:**
+
+- `/api/v1/aguinaldo` — generar/aprobar/pagar/anular (días 15/19/21 × diario; ISR exento $600)
+- `/api/v1/vacation-balances` + `ensure`; `/api/v1/leave-types`; `/api/v1/leave-requests` (aprobar vacaciones descuenta saldo)
+- `/api/v1/employee-terminations` — indemnización solo `DESPIDO_INJUSTIFICADO` (30 d/año); vacaciones + aguinaldo proporcional; desactiva empleado al aprobar
+- Seed: `LeaveTypes` básicos
+
+**Adminweb:** `/planilla/aguinaldo`, `/planilla/vacaciones`, `/planilla/liquidaciones`
 
 ---
 
@@ -333,15 +348,7 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 
 ## 9. Orden de trabajo (siguientes sprints)
 
-1. ~~Actualizar este plan con plantillas erp-core-api / erp-admin-web~~
-2. ~~Scaffold TypeScript + Express + health (Fase 8)~~
-3. ~~Auth JWT + seed `WebUser`~~
-4. ~~Employees + banks + document-types + customers + products~~
-5. ~~Smoke: `db:push` + `db:seed` + login real contra PostgreSQL~~
-6. ~~Portar UI RRHH login + directorio (Fase 8b)~~
-7. ~~Fase 9 inventario~~
-8. ~~Fase 9b compras~~
-9. ~~Fase 10 planilla MVP (motor AFP/ISSS/ISR + períodos + corridas + UI básica)~~ → **Siguiente:** Fase 10-export (Excel/PDF)
+1. ~~… Fases 8–10c~~ → **Siguiente:** Fase 10d libros IVA / consulta DTE + Fase 11 dashboard KPIs
 
 ---
 
@@ -350,7 +357,7 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 | Riesgo | Mitigación |
 |---|---|
 | Copiar ciego schema/auth de erp-core | Mapear a `WebUsers` + schema ferreteria v3 |
-| `payroll-exports.service.ts` (~3000 líneas) | Portar motor primero; exports por entregables |
+| `payroll-exports.service.ts` (~3000 líneas) | MVP: 3 exports; honorarios PDF avanzado después |
 | UI monolítica (`*-content.tsx` 500–1400 líneas) | Portar pantalla a pantalla; no un big-bang |
 | WPF y API en mismas tablas | Transacciones y mismas reglas de stock/costo |
 | Tienda pública prematura | No mezclar B2C en Fase 8 |
@@ -365,11 +372,13 @@ Endpoints públicos de catálogo; auth cliente distinta de `WebUsers`. Fuera de 
 | API mínima (Fase 8) | Login + CRUD empleados/clientes/productos + CORS (✅) |
 | UI RRHH base (8b) | Directorio/bancos/docs portados desde erp-admin-web |
 | Compras (9b) | Proveedores + OC + recepción con costo promedio (✅) |
-| API planilla (10 MVP) | Motor + períodos + corridas + UI básica (✅); exports Excel/PDF en 10-export |
+| API planilla (10) | Motor + períodos + corridas + exports + aguinaldo/vacaciones/liquidaciones (✅) |
+| Fiscal / Dashboard | Libros IVA + KPIs (🔲 10d/11) |
 | Ecosistema web completo | Adminweb + (futuro) tienda pública |
 
 ---
 
 ## 12. Próximo paso inmediato
 
-**Fase 10-export:** portar `payroll-exports.service.ts` (Excel/PDF, boletas, Planilla Única AFP/ISSS) y luego Fase 10b (aguinaldo/vacaciones).
+**Fase 10d:** libros de IVA (compras/ventas) desde `PurchaseOrders` recibidas + `DteIssued`.  
+**Fase 11:** dashboard BI (ventas, inventario valorado, planilla, alertas).
