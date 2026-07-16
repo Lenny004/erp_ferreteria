@@ -9,8 +9,13 @@ public class Order
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>FK al <see cref="Employee"/> que registró la venta u orden.</summary>
     public Guid EmployeeId { get; set; }
+
+    /// <summary>FK opcional a la sesión de caja abierta al facturar.</summary>
     public Guid? CashSessionId { get; set; }
+
+    /// <summary>FK opcional al cliente facturado (CF/CCF).</summary>
     public Guid? CustomerId { get; set; }
 
     /// <summary>VENTA_CAJA | ORDEN_CONFECCION.</summary>

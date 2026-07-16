@@ -44,8 +44,13 @@ public class Employee
     public string? DependentsDescription { get; set; }
 
     // Puesto y contrato
+    /// <summary>FK a <see cref="Position"/>.</summary>
     public Guid? PositionId { get; set; }
+
+    /// <summary>FK a <see cref="Department"/> (puede diferir del departamento del cargo).</summary>
     public Guid? DepartmentId { get; set; }
+
+    /// <summary>FK al <see cref="Employee"/> supervisor directo.</summary>
     public Guid? DirectSupervisorId { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ContractEndDate { get; set; }

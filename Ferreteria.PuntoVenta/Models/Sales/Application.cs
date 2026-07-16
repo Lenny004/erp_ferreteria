@@ -9,6 +9,7 @@ public class Application
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>Código de tipo de aplicación (ej. VT-01, VT-02).</summary>
     [Required, MaxLength(10)]
     public string Code { get; set; } = string.Empty;
 

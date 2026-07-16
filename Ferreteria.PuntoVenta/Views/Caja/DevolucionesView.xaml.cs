@@ -3,8 +3,8 @@ using System.Windows.Controls;
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
 /// <summary>
-/// Pantalla placeholder de devoluciones / notas de crédito asociadas a Order.
-/// La lógica de dominio se completará en fases posteriores del POS.
+/// Vista pendiente: devoluciones y notas de crédito asociadas a <see cref="Models.Order"/>.
+/// Solo UI estática; la lógica de dominio se implementará en fases posteriores del POS.
 /// </summary>
 public partial class DevolucionesView : UserControl
 {

@@ -9,6 +9,7 @@ public class Position
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>FK a <see cref="Department"/>.</summary>
     public Guid DepartmentId { get; set; }
 
     [Required, MaxLength(100)]

@@ -15,6 +15,7 @@ public class MeasurementType
     [Required, MaxLength(50)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Etiqueta corta en UI al capturar cantidades (ej. m, und, kg).</summary>
     [Required, MaxLength(20)]
     public string UnitLabel { get; set; } = string.Empty;
 

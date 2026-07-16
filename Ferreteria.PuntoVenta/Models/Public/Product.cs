@@ -18,9 +18,16 @@ public class Product
     [Required, MaxLength(200)]
     public string Description { get; set; } = string.Empty;
 
+    /// <summary>FK a <see cref="Family"/>.</summary>
     public Guid FamilyId { get; set; }
+
+    /// <summary>FK opcional a <see cref="Subfamily"/> dentro de la familia.</summary>
     public Guid? SubfamilyId { get; set; }
+
+    /// <summary>FK a <see cref="MeasurementType"/> (unidad base de inventario).</summary>
     public Guid MeasurementTypeId { get; set; }
+
+    /// <summary>FK opcional al <see cref="Supplier"/> habitual.</summary>
     public Guid? SupplierId { get; set; }
 
     [Column(TypeName = "numeric(12,2)")]

@@ -3,8 +3,8 @@ using System.Windows.Controls;
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
 /// <summary>
-/// Pantalla placeholder de configuración de impresoras de tickets/facturas.
-/// Independiente de entidades de dominio; se cableará a impresión en fases posteriores.
+/// Vista pendiente: configuración de impresoras de tickets/facturas (<see cref="Models.Printer"/>).
+/// Solo UI estática; se cableará a <see cref="Services.ImpresionService"/> en fases posteriores.
 /// </summary>
 public partial class ImpresorasView : UserControl
 {

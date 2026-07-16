@@ -12,6 +12,7 @@ public class Department
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>FK opcional al departamento padre (jerarquía organizacional).</summary>
     public Guid? ParentId { get; set; }
 
     [MaxLength(300)]

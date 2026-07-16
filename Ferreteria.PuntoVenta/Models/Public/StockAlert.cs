@@ -9,6 +9,7 @@ public class StockAlert
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>FK al <see cref="Product"/> en alerta.</summary>
     public Guid ProductId { get; set; }
 
     [Column(TypeName = "numeric(12,3)")]

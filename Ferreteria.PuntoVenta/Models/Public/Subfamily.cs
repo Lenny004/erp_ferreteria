@@ -9,6 +9,7 @@ public class Subfamily
     [Key]
     public Guid Id { get; set; }
 
+    /// <summary>FK a <see cref="Family"/>.</summary>
     public Guid FamilyId { get; set; }
 
     [Required, MaxLength(10)]

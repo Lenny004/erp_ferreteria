@@ -1,5 +1,5 @@
-// Herramienta de smoke test del POS: verifica conectividad EF, seed mínimo y que el PIN demo
-// del cajero coincida con BCrypt (Employee.PinHash). No forma parte del flujo de UI.
+// Ferreteria.Smoke — smoke test del POS (conectividad EF, seed mínimo, PIN demo BCrypt).
+// No forma parte del flujo de UI. Uso: dotnet run --project tools/Ferreteria.Smoke
 // Seguridad: nunca imprimir el PIN en claro; solo el resultado booleano de la verificación.
 using System.Text.Json;
 using Ferreteria.PuntoVenta.Data;

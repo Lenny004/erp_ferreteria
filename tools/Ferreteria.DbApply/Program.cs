@@ -1,6 +1,6 @@
-// Aplicador legacy de schema/migraciones SQL contra PostgreSQL del POS.
-// Preferir Prisma (ferreteria_backend) como fuente de verdad; este tool solo aplica
-// Squema.sql + migraciones si se fuerza --force-legacy-sql o no existe schema.prisma.
+// Ferreteria.DbApply — aplica schema/migraciones SQL legacy contra PostgreSQL del POS.
+// Preferir Prisma (ferreteria_backend) como fuente de verdad del esquema.
+// Uso: dotnet run --project tools/Ferreteria.DbApply [--connection "..."] [--force-legacy-sql]
 using System.Text.Json;
 using Npgsql;
 

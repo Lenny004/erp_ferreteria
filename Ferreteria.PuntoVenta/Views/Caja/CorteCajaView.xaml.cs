@@ -3,8 +3,8 @@ using System.Windows.Controls;
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
 /// <summary>
-/// Pantalla placeholder de corte de caja (CashSession): apertura/cierre y arqueo.
-/// La lógica de dominio se completará en fases posteriores del POS.
+/// Vista pendiente: corte de caja (<see cref="Models.CashSession"/>) — apertura, cierre y arqueo.
+/// Solo UI estática; la lógica de dominio se implementará en fases posteriores del POS.
 /// </summary>
 public partial class CorteCajaView : UserControl
 {
