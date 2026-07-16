@@ -18,8 +18,8 @@ namespace Ferreteria.PuntoVenta.Views.PIN;
 public partial class PinWindow : Window
 {
     private const int PinLength = 4;
-    private static readonly SolidColorBrush ColorVacio = new(Color.FromRgb(0x5A, 0x30, 0x38));
-    private static readonly SolidColorBrush ColorRelleno = new(Color.FromRgb(0xE6, 0x0A, 0x2E));
+    private static readonly SolidColorBrush ColorVacio = new(Color.FromRgb(0x4A, 0x2A, 0x2E));
+    private static readonly SolidColorBrush ColorRelleno = new(Color.FromRgb(0xC2, 0x3D, 0x3D));
 
     private readonly PinAuthService _pinAuth;
     private readonly IServiceProvider _services;

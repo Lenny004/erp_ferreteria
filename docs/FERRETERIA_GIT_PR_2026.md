@@ -27,8 +27,9 @@
 | Momento | Acción |
 |---------|--------|
 | Terminaste una tarea acotada | `git add` → `git commit` → `git push` |
-| Cambio solo local / experimental | Puedes commitear en rama sin push hasta que esté listo |
-| Trabajo con agente (Cursor) | Pedir explícitamente *"haz commit y push"* si quieres que el agente lo ejecute |
+| Archivos nuevos o bloque grande de código | Commit + push a la rama actual (no acumular solo en local) |
+| Cambio solo local / experimental | Puedes pedir al agente que **no** suba hasta que esté listo |
+| Trabajo con agente (Cursor) | El agente **debe** commit + push de forma frecuente (regla `.cursor/rules/commit-push-frecuente.mdc`); di *"no subas"* si no quieres |
 | No está claro si commitear | Preguntar antes |
 
 **Repos del monorepo / workspace:**

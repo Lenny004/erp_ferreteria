@@ -20,7 +20,7 @@ description: >-
 
 1. **Identificar la tarea** (implementar, commitear, PR, revisar).
 2. **Abrir el documento correspondiente** y seguir sus secciones.
-3. **Commits / PR:** ejecutar los comandos git indicados en FERRETERIA-DEV-STD-002; commit solo si el usuario lo pide explícitamente.
+3. **Commits / PR:** ejecutar los comandos git indicados en FERRETERIA-DEV-STD-002. Tras archivos nuevos o cambios sustanciales, hacer **commit + push** a la rama actual (regla `commit-push-frecuente`); omitir solo si el usuario dice que no suba.
 4. **Revisión:** combinar checklist de dominio (STD-002) con Pre-Commit y estilo C# (STD-001).
 5. **Cambios de código:** cumplir nomenclatura, async, EF y guard clauses del STD-001; cambios mínimos al alcance pedido.
 

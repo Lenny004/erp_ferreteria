@@ -5,35 +5,35 @@
 
     <!-- ════════════════════════════════════════════
          PALETA OFICIAL FERRETERIA (DARK)
-         text #fedce5 | background #0e0103
-         primary #e60a2e | secondary #894c06 | accent #ab8507
+         text #f6e4e6 | background #0c0405
+         primary #c23d3d | secondary #705d23 | accent #878c2c
     ════════════════════════════════════════════ -->
 
     <!-- Primary (rojo corporativo) -->
-    <SolidColorBrush x:Key="AppRojo" Color="#E60A2E"/>
-    <SolidColorBrush x:Key="AppRojoDark" Color="#A00820"/>
-    <SolidColorBrush x:Key="AppRojoHover" Color="#F5193E"/>
+    <SolidColorBrush x:Key="AppRojo" Color="#C23D3D"/>
+    <SolidColorBrush x:Key="AppRojoDark" Color="#8B2C2C"/>
+    <SolidColorBrush x:Key="AppRojoHover" Color="#D55A5A"/>
 
     <!-- Neutros -->
-    <SolidColorBrush x:Key="AppNegro" Color="#0E0103"/>
-    <SolidColorBrush x:Key="AppBlanco" Color="#FEDCE5"/>
-    <SolidColorBrush x:Key="AppGris" Color="#894C06"/>
-    <SolidColorBrush x:Key="AppGrisClaro" Color="#AB8507"/>
-    <SolidColorBrush x:Key="AppGrisOscuro" Color="#5A3038"/>
+    <SolidColorBrush x:Key="AppNegro" Color="#0C0405"/>
+    <SolidColorBrush x:Key="AppBlanco" Color="#F6E4E6"/>
+    <SolidColorBrush x:Key="AppGris" Color="#705D23"/>
+    <SolidColorBrush x:Key="AppGrisClaro" Color="#878C2C"/>
+    <SolidColorBrush x:Key="AppGrisOscuro" Color="#4A2A2E"/>
 
     <!-- Estados -->
     <SolidColorBrush x:Key="AppSuccess" Color="#81c784"/>
-    <SolidColorBrush x:Key="AppWarning" Color="#AB8507"/>
-    <SolidColorBrush x:Key="AppError" Color="#E60A2E"/>
-    <SolidColorBrush x:Key="AppInfo" Color="#894C06"/>
-    <SolidColorBrush x:Key="AppSecondary" Color="#894C06"/>
-    <SolidColorBrush x:Key="AppAccent" Color="#AB8507"/>
+    <SolidColorBrush x:Key="AppWarning" Color="#878C2C"/>
+    <SolidColorBrush x:Key="AppError" Color="#C23D3D"/>
+    <SolidColorBrush x:Key="AppInfo" Color="#705D23"/>
+    <SolidColorBrush x:Key="AppSecondary" Color="#705D23"/>
+    <SolidColorBrush x:Key="AppAccent" Color="#878C2C"/>
 
     <!-- Superficies (claves históricas AppAzul* → fondo rojo oscuro) -->
-    <SolidColorBrush x:Key="AppAzulOscuro" Color="#0E0103"/>
-    <SolidColorBrush x:Key="AppAzulMedio" Color="#1C080D"/>
-    <SolidColorBrush x:Key="AppAzulClaro" Color="#2A1016"/>
-    <SolidColorBrush x:Key="AppAzulFilaAlt" Color="#160507"/>
+    <SolidColorBrush x:Key="AppAzulOscuro" Color="#0C0405"/>
+    <SolidColorBrush x:Key="AppAzulMedio" Color="#1A090B"/>
+    <SolidColorBrush x:Key="AppAzulClaro" Color="#2A1215"/>
+    <SolidColorBrush x:Key="AppAzulFilaAlt" Color="#140608"/>
 
     <!-- ════════════════════════════════════════════
          TIPOGRAFÍA (OPTIMIZADA - 4 TAMAÑOS ESENCIALES)
@@ -111,19 +111,19 @@
     ════════════════════════════════════════════ -->
 
     <LinearGradientBrush x:Key="FondoVentana" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0E0103" Offset="0"/>
-        <GradientStop Color="#1A0508" Offset="0.5"/>
-        <GradientStop Color="#2A1016" Offset="1"/>
+        <GradientStop Color="#0C0405" Offset="0"/>
+        <GradientStop Color="#1A090B" Offset="0.5"/>
+        <GradientStop Color="#2A1215" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="GradienteBoton" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#E60A2E" Offset="0"/>
-        <GradientStop Color="#A00820" Offset="1"/>
+        <GradientStop Color="#C23D3D" Offset="0"/>
+        <GradientStop Color="#8B2C2C" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="GradienteBotonHover" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#F5193E" Offset="0"/>
-        <GradientStop Color="#E60A2E" Offset="1"/>
+        <GradientStop Color="#D55A5A" Offset="0"/>
+        <GradientStop Color="#C23D3D" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- ════════════════════════════════════════════
