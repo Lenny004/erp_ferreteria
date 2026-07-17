@@ -1,5 +1,7 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
