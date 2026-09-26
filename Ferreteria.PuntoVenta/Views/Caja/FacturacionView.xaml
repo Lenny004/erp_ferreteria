@@ -270,6 +270,16 @@
                         <Button
                             Style="{StaticResource AppSecondaryWideButtonStyle}"
                             Margin="0,10,0,0"
+                            Click="OnPrintLastClick">
+                            <TextBlock
+                                Text="IMPRIMIR ÚLTIMO TICKET"
+                                Foreground="{StaticResource AppBlanco}"
+                                FontWeight="Bold"
+                                TextWrapping="Wrap" />
+                        </Button>
+                        <Button
+                            Style="{StaticResource AppSecondaryWideButtonStyle}"
+                            Margin="0,10,0,0"
                             Click="OnLimpiarClick">
                             <TextBlock
                                 Text="LIMPIAR"

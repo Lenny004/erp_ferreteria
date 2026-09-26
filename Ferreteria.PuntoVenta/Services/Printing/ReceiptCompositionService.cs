@@ -4,6 +4,7 @@ using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
@@ -13,8 +14,8 @@ namespace Ferreteria.PuntoVenta.Services.Printing;
 /// </summary>
 public interface IReceiptCompositionService
 {
-    /// <summary>Arma el ticket del ultimo DTE emitido para una orden.</summary>
-    /// <returns>El documento imprimible o null si la orden no tiene DTE.</returns>
+    /// <summary>Arma el ticket DTE o el comprobante interno de una orden.</summary>
+    /// <returns>El documento imprimible o null si la orden no existe.</returns>
     Task<ReceiptDocument?> ComposeForOrderAsync(Guid orderId, CancellationToken cancellationToken = default);
 }
 
@@ -23,12 +24,21 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IDteService _dteService;
+    private readonly PrintingOptions _printingOptions;
+    private readonly ReceiptDocumentFactory _documentFactory;
 
     /// <summary>Crea el servicio de composicion de tickets.</summary>
-    public ReceiptCompositionService(IServiceScopeFactory scopeFactory, IDteService dteService)
+    public ReceiptCompositionService(
+        IServiceScopeFactory scopeFactory,
+        IDteService dteService,
+        IOptions<PrintingOptions> printingOptions,
+        ReceiptDocumentFactory documentFactory)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _dteService = dteService ?? throw new ArgumentNullException(nameof(dteService));
+        ArgumentNullException.ThrowIfNull(printingOptions);
+        _printingOptions = printingOptions.Value;
+        _documentFactory = documentFactory ?? throw new ArgumentNullException(nameof(documentFactory));
     }
 
     /// <inheritdoc />
@@ -59,11 +69,6 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             .OrderByDescending(d => d.IssuedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (dte is null)
-        {
-            return null;
-        }
-
         var emisor = await dbContext.DteConfigs
             .AsNoTracking()
             .Where(config => config.IsActive)
@@ -85,9 +90,17 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             .FirstOrDefault() ?? SalesDomainConstants.PaymentMethods.Cash;
 
         var amountPaid = order.Payments.Sum(payment => payment.Amount);
-        if (amountPaid <= 0)
+
+        var customerName = order.Customer?.Name ?? SalesDomainConstants.Customers.DefaultWalkInDisplayName;
+        var customerDocument = order.Customer?.Nit ?? order.Customer?.Dui;
+
+        if (dte is null)
         {
-            amountPaid = order.Total;
+            // A VERIFICAR con contador / normativa MH: validez y leyenda del comprobante interno.
+            return _documentFactory.Create(
+                new ReceiptSaleData(order.Id, BuildEmployeeName(order.Employee), customerName, customerDocument,
+                    items, order.Subtotal, order.TaxAmount, order.Total, paymentMethod, amountPaid, order.CreatedAt.ToLocalTime()),
+                MapIssuer(emisor), null, _printingOptions.InternalReceiptFooter);
         }
 
         var codigoGeneracion = dte.GenerationCode.ToString().ToUpperInvariant();
@@ -95,41 +108,13 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
         var consultaUrl = _dteService.BuildConsultaUrl(dte.Ambiente, codigoGeneracion, issuedLocal);
         var isContingency = dte.MhStatus == DteConstants.EstadosMh.Contingencia;
 
-        var customerName = order.Customer?.Name ?? SalesDomainConstants.Customers.DefaultWalkInDisplayName;
-        var customerDocument = order.Customer?.Nit ?? order.Customer?.Dui;
-
-        return new ReceiptDocument(
-            BusinessName: emisor?.EmisorName ?? "FERRETERIA",
-            BusinessTradeName: emisor?.EmisorTradeName,
-            BusinessNit: emisor?.EmisorNit ?? "-",
-            BusinessNrc: emisor?.EmisorNrc ?? "-",
-            BusinessAddress: emisor is null
-                ? "San Salvador, El Salvador"
-                : $"{emisor.AddressLine}, {emisor.Municipality}, {emisor.Department}",
-            BusinessPhone: emisor?.Phone,
-            DteTypeName: MapDteTypeName(dte.DteType),
-            DteTypeCode: dte.DteType,
-            NumeroControl: dte.ControlNumber,
-            CodigoGeneracion: codigoGeneracion,
-            SelloRecibido: dte.MhSello,
-            Ambiente: dte.Ambiente,
-            IssuedAt: issuedLocal,
-            CashierName: BuildEmployeeName(order.Employee),
-            CustomerName: customerName,
-            CustomerDocument: customerDocument,
-            Items: items,
-            Subtotal: order.Subtotal,
-            Tax: dte.TotalIva,
-            Total: order.Total,
-            TotalInWords: SpanishNumberToWords.Convert(order.Total),
-            PaymentMethod: paymentMethod,
-            AmountPaid: amountPaid,
-            Change: Math.Max(0m, amountPaid - order.Total),
-            ConsultaUrl: consultaUrl,
-            IsContingency: isContingency,
-            FooterNote: isContingency
-                ? "Documento pendiente de sello del Ministerio de Hacienda."
-                : null);
+        return _documentFactory.Create(
+            new ReceiptSaleData(order.Id, BuildEmployeeName(order.Employee), customerName, customerDocument,
+                items, order.Subtotal, order.TaxAmount, order.Total, paymentMethod, amountPaid, issuedLocal),
+            MapIssuer(emisor),
+            new ReceiptDteData(dte.DteType, MapDteTypeName(dte.DteType), dte.ControlNumber,
+                codigoGeneracion, dte.MhSello, dte.Ambiente, consultaUrl, isContingency, dte.TotalIva),
+            _printingOptions.InternalReceiptFooter);
     }
 
     private static string MapDteTypeName(string dteType)
@@ -141,6 +126,15 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             DteConstants.TiposDte.NotaCredito => "NOTA DE CREDITO",
             _ => "DOCUMENTO TRIBUTARIO ELECTRONICO"
         };
+    }
+
+    private static ReceiptIssuerData MapIssuer(DteConfig? emisor)
+    {
+        // A VERIFICAR con contador / normativa MH: valores mostrados cuando falta configuración activa.
+        return emisor is null
+            ? new ReceiptIssuerData("EMISOR A VERIFICAR", null, "-", "-", "DIRECCIÓN A VERIFICAR", null)
+            : new ReceiptIssuerData(emisor.EmisorName, emisor.EmisorTradeName, emisor.EmisorNit,
+                emisor.EmisorNrc, $"{emisor.AddressLine}, {emisor.Municipality}, {emisor.Department}", emisor.Phone);
     }
 
     private static string BuildEmployeeName(Employee? employee)

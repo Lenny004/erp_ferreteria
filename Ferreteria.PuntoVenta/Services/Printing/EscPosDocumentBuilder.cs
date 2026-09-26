@@ -10,6 +10,7 @@ namespace Ferreteria.PuntoVenta.Services.Printing;
 internal sealed class EscPosDocumentBuilder
 {
     private readonly List<byte> _buffer = new();
+    private readonly List<string> _plainLines = new();
     private readonly Encoding _encoding;
     private readonly int _columns;
 
@@ -51,6 +52,16 @@ internal sealed class EscPosDocumentBuilder
     {
         _buffer.AddRange(EscPosCommands.AlignCenter);
         WriteTextLine(text);
+        if (_plainLines.Count > 0)
+        {
+            string line = _plainLines[^1];
+            if (line.Length > _columns)
+            {
+                line = line[.._columns];
+            }
+
+            _plainLines[^1] = line.PadLeft((_columns + line.Length) / 2).PadRight(_columns);
+        }
         _buffer.AddRange(EscPosCommands.AlignLeft);
         return this;
     }
@@ -121,6 +132,11 @@ internal sealed class EscPosDocumentBuilder
 
         left ??= string.Empty;
         right ??= string.Empty;
+        if (right.Length >= _columns)
+        {
+            right = right[.._columns];
+            left = string.Empty;
+        }
 
         // La columna derecha manda; si no cabe, se recorta la izquierda.
         int availableForLeft = _columns - right.Length - 1;
@@ -140,11 +156,7 @@ internal sealed class EscPosDocumentBuilder
             padding = 1;
         }
 
-        string line = string.Concat(left, new string(' ', padding), right);
-        if (line.Length > _columns)
-        {
-            line = line.Substring(0, _columns);
-        }
+        string line = string.Concat(left, new string(' ', padding), right).PadRight(_columns)[.._columns];
 
         if (emphasized)
         {
@@ -174,6 +186,7 @@ internal sealed class EscPosDocumentBuilder
         _buffer.AddRange(EscPosCommands.AlignCenter);
         _buffer.AddRange(EscPosCommands.BuildQr(data, moduleSize));
         _buffer.Add(EscPosCommands.LineFeed);
+        _plainLines.Add($"[QR: {data}]");
         _buffer.AddRange(EscPosCommands.AlignLeft);
         return this;
     }
@@ -197,6 +210,7 @@ internal sealed class EscPosDocumentBuilder
     public EscPosDocumentBuilder Cut()
     {
         _buffer.AddRange(EscPosCommands.PartialCutWithFeed(80));
+        _plainLines.Add("[CORTE]");
         return this;
     }
 
@@ -209,10 +223,19 @@ internal sealed class EscPosDocumentBuilder
         return _buffer.ToArray();
     }
 
+    /// <summary>Devuelve el espejo de texto plano generado junto con el documento ESC/POS.</summary>
+    /// <returns>Texto con las mismas líneas visibles, marcas de QR y corte.</returns>
+    public string BuildPlainText()
+    {
+        return string.Join(Environment.NewLine, _plainLines) + Environment.NewLine;
+    }
+
     private void WriteTextLine(string text)
     {
-        _buffer.AddRange(_encoding.GetBytes(text ?? string.Empty));
+        string safeText = text ?? string.Empty;
+        _buffer.AddRange(_encoding.GetBytes(safeText));
         _buffer.Add(EscPosCommands.LineFeed);
+        _plainLines.Add(safeText);
     }
 
     private static IEnumerable<string> WrapText(string text, int width)

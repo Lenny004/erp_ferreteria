@@ -5,20 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ferreteria.PuntoVenta.Services;
 
-/// <summary>Datos para crear o actualizar una impresora del POS.</summary>
-/// <param name="Name">Nombre de la impresora (spooler Windows o etiqueta).</param>
-/// <param name="ConnectionType">USB, RED o BLUETOOTH.</param>
-/// <param name="IpAddress">IP para impresoras de red.</param>
-/// <param name="NetworkPort">Puerto TCP (por defecto 9100 en red).</param>
-/// <param name="PaperWidth">Ancho de papel en mm (58 u 80).</param>
-/// <param name="IsDefault">Marca la impresora como predeterminada.</param>
-public sealed record PrinterInput(
-    string Name,
-    string ConnectionType,
-    string? IpAddress,
-    int? NetworkPort,
-    short PaperWidth,
-    bool IsDefault);
 
 /// <summary>Gestion de impresoras configuradas en <c>system.Printers</c>.</summary>
 public interface IPrinterConfigService
@@ -40,11 +26,18 @@ public interface IPrinterConfigService
 public sealed class PrinterConfigService : IPrinterConfigService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IAuditService _auditService;
+    private readonly ICurrentSessionService _currentSession;
 
     /// <summary>Crea el servicio de impresoras.</summary>
-    public PrinterConfigService(IServiceScopeFactory scopeFactory)
+    public PrinterConfigService(
+        IServiceScopeFactory scopeFactory,
+        IAuditService auditService,
+        ICurrentSessionService currentSession)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
     }
 
     /// <inheritdoc />
@@ -77,17 +70,24 @@ public sealed class PrinterConfigService : IPrinterConfigService
     public async Task<Printer> SaveAsync(PrinterInput input, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
-
-        if (string.IsNullOrWhiteSpace(input.Name))
-        {
-            throw new ArgumentException("El nombre de la impresora es obligatorio.", nameof(input));
-        }
+        PrinterConfigurationRules.Validate(input);
+        var connectionType = PrinterConfigurationRules.NormalizeConnectionType(input.ConnectionType);
 
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
         var printer = await dbContext.Printers
             .FirstOrDefaultAsync(p => p.Name == input.Name, cancellationToken);
+
+        var oldData = printer is null ? null : new
+        {
+            printer.Name,
+            printer.ConnectionType,
+            printer.IpAddress,
+            printer.NetworkPort,
+            printer.PaperWidth,
+            printer.IsDefault
+        };
 
         if (printer is null)
         {
@@ -100,7 +100,7 @@ public sealed class PrinterConfigService : IPrinterConfigService
             dbContext.Printers.Add(printer);
         }
 
-        printer.ConnectionType = input.ConnectionType.Trim().ToUpperInvariant();
+        printer.ConnectionType = connectionType;
         printer.IpAddress = string.IsNullOrWhiteSpace(input.IpAddress) ? null : input.IpAddress.Trim();
         printer.NetworkPort = input.NetworkPort;
         printer.PaperWidth = input.PaperWidth;
@@ -114,6 +114,14 @@ public sealed class PrinterConfigService : IPrinterConfigService
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await _auditService.RecordChangeAsync(
+            "CONFIGURACION_IMPRESORA",
+            "system.Printers",
+            printer.Id.ToString(),
+            oldData,
+            new { printer.Name, printer.ConnectionType, printer.IpAddress, printer.NetworkPort, printer.PaperWidth, printer.IsDefault },
+            _currentSession.CurrentEmployee?.Id,
+            cancellationToken);
         return printer;
     }
 
@@ -131,11 +139,25 @@ public sealed class PrinterConfigService : IPrinterConfigService
             throw new InvalidOperationException("Impresora no encontrada.");
         }
 
+        var previousDefault = await dbContext.Printers
+            .AsNoTracking()
+            .Where(p => p.IsActive && p.IsDefault && p.Id != printerId)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
         await ClearDefaultsAsync(dbContext, printerId, cancellationToken);
         printer.IsDefault = true;
         printer.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await _auditService.RecordChangeAsync(
+            "IMPRESORA_PREDETERMINADA",
+            "system.Printers",
+            printer.Id.ToString(),
+            previousDefault,
+            new { printer.IsDefault },
+            _currentSession.CurrentEmployee?.Id,
+            cancellationToken);
     }
 
     private static async Task ClearDefaultsAsync(

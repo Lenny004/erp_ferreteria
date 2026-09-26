@@ -6,7 +6,7 @@ namespace Ferreteria.PuntoVenta.Services.Printing;
 /// Convierte un <see cref="ReceiptDocument"/> en bytes ESC/POS siguiendo el
 /// layout de ticket DTE 2026 para El Salvador.
 /// </summary>
-internal static class TicketReceiptRenderer
+public static class TicketReceiptRenderer
 {
     private static readonly CultureInfo Money = CultureInfo.InvariantCulture;
 
@@ -21,7 +21,24 @@ internal static class TicketReceiptRenderer
         ArgumentNullException.ThrowIfNull(document);
 
         var builder = new EscPosDocumentBuilder(paperWidthMm);
+        RenderLayout(builder, document);
+        return builder.Build();
+    }
 
+    /// <summary>Renderiza el texto plano usando exactamente la misma secuencia de pasos del ESC/POS.</summary>
+    /// <param name="document">Documento que se desea representar.</param>
+    /// <param name="paperWidthMm">Ancho del papel, 58 u 80 mm.</param>
+    /// <returns>Texto plano con centrado, QR y corte reflejados.</returns>
+    public static string RenderPlainText(ReceiptDocument document, int paperWidthMm)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var builder = new EscPosDocumentBuilder(paperWidthMm);
+        RenderLayout(builder, document);
+        return builder.BuildPlainText();
+    }
+
+    private static void RenderLayout(EscPosDocumentBuilder builder, ReceiptDocument document)
+    {
         RenderBusinessHeader(builder, document);
         RenderDocumentTitle(builder, document);
         RenderFiscalData(builder, document);
@@ -29,9 +46,7 @@ internal static class TicketReceiptRenderer
         RenderTotals(builder, document);
         RenderQrBlock(builder, document);
         RenderLegalFooter(builder, document);
-
         builder.Feed(2).Cut();
-        return builder.Build();
     }
 
     private static void RenderBusinessHeader(EscPosDocumentBuilder builder, ReceiptDocument document)
@@ -64,7 +79,9 @@ internal static class TicketReceiptRenderer
     {
         builder.AppendSeparator();
 
-        string pruebaTag = document.Ambiente == "00" ? "  *PRUEBA*" : string.Empty;
+        string pruebaTag = document.DteTypeCode != ReceiptDocumentTypes.InternalReceipt && document.Ambiente == "00"
+            ? "  *PRUEBA*"
+            : string.Empty;
         builder.AppendCenter($"{document.DteTypeName}{pruebaTag}");
     }
 
@@ -72,16 +89,20 @@ internal static class TicketReceiptRenderer
     {
         builder.AppendSeparator();
 
-        builder.AppendLeft("Num. Control:");
-        builder.AppendLeft(document.NumeroControl);
-        builder.AppendLeft("Cod. Generacion:");
-        builder.AppendLeft(document.CodigoGeneracion);
+        // El comprobante interno no lleva numero de control, codigo de generacion ni sello.
+        if (document.DteTypeCode != ReceiptDocumentTypes.InternalReceipt)
+        {
+            builder.AppendLeft("Num. Control:");
+            builder.AppendWrapped(document.NumeroControl);
+            builder.AppendLeft("Cod. Generacion:");
+            builder.AppendWrapped(document.CodigoGeneracion);
 
-        string sello = string.IsNullOrWhiteSpace(document.SelloRecibido)
-            ? "PENDIENTE / CONTINGENCIA"
-            : document.SelloRecibido;
-        builder.AppendLeft("Sello:");
-        builder.AppendLeft(sello);
+            string sello = string.IsNullOrWhiteSpace(document.SelloRecibido)
+                ? "PENDIENTE / CONTINGENCIA"
+                : document.SelloRecibido;
+            builder.AppendLeft("Sello:");
+            builder.AppendWrapped(sello);
+        }
 
         builder.AppendLeft($"Fecha: {document.IssuedAt.ToString("dd/MM/yyyy HH:mm:ss", Money)}");
         builder.AppendLeft($"Cajero: {document.CashierName}");
@@ -114,7 +135,8 @@ internal static class TicketReceiptRenderer
         builder.AppendSeparator();
 
         builder.AppendColumns("Subtotal:", FormatMoney(document.Subtotal));
-        builder.AppendColumns("IVA (13%):", FormatMoney(document.Tax));
+        // A VERIFICAR con contador / normativa MH: porcentaje y leyenda fiscal del IVA.
+        builder.AppendColumns("IVA:", FormatMoney(document.Tax));
         builder.AppendColumns("TOTAL:", FormatMoney(document.Total), emphasized: true);
 
         builder.AppendLeft("Son:");
@@ -128,6 +150,11 @@ internal static class TicketReceiptRenderer
 
     private static void RenderQrBlock(EscPosDocumentBuilder builder, ReceiptDocument document)
     {
+        if (document.DteTypeCode == ReceiptDocumentTypes.InternalReceipt)
+        {
+            return;
+        }
+
         builder.AppendSeparator();
         builder.AppendCenter("Consulta este DTE en linea:");
 
@@ -147,7 +174,9 @@ internal static class TicketReceiptRenderer
     private static void RenderLegalFooter(EscPosDocumentBuilder builder, ReceiptDocument document)
     {
         builder.AppendSeparator();
-        builder.AppendCenter("Documento Tributario Electronico");
+        builder.AppendCenter(document.DteTypeCode == ReceiptDocumentTypes.InternalReceipt
+            ? "Comprobante interno"
+            : "Documento Tributario Electronico");
 
         if (document.IsContingency)
         {

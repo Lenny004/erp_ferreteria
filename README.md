@@ -601,7 +601,7 @@ Ferreteria/
 | Inventario (consulta + descuento) | `InventoryService` | ✅ Implementado | 2 |
 | Órdenes y ventas | `OrderService` | ✅ Implementado | 3 |
 | DTE | `DTEService` | 🔲 Vacío | 4 |
-| Impresión | `ImpresionService` | 🔲 Vacío | 5 |
+| Impresión | `ReceiptPrintService`, `SaleReceiptPrinter` | Implementado (sin prueba con impresora física) | 5 |
 | Corte de caja | — | 🔲 Pendiente | 6 |
 | Configuración | `ConfigService` | Parcial | — |
 
