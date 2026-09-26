@@ -1,0 +1,71 @@
+---
+alwaysApply: true
+---
+
+# Reglas del Proyecto Ferreteria
+
+Todo cambio de código en este repositorio **debe seguir** las skills del proyecto:
+
+## Skills obligatorias
+
+1. **principios-calidad** (`.cursor/skills/principios-calidad/SKILL.md`)
+   - Aplica los 100 criterios de calidad en arquitectura, validación, seguridad, transacciones, recuperación, verificación y telemetría.
+   - Invocar al diseñar, escribir, revisar o auditar cualquier código.
+
+2. **documentacion-codigo** (`.cursor/skills/documentacion-codigo/SKILL.md`)
+   - Aplica el estándar oficial de C# XML comments (`/// <summary>`, `<param>`, `<returns>`, `<exception>`, `<remarks>`).
+   - Invocar al documentar código C#, XAML o SQL del proyecto.
+
+## Verificación en Pull Requests
+
+Al crear o actualizar un PR, **reportar en la descripción** cómo se cumplieron estas reglas:
+
+### Checklist de calidad
+
+- [ ] **Arquitectura**: SRP, DIP, bajo acoplamiento (criterios 1-15)
+- [ ] **Validación**: Zero Trust, tipo/longitud/rango, whitelist (criterios 16-30)
+- [ ] **Seguridad**: Autenticación robusta, RBAC, hash bcrypt, prevención SQL injection (criterios 31-45)
+- [ ] **Transacciones**: Atomicidad, rollback controlado, aislamiento EF Core (criterios 46-60)
+- [ ] **Recuperación**: Fail secure, circuit breaker para DTE MH, timeout controlado (criterios 61-75)
+- [ ] **Verificación**: Integridad, postcondiciones, completitud (criterios 76-90)
+- [ ] **Telemetría**: Correlation ID, auditoría de operaciones críticas, logs sin datos sensibles (criterios 91-100)
+
+### Checklist de documentación
+
+- [ ] **XML comments**: Clases, métodos, propiedades con `<summary>`, `<param>`, `<returns>`, `<exception>`, `<remarks>` según estándar Microsoft
+- [ ] **Transacciones**: Mencionadas en `<remarks>` cuando el método ejecuta dentro de una transacción EF Core explícita
+- [ ] **Comentarios inline**: Solo en lógica no evidente, explican el **por qué**, no el **qué**
+- [ ] **Idioma**: Español en todos los comentarios
+- [ ] **CS1591**: Sin nuevas advertencias de miembros públicos sin documentación
+
+### Formato del reporte en PR
+
+```markdown
+## Cumplimiento de reglas del proyecto
+
+### Principios de calidad aplicados
+- **Familia 1 (Arquitectura)**: [describir brevemente]
+- **Familia 2 (Validación)**: [describir brevemente]
+- **Familia 3 (Seguridad)**: [describir brevemente si aplica]
+- **Familia 4 (Transacciones)**: [describir brevemente si aplica]
+- **Familia 5 (Recuperación)**: [describir brevemente si aplica]
+- **Familia 6 (Verificación)**: [describir brevemente]
+- **Familia 7 (Telemetría)**: [describir brevemente si aplica]
+
+### Documentación agregada
+- Archivos documentados: [listar archivos .cs]
+- XML comments: [resumen de clases/métodos documentados]
+- Advertencias CS1591 resueltas: [número]
+```
+
+## Excepciones
+
+- Archivos generados automáticos (migraciones EF Core `*.Designer.cs`, `Migrations/*.cs`): no requieren documentación XML.
+- Archivos XAML: no requieren documentación XML en el archivo XAML (solo en code-behind `.xaml.cs` si hay lógica no trivial).
+- Archivos de configuración (`appsettings.json`, `.csproj`): no aplican estas reglas.
+
+---
+
+**Responsabilidad del desarrollador/agente:**
+
+Antes de solicitar review o marcar un PR como listo, verificar que se cumplen **ambas skills** y documentarlo en la descripción del PR.
