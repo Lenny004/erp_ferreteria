@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Ferreteria.PuntoVenta/Ferreteria.PuntoVenta.slnx
+      - run: dotnet build Ferreteria.PuntoVenta/Ferreteria.PuntoVenta.slnx -c Release --no-restore
+      - run: dotnet test Ferreteria.PuntoVenta/Ferreteria.PuntoVenta.slnx -c Release --no-build
+      - run: dotnet list Ferreteria.PuntoVenta/Ferreteria.PuntoVenta.slnx package --vulnerable --include-transitive

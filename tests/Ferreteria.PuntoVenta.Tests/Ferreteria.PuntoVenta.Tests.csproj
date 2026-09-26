@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2"><PrivateAssets>all</PrivateAssets></PackageReference>
+  </ItemGroup>
+  <!--
+    Decisión: net10.0 + archivos enlazados (Compile Include/Link) en lugar de referenciar el proyecto WPF.
+    - Solo se enlaza la lógica pura de impresión (formato, ESC/POS, fábrica de comprobantes, validación y transporte TCP),
+      sin dependencias de WPF, EF Core, PostgreSQL ni del registro de Windows.
+    - Así los tests corren en Windows (CI windows-latest) y también en Linux/macOS, y no requieren impresora ni BD.
+    - Los servicios con EF (ReceiptCompositionService, PrinterConfigService) y la UI quedan fuera; se prueban manualmente.
+  -->
+  <ItemGroup>
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptContracts.cs" Link="Printing/ReceiptContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosCommands.cs" Link="Printing/EscPosCommands.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosDocumentBuilder.cs" Link="Printing/EscPosDocumentBuilder.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/TicketReceiptRenderer.cs" Link="Printing/TicketReceiptRenderer.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/NetworkPrinterTransport.cs" Link="Printing/NetworkPrinterTransport.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/PrinterException.cs" Link="Printing/PrinterException.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptDocumentFactory.cs" Link="Printing/ReceiptDocumentFactory.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/SpanishNumberToWords.cs" Link="Dte/SpanishNumberToWords.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PrinterConfigurationContracts.cs" Link="Printing/PrinterConfigurationContracts.cs" />
+  </ItemGroup>
+</Project>

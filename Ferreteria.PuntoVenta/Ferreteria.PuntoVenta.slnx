@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="Ferreteria.PuntoVenta.csproj" />
+  <Project Path="../tools/Ferreteria.TicketPreview/Ferreteria.TicketPreview.csproj" />
+  <Project Path="../tests/Ferreteria.PuntoVenta.Tests/Ferreteria.PuntoVenta.Tests.csproj" />
 </Solution>
