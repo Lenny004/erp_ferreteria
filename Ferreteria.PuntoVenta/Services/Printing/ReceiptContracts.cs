@@ -1,5 +1,15 @@
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
+/// <summary>Tipos de documento usados por la impresión de comprobantes.</summary>
+public static class ReceiptDocumentTypes
+{
+    /// <summary>Código del comprobante interno sin DTE.</summary>
+    public const string InternalReceipt = "INTERNO";
+
+    /// <summary>Título impreso en el comprobante interno (sin DTE).</summary>
+    public const string InternalReceiptTitle = "COMPROBANTE INTERNO";
+}
+
 /// <summary>
 /// Representa una línea de detalle del ticket (un producto o servicio vendido).
 /// </summary>
@@ -72,7 +82,11 @@ public sealed record ReceiptDocument(
     decimal Change,
     string ConsultaUrl,
     bool IsContingency,
-    string? FooterNote);
+    string? FooterNote)
+{
+    /// <summary>Orden asociada para auditoría de impresión, si aplica.</summary>
+    public Guid? OrderId { get; init; }
+}
 
 /// <summary>
 /// Configuración de la impresora térmica destino.
@@ -88,3 +102,20 @@ public sealed record PrinterConfig(
     string? IpAddress,
     int? NetworkPort,
     int PaperWidthMm);
+
+/// <summary>Opciones de impresión configurables en la sección <c>Printing</c>.</summary>
+public sealed class PrintingOptions
+{
+    /// <summary>Nombre de la sección de configuración.</summary>
+    public const string SectionName = "Printing";
+
+    /// <summary>Indica si se imprime automáticamente después de guardar una venta.</summary>
+    public bool AutoPrintOnSale { get; set; } = true;
+
+    /// <summary>Tiempo máximo de conexión y escritura de una impresora de red.</summary>
+    public int NetworkTimeoutSeconds { get; set; } = 5;
+
+    /// <summary>Leyenda del comprobante interno, pendiente de validación fiscal.</summary>
+    // A VERIFICAR con contador / normativa MH: la leyenda aplicable al comprobante interno.
+    public string InternalReceiptFooter { get; set; } = "COMPROBANTE INTERNO - SIN VALOR FISCAL";
+}

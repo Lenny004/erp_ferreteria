@@ -3,6 +3,9 @@ using System.Globalization;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Printing;
+using Microsoft.Extensions.Options;
+using System.Windows;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -15,6 +18,9 @@ public partial class FacturacionView : UserControl
     private readonly IInventoryService _inventoryService;
     private readonly IOrderService _orderService;
     private readonly ICurrentSessionService _currentSession;
+    private readonly ISaleReceiptPrinter _saleReceiptPrinter;
+    private readonly PrintingOptions _printingOptions;
+    private Guid? _lastOrderId;
     private readonly ObservableCollection<CartLineItem> _cartLineItems = new();
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
@@ -22,11 +28,15 @@ public partial class FacturacionView : UserControl
     public FacturacionView(
         IInventoryService inventoryService,
         IOrderService orderService,
-        ICurrentSessionService currentSession)
+        ICurrentSessionService currentSession,
+        ISaleReceiptPrinter saleReceiptPrinter,
+        IOptions<PrintingOptions> printingOptions)
     {
         _inventoryService = inventoryService;
         _orderService = orderService;
         _currentSession = currentSession;
+        _saleReceiptPrinter = saleReceiptPrinter;
+        _printingOptions = printingOptions.Value;
 
         InitializeComponent();
         CartItemsControl.ItemsSource = _cartLineItems;
@@ -156,14 +166,51 @@ public partial class FacturacionView : UserControl
                 Payments: new[] { new CashSalePaymentRequest(paymentMethod, grandTotal) },
                 Notes: "Venta registrada desde WPF"));
 
+            _lastOrderId = saleResult.OrderId;
             _cartLineItems.Clear();
             RenderSaleTotals();
             await SearchProductsAsync();
-            SetStatusMessage($"Venta registrada: {saleResult.OrderId}. DTE pendiente de Fase 4.");
+            SetStatusMessage($"Venta registrada: {saleResult.OrderId}.");
+            if (_printingOptions.AutoPrintOnSale)
+            {
+                await TryPrintOrderAsync(saleResult.OrderId);
+            }
         }
         catch (Exception ex)
         {
             SetStatusMessage($"No se pudo registrar la venta: {ex.Message}", isError: true);
+        }
+    }
+
+    /// <summary>Imprime nuevamente el último comprobante guardado.</summary>
+    private async void OnPrintLastClick(object sender, RoutedEventArgs e)
+    {
+        if (_lastOrderId is not Guid orderId)
+        {
+            SetStatusMessage("Aún no hay una venta para imprimir.", isError: true);
+            return;
+        }
+
+        await TryPrintOrderAsync(orderId);
+    }
+
+    private async Task TryPrintOrderAsync(Guid orderId)
+    {
+        var result = await _saleReceiptPrinter.PrintSaleAsync(orderId);
+        if (result.Status == SaleReceiptPrintStatus.Printed)
+        {
+            SetStatusMessage(result.UserMessage);
+            return;
+        }
+
+        SetStatusMessage($"La venta se guardó, pero no se pudo imprimir: {result.UserMessage}", isError: true);
+        var dialog = new PrintFailureDialog(result.UserMessage)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            await TryPrintOrderAsync(orderId);
         }
     }
 

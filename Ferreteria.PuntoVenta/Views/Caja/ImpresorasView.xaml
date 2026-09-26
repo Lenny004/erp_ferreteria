@@ -1,6 +1,7 @@
 <UserControl
-    x:Class="Ferreteria.PuntoVenta.Views.Caja.ImpresorasView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers">
+    x:Class="Ferreteria.PuntoVenta.Views.Caja.ImpresorasView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -11,14 +12,15 @@
     </UserControl.Resources>
     <ScrollViewer
         VerticalScrollBarVisibility="Auto">
-        <Grid>
+        <Grid
+            Margin="0,0,0,16">
             <Grid.RowDefinitions>
                 <RowDefinition
                     Height="Auto" />
                 <RowDefinition
                     Height="Auto" />
                 <RowDefinition
-                    Height="470" />
+                    Height="*" />
             </Grid.RowDefinitions>
             <StackPanel
                 Margin="0,0,0,16">
@@ -26,7 +28,7 @@
                     Text="Impresoras"
                     Style="{StaticResource AppPanelTitleStyle}" />
                 <TextBlock
-                    Text="Impresoras conectadas y configuracion de tickets"
+                    Text="Configure la impresora de tickets y pruebe la conexión"
                     Style="{StaticResource AppPanelSubtitleStyle}" />
             </StackPanel>
             <UniformGrid
@@ -41,9 +43,10 @@
                             Text="Predeterminada"
                             Style="{StaticResource AppCardLabelStyle}" />
                         <TextBlock
-                            Text="EPSON TM-T20"
+                            x:Name="DefaultNameText"
+                            Text="Sin configurar"
                             Style="{StaticResource AppCardValueStyle}"
-                            FontSize="{StaticResource AppFontSize_LG}" />
+                            TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border
@@ -54,8 +57,10 @@
                             Text="Ancho papel"
                             Style="{StaticResource AppCardLabelStyle}" />
                         <TextBlock
-                            Text="80 mm"
-                            Style="{StaticResource AppCardValueStyle}" />
+                            x:Name="DefaultPaperText"
+                            Text="-"
+                            Style="{StaticResource AppCardValueStyle}"
+                            TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border
@@ -65,9 +70,10 @@
                             Text="Estado"
                             Style="{StaticResource AppCardLabelStyle}" />
                         <TextBlock
-                            Text="Lista"
+                            x:Name="StatusText"
+                            Text="Cargando..."
                             Style="{StaticResource AppCardValueStyle}"
-                            Foreground="{StaticResource AppSuccess}" />
+                            TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </UniformGrid>
@@ -75,7 +81,7 @@
                 Grid.Row="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition
-                        Width="1.4*" />
+                        Width="1.3*" />
                     <ColumnDefinition
                         Width="0.9*" />
                 </Grid.ColumnDefinitions>
@@ -84,84 +90,52 @@
                     BorderBrush="{StaticResource AppAzulClaro}"
                     BorderThickness="1"
                     CornerRadius="{StaticResource AppRadius_MD}"
-                    Margin="0,0,12,0">
+                    Margin="0,0,12,0"
+                    Padding="12">
                     <StackPanel>
-                        <Grid
-                            Height="40"
-                            Style="{StaticResource AppGridHeaderStyle}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition
-                                    Width="*" />
-                                <ColumnDefinition
-                                    Width="100" />
-                                <ColumnDefinition
-                                    Width="120" />
-                                <ColumnDefinition
-                                    Width="100" />
-                                <ColumnDefinition
-                                    Width="120" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock
-                                Text="NOMBRE"
-                                Style="{StaticResource AppGridHeaderTextStyle}" />
-                            <TextBlock
-                                Grid.Column="1"
-                                Text="CONEXION"
-                                Style="{StaticResource AppGridHeaderTextStyle}" />
-                            <TextBlock
-                                Grid.Column="2"
-                                Text="IP"
-                                Style="{StaticResource AppGridHeaderTextStyle}" />
-                            <TextBlock
-                                Grid.Column="3"
-                                Text="PAPEL"
-                                Style="{StaticResource AppGridHeaderTextStyle}" />
-                            <TextBlock
-                                Grid.Column="4"
-                                Text="ESTADO"
-                                Style="{StaticResource AppGridHeaderTextStyle}" />
-                        </Grid>
-                        <Border
-                            Style="{StaticResource AppDataGridRowStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition
-                                        Width="*" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="120" />
-                                    <ColumnDefinition
-                                        Width="100" />
-                                    <ColumnDefinition
-                                        Width="120" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    Text="EPSON TM-T20"
-                                    Style="{StaticResource AppTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    Text="USB"
-                                    Style="{StaticResource AppTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="2"
-                                    Text="-"
-                                    Style="{StaticResource AppTableCellStyle}" />
-                                <TextBlock
-                                    Grid.Column="3"
-                                    Text="80mm"
-                                    Style="{StaticResource AppTableCellStyle}" />
-                                <Border
-                                    Grid.Column="4"
-                                    Style="{StaticResource AppBadgeStyle}"
-                                    Background="{StaticResource AppAzulClaro}">
-                                    <TextBlock
-                                        Text="DEFAULT"
-                                        Foreground="{StaticResource AppSuccess}"
-                                        FontSize="{StaticResource AppFontSize_XS}" />
-                                </Border>
-                            </Grid>
-                        </Border>
+                        <TextBlock
+                            Text="Impresoras configuradas (toque una para editarla)"
+                            Style="{StaticResource AppCardLabelStyle}" />
+                        <ListBox
+                            x:Name="PrintersList"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Margin="0,10,0,0"
+                            SelectionChanged="OnPrinterSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Style="{StaticResource AppDataGridRowStyle}"
+                                        Padding="8">
+                                        <StackPanel>
+                                            <TextBlock
+                                                Text="{Binding Name}"
+                                                FontSize="{StaticResource AppFontSize_LG}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <TextBlock
+                                                Text="{Binding ConnectionType}"
+                                                FontSize="{StaticResource AppFontSize_LG}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                            <TextBlock
+                                                Text="{Binding PaperWidth, StringFormat={}{0} mm}"
+                                                FontSize="{StaticResource AppFontSize_LG}"
+                                                Style="{StaticResource AppTableCellStyle}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock
+                            Text="Impresoras detectadas en Windows"
+                            Style="{StaticResource AppCardLabelStyle}"
+                            Margin="0,16,0,4" />
+                        <ListBox
+                            x:Name="WindowsPrintersList"
+                            Height="120"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Background="Transparent"
+                            Foreground="{StaticResource AppBlanco}"
+                            BorderThickness="0" />
                     </StackPanel>
                 </Border>
                 <Border
@@ -169,53 +143,134 @@
                     Style="{StaticResource AppStatCardStyle}">
                     <StackPanel>
                         <TextBlock
-                            Text="Configuracion"
+                            Text="Configuración"
                             Style="{StaticResource AppCardLabelStyle}" />
+                        <TextBlock
+                            Text="Nombre de la impresora"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Foreground="{StaticResource AppBlanco}"
+                            Margin="0,8,0,4" />
                         <TextBox
+                            x:Name="NameTextBox"
                             Style="{StaticResource AppFieldTextBoxStyle}"
-                            helpers:WatermarkService.Watermark="Nombre impresora"
-                            Margin="0,8,0,8" />
+                            FontSize="{StaticResource AppFontSize_LG}" />
+                        <TextBlock
+                            Text="Tipo de conexión"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Foreground="{StaticResource AppBlanco}"
+                            Margin="0,8,0,4" />
                         <ComboBox
+                            x:Name="ConnectionCombo"
                             Style="{StaticResource AppFieldComboBoxStyle}"
+                            FontSize="{StaticResource AppFontSize_LG}"
                             SelectedIndex="0"
-                            Margin="0,0,0,8">
+                            SelectionChanged="OnConnectionChanged">
                             <ComboBoxItem
-                                Content="USB" />
+                                Content="USB (cola de Windows)"
+                                Tag="USB" />
                             <ComboBoxItem
-                                Content="Ethernet" />
+                                Content="Red (Ethernet)"
+                                Tag="RED" />
+                            <ComboBoxItem
+                                Content="Bluetooth"
+                                Tag="BLUETOOTH" />
                         </ComboBox>
+                        <TextBlock
+                            Text="Dirección IP (solo red)"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Foreground="{StaticResource AppBlanco}"
+                            Margin="0,8,0,4" />
                         <TextBox
+                            x:Name="IpTextBox"
                             Style="{StaticResource AppFieldTextBoxStyle}"
-                            helpers:WatermarkService.Watermark="IP"
-                            Margin="0,0,0,8" />
+                            FontSize="{StaticResource AppFontSize_LG}" />
+                        <TextBlock
+                            Text="Puerto (solo red)"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Foreground="{StaticResource AppBlanco}"
+                            Margin="0,8,0,4" />
                         <TextBox
+                            x:Name="PortTextBox"
                             Style="{StaticResource AppFieldTextBoxStyle}"
-                            helpers:WatermarkService.Watermark="Puerto"
-                            Margin="0,0,0,8" />
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Text="9100" />
+                        <TextBlock
+                            Text="Ancho de papel"
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            Foreground="{StaticResource AppBlanco}"
+                            Margin="0,8,0,4" />
                         <ComboBox
+                            x:Name="PaperCombo"
                             Style="{StaticResource AppFieldComboBoxStyle}"
-                            SelectedIndex="0"
-                            Margin="0,0,0,18">
+                            FontSize="{StaticResource AppFontSize_LG}"
+                            SelectedIndex="0">
                             <ComboBoxItem
-                                Content="80 mm" />
+                                Content="80 mm"
+                                Tag="80" />
                             <ComboBoxItem
-                                Content="58 mm" />
+                                Content="58 mm"
+                                Tag="58" />
                         </ComboBox>
-                        <Button
-                            Style="{StaticResource AppSecondaryWideButtonStyle}"
-                            Margin="0,0,0,10">
-                            <TextBlock
-                                Text="PRUEBA"
-                                Foreground="{StaticResource AppBlanco}"
-                                FontWeight="Bold" />
-                        </Button>
-                        <Button
-                            Style="{StaticResource AppPrimaryWideButtonStyle}">
-                            <TextBlock
-                                Text="GUARDAR"
-                                Foreground="{StaticResource AppBlanco}"
-                                FontWeight="Bold" />
-                        </Button>
+                        <UniformGrid
+                            Columns="2"
+                            Margin="0,18,0,0">
+                            <Button
+                                Style="{StaticResource AppPrimaryWideButtonStyle}"
+                                Width="Auto"
+                                Height="90"
+                                Margin="0,0,6,6"
+                                Click="OnSaveClick">
+                                <TextBlock
+                                    Text="GUARDAR"
+                                    Foreground="{StaticResource AppBlanco}"
+                                    FontSize="{StaticResource AppFontSize_LG}"
+                                    FontWeight="Bold"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+                            </Button>
+                            <Button
+                                Style="{StaticResource AppSecondaryWideButtonStyle}"
+                                Width="Auto"
+                                Height="90"
+                                Margin="6,0,0,6"
+                                Click="OnTestClick">
+                                <TextBlock
+                                    Text="PRUEBA"
+                                    Foreground="{StaticResource AppBlanco}"
+                                    FontSize="{StaticResource AppFontSize_LG}"
+                                    FontWeight="Bold"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+                            </Button>
+                            <Button
+                                Style="{StaticResource AppSecondaryWideButtonStyle}"
+                                Width="Auto"
+                                Height="90"
+                                Margin="0,6,6,0"
+                                Click="OnPreviewClick">
+                                <TextBlock
+                                    Text="VISTA PREVIA"
+                                    Foreground="{StaticResource AppBlanco}"
+                                    FontSize="{StaticResource AppFontSize_LG}"
+                                    FontWeight="Bold"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+                            </Button>
+                            <Button
+                                Style="{StaticResource AppSecondaryWideButtonStyle}"
+                                Width="Auto"
+                                Height="90"
+                                Margin="6,6,0,0"
+                                Click="OnSetDefaultClick">
+                                <TextBlock
+                                    Text="MARCAR PREDETERMINADA"
+                                    Foreground="{StaticResource AppBlanco}"
+                                    FontSize="{StaticResource AppFontSize_LG}"
+                                    FontWeight="Bold"
+                                    TextAlignment="Center"
+                                    TextWrapping="Wrap" />
+                            </Button>
+                        </UniformGrid>
                     </StackPanel>
                 </Border>
             </Grid>
