@@ -116,6 +116,7 @@ public class FerreteriaDbContext : DbContext
     //  Mantenerlos aquí y en SQL provocaba duplicación y riesgo de desincronización.
     // ========================================================================
 
+    /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Llama al base para que ejecute cualquier convención global configurada.
@@ -253,6 +254,7 @@ public class FerreteriaDbContext : DbContext
         {
             entity.ToTable("InventoryMovements", "public");
             entity.Property(i => i.Id).HasColumnName("id");
+            entity.Property(i => i.Quantity).HasColumnName("quantity");
             entity.Property(i => i.Reason).HasColumnName("reason");
 
             // Relación N:1 con Product. Cada movimiento afecta a un solo producto.
@@ -288,6 +290,7 @@ public class FerreteriaDbContext : DbContext
         modelBuilder.Entity<StockAlert>(entity =>
         {
             entity.ToTable("StockAlerts", "public");
+            entity.Property(s => s.Id).HasColumnName("id");
 
             // Relación N:1 con Product. Un producto puede tener muchas alertas en el tiempo.
             entity.HasOne(s => s.Product)
