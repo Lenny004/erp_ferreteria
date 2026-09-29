@@ -45,12 +45,14 @@ public sealed class ReceiptDocumentFactory
     /// <param name="issuer">Emisor activo o valores de verificación.</param>
     /// <param name="dte">Datos del DTE, si existe.</param>
     /// <param name="internalFooter">Leyenda configurable del comprobante interno.</param>
+    /// <param name="isReprint">Indica que se trata de una reimpresión.</param>
     /// <returns>Documento listo para renderizar.</returns>
     public ReceiptDocument Create(
         ReceiptSaleData sale,
         ReceiptIssuerData issuer,
         ReceiptDteData? dte,
-        string internalFooter)
+        string internalFooter,
+        bool isReprint = false)
     {
         ArgumentNullException.ThrowIfNull(sale);
         ArgumentNullException.ThrowIfNull(issuer);
@@ -89,7 +91,8 @@ public sealed class ReceiptDocumentFactory
             change,
             dte?.ConsultaUrl ?? string.Empty,
             dte?.IsContingency ?? false,
-            isInternal ? internalFooter : null)
+            isInternal ? internalFooter : null,
+            isReprint)
         { OrderId = sale.OrderId };
     }
 }
