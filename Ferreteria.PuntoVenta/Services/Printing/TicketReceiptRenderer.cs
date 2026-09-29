@@ -79,6 +79,12 @@ public static class TicketReceiptRenderer
     {
         builder.AppendSeparator();
 
+        // A VERIFICAR con contador / normativa MH: texto y obligatoriedad de la leyenda.
+        if (document.IsReprint)
+        {
+            builder.AppendCenter(ReceiptDocumentTypes.ReprintLegend);
+        }
+
         string pruebaTag = document.DteTypeCode != ReceiptDocumentTypes.InternalReceipt && document.Ambiente == "00"
             ? "  *PRUEBA*"
             : string.Empty;

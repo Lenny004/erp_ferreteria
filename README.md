@@ -106,7 +106,7 @@ La caja **no** implementa módulos de planilla, RRHH ni inventario administrativ
 
 | Repositorio | Tecnología | Responsabilidad |
 |---|---|---|
-| `erp_ferreteria` / `Ferreteria.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
+| `erp_ferreteria` / `Ferreteria.PuntoVenta` | C# WPF, EF Core | Caja, historial de ventas y reimpresión, confección, DTE, impresión, PIN |
 | [`ferreteria_backend`](../ferreteria_backend/README.md) | Node.js, Express, Prisma | API REST: empleados, planilla, compras, libros IVA, BI, Excel/PDF |
 | [`ferreteria_adminweb`](../ferreteria_adminweb/README.md) | Next.js | UI administrativa; consume **solo** la API Node |
 
@@ -209,6 +209,10 @@ El módulo de Confección es de acceso directo sin PIN, pues los técnicos de ta
 ```
 
 > **Nota de implementación:** `PinWindow` valida el PIN según el módulo elegido: `can_cashier` para VENTAS, `can_sell` para CONFECCION. Tras el ingreso, `MainShellWindow` oculta las secciones del otro módulo vía `NavSections` y `ICurrentSessionService.ActiveModule`.
+
+### Alcance del historial de ventas
+
+Por defecto, `Config/appsettings.json` permite el historial completo al puesto `Administrador`, que es el puesto sembrado en `Squema.sql`. Los demás cajeros ven sus ventas del día local de El Salvador. Esta es una **decisión pendiente del dueño**: para habilitar otro puesto, agregá su nombre exacto a `SalesHistory:FullHistoryPositionNames`; no se interpreta `CanSell` como permiso de encargado.
 
 ---
 

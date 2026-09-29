@@ -8,17 +8,6 @@ using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
-/// <summary>
-/// Compone la representacion imprimible (<see cref="ReceiptDocument"/>) de un DTE
-/// a partir de la orden de venta, el DTE emitido y la configuracion del emisor.
-/// </summary>
-public interface IReceiptCompositionService
-{
-    /// <summary>Arma el ticket DTE o el comprobante interno de una orden.</summary>
-    /// <returns>El documento imprimible o null si la orden no existe.</returns>
-    Task<ReceiptDocument?> ComposeForOrderAsync(Guid orderId, CancellationToken cancellationToken = default);
-}
-
 /// <summary>Implementacion de la composicion de tickets DTE.</summary>
 public sealed class ReceiptCompositionService : IReceiptCompositionService
 {
@@ -44,6 +33,7 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
     /// <inheritdoc />
     public async Task<ReceiptDocument?> ComposeForOrderAsync(
         Guid orderId,
+        bool isReprint = false,
         CancellationToken cancellationToken = default)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -100,7 +90,7 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             return _documentFactory.Create(
                 new ReceiptSaleData(order.Id, BuildEmployeeName(order.Employee), customerName, customerDocument,
                     items, order.Subtotal, order.TaxAmount, order.Total, paymentMethod, amountPaid, order.CreatedAt.ToLocalTime()),
-                MapIssuer(emisor), null, _printingOptions.InternalReceiptFooter);
+                MapIssuer(emisor), null, _printingOptions.InternalReceiptFooter, isReprint);
         }
 
         var codigoGeneracion = dte.GenerationCode.ToString().ToUpperInvariant();
@@ -114,7 +104,7 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             MapIssuer(emisor),
             new ReceiptDteData(dte.DteType, MapDteTypeName(dte.DteType), dte.ControlNumber,
                 codigoGeneracion, dte.MhSello, dte.Ambiente, consultaUrl, isContingency, dte.TotalIva),
-            _printingOptions.InternalReceiptFooter);
+            _printingOptions.InternalReceiptFooter, isReprint);
     }
 
     private static string MapDteTypeName(string dteType)

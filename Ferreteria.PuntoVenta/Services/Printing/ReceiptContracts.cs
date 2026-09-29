@@ -8,6 +8,10 @@ public static class ReceiptDocumentTypes
 
     /// <summary>Título impreso en el comprobante interno (sin DTE).</summary>
     public const string InternalReceiptTitle = "COMPROBANTE INTERNO";
+
+    /// <summary>Leyenda de reimpresión, pendiente de verificar con contador y normativa MH.</summary>
+    // A VERIFICAR con contador / normativa MH: texto y obligatoriedad de esta leyenda.
+    public const string ReprintLegend = "REIMPRESIÓN";
 }
 
 /// <summary>
@@ -55,6 +59,7 @@ public sealed record TicketLineItem(
 /// <param name="ConsultaUrl">Contenido del QR (enlace de consulta pública del MH).</param>
 /// <param name="IsContingency">Indica si el DTE fue emitido en contingencia.</param>
 /// <param name="FooterNote">Nota adicional para el pie del ticket (opcional).</param>
+/// <param name="IsReprint">Indica que el comprobante es una reimpresión.</param>
 public sealed record ReceiptDocument(
     string BusinessName,
     string? BusinessTradeName,
@@ -82,7 +87,8 @@ public sealed record ReceiptDocument(
     decimal Change,
     string ConsultaUrl,
     bool IsContingency,
-    string? FooterNote)
+    string? FooterNote,
+    bool IsReprint = false)
 {
     /// <summary>Orden asociada para auditoría de impresión, si aplica.</summary>
     public Guid? OrderId { get; init; }

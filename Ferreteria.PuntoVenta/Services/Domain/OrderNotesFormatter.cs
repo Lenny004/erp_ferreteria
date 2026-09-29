@@ -44,6 +44,21 @@ public static class OrderNotesFormatter
             : customerSegment[CustomerNamePrefix.Length..].Trim();
     }
 
+    /// <summary>Normaliza las notas de una orden para mostrarlas en el detalle.</summary>
+    /// <param name="orderNotes">Notas persistidas de la orden.</param>
+    /// <returns>Notas separadas por líneas o una etiqueta de ausencia.</returns>
+    /// <remarks>La separación conserva los segmentos estructurados sin exponer el formato persistido al usuario.</remarks>
+    public static string FormatForDisplay(string? orderNotes)
+    {
+        if (string.IsNullOrWhiteSpace(orderNotes))
+        {
+            return "Sin notas.";
+        }
+
+        return string.Join(Environment.NewLine, orderNotes
+            .Split(NotesSegmentSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+    }
+
     private static string? FormatSegment(string prefix, string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : $"{prefix}{value.Trim()}";

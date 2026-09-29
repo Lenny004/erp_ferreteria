@@ -130,4 +130,28 @@ public static class SalesDomainConstants
         /// <summary>Método de pago no disponible en la proyección.</summary>
         public const string PaymentMethodNotAvailable = "N/D";
     }
+
+    /// <summary>Acciones de auditoría del historial.</summary>
+    public static class SalesHistoryAuditActions
+    {
+        /// <summary>Código persistido para una reimpresión de ticket.</summary>
+        /// <remarks>
+        /// Debe caber en <c>system.AuditLog.action VARCHAR(10)</c>; por eso se persiste
+        /// <c>REIMPRIMIR</c> y no el nombre lógico más largo del evento.
+        /// </remarks>
+        public const string ReceiptReprint = "REIMPRIMIR";
+
+        /// <summary>Nombre lógico del evento de reimpresión usado en los datos nuevos.</summary>
+        public const string ReceiptReprintEvent = "REIMPRESION_TICKET";
+
+        /// <summary>Nombre lógico de la tabla de órdenes usado en la auditoría.</summary>
+        public const string OrdersTableName = "sales.Orders";
+    }
+
+    /// <summary>Códigos de unidades de venta usados por el dominio.</summary>
+    public static class SalesUnitCodes
+    {
+        /// <summary>Unidad genérica usada cuando una línea no tiene presentación asociada.</summary>
+        public const string Unit = "UNIDAD";
+    }
 }

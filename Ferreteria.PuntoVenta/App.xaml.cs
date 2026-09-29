@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.Printing;
+using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -51,6 +52,8 @@ public partial class App : Application
                 services.AddFerreteriaDatabase(context.Configuration);
                 services.Configure<PrintingOptions>(context.Configuration.GetSection(PrintingOptions.SectionName));
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
+                services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
+                services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
                 services.AddSingleton<IConnectivityService, ConnectivityService>();
@@ -63,6 +66,7 @@ public partial class App : Application
                 services.AddSingleton<IEmployeeService, EmployeeService>();
                 services.AddSingleton<ICustomerService, CustomerService>();
                 services.AddSingleton<IReportService, ReportService>();
+                services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
                 services.AddSingleton<IPrinterConfigService, PrinterConfigService>();
                 services.AddSingleton<IReceiptPrintService, ReceiptPrintService>();
                 services.AddSingleton<IReceiptCompositionService, ReceiptCompositionService>();
