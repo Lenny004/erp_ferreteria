@@ -226,6 +226,7 @@ public partial class DevolucionesView : UserControl
     {
         if (_selectedSale is null || _currentSession.CurrentEmployee is null)
         {
+            ConfirmButton.IsEnabled = false;
             SubtotalText.Text = "Subtotal: $0.00";
             DiscountText.Text = "Descuento: $0.00";
             TaxText.Text = "IVA: $0.00";
@@ -240,6 +241,7 @@ public partial class DevolucionesView : UserControl
             .ToArray();
         if (requests.Length == 0)
         {
+            ConfirmButton.IsEnabled = false;
             TotalText.Text = "Total crédito: $0.00";
             FiscalText.Text = string.Empty;
             return;

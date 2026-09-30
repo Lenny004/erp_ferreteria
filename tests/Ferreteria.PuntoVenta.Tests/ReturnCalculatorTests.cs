@@ -94,7 +94,70 @@ public sealed class ReturnCalculatorTests
         Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, sale, new[] { line }, null, ReturnOptions.CreateDefault()));
     }
 
+    /// <summary>Una venta sin IVA no genera IVA en un tramo parcial.</summary>
+    [Fact]
+    public void Calculate_OriginalTaxZero_ProducesZeroTax()
+    {
+        var sale = CreateSale() with { TaxAmount = 0m, Total = 100m };
+        var line = CreateLine(2m, 100m);
+        var result = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line }, null, ReturnOptions.CreateDefault());
+
+        Assert.Equal(0m, result.TaxAmount);
+    }
+
+    /// <summary>El cierre por remanente de tres tramos suma exactamente la venta original.</summary>
+    [Fact]
+    public void Calculate_ThreeSuccessiveReturns_CloseOriginalAmounts()
+    {
+        var sale = CreateSale();
+        var line = CreateLine(3m, 100m);
+        var options = ReturnOptions.CreateDefault();
+        var first = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line }, null, options);
+        var firstCredit = new ReturnedLineCredit(1m, first.Subtotal, first.DiscountAmount, first.TaxAmount, first.Total);
+        var second = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line with { AlreadyReturnedQuantity = 1m, AvailableQuantity = 2m } }, new Dictionary<Guid, ReturnedLineCredit> { [line.OrderDetailId] = firstCredit }, options);
+        var previous = new Dictionary<Guid, ReturnedLineCredit>
+        {
+            [line.OrderDetailId] = new ReturnedLineCredit(2m, first.Subtotal + second.Subtotal, first.DiscountAmount + second.DiscountAmount, first.TaxAmount + second.TaxAmount, first.Total + second.Total)
+        };
+        var third = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line with { AlreadyReturnedQuantity = 2m, AvailableQuantity = 1m } }, previous, options);
+
+        Assert.Equal(sale.Subtotal, first.Subtotal + second.Subtotal + third.Subtotal);
+        Assert.Equal(sale.DiscountAmount, first.DiscountAmount + second.DiscountAmount + third.DiscountAmount);
+        Assert.Equal(sale.TaxAmount, first.TaxAmount + second.TaxAmount + third.TaxAmount);
+        Assert.Equal(sale.Total, first.Total + second.Total + third.Total);
+    }
+
+    /// <summary>Rechaza total cero y un reintegro distinto del crédito.</summary>
+    [Fact]
+    public void Calculate_EnforcesPositiveTotalAndExactRefund()
+    {
+        var line = CreateLine(1m, 0m);
+        var zeroSale = CreateSale() with { Subtotal = 0m, TaxAmount = 0m, Total = 0m };
+        var zeroRequest = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None);
+        Assert.Contains("mayor que cero", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(zeroRequest, zeroSale, new[] { line }, null, ReturnOptions.CreateDefault())).Message, StringComparison.OrdinalIgnoreCase);
+
+        var paidRequest = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.Card) with { RefundAmount = 1m };
+        Assert.Contains("igual al total", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(paidRequest, CreateSale(), new[] { line with { Subtotal = 100m, UnitPrice = 100m } }, null, ReturnOptions.CreateDefault())).Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Verifica la política fiscal predeterminada para CCF, factura y venta sin DTE.</summary>
+    /// <summary>Rechaza que los créditos acumulados superen subtotal, descuento, IVA o total originales.</summary>
+    [Fact]
+    public void Calculate_EnforcesAccumulatedAmountsWithinSale()
+    {
+        var line = CreateLine(2m, 100m);
+        var request = CreateRequest(line.OrderDetailId, 0.5m, ReturnDomainConstants.RefundMethods.None);
+        var options = ReturnOptions.CreateDefault();
+
+        Assert.Contains("subtotal", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }, new Dictionary<Guid, ReturnedLineCredit> { [line.OrderDetailId] = new(1m, 100m) }, options)).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("descuento", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }, new Dictionary<Guid, ReturnedLineCredit> { [line.OrderDetailId] = new(1m, 0m, 1m) }, options)).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IVA", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }, new Dictionary<Guid, ReturnedLineCredit> { [line.OrderDetailId] = new(1m, 0m, 0m, 13m) }, options)).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("total", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }, new Dictionary<Guid, ReturnedLineCredit> { [line.OrderDetailId] = new(1m, 0m, 0m, 0m, 100m) }, options)).Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Verifica que la política fiscal predeterminada exija la revisión esperada según el DTE original.</summary>
+
+    /// <summary>Verifica que la política fiscal predeterminada exija la revisión esperada según el DTE original.</summary>
     [Fact]
     public void FiscalPolicy_RequiresExpectedReview()
     {

@@ -74,6 +74,7 @@ public sealed record ReturnDetailRecord(
 
 /// <summary>Valores de movimiento que se insertarán en <c>sales."CashMovements"</c>.</summary>
 /// <param name="CashSessionId">Columna <c>CashSessionId</c>.</param>
+/// <param name="MovementType">Columna <c>MovementType</c>; siempre DEVOLUCION_EFECTIVO.</param>
 /// <param name="EmployeeId">Columna <c>EmployeeId</c>.</param>
 /// <param name="AuthorizedByEmployeeId">Columna <c>AuthorizedByEmployeeId</c>, nullable.</param>
 /// <param name="ClientRequestId">Columna <c>ClientRequestId</c> única.</param>
@@ -83,6 +84,7 @@ public sealed record ReturnDetailRecord(
 /// <param name="ReturnId">Columna <c>ReturnId</c>; el writer la liga a la devolución que genere.</param>
 public sealed record CashMovementRecord(
     Guid CashSessionId,
+    string MovementType,
     Guid EmployeeId,
     Guid? AuthorizedByEmployeeId,
     Guid ClientRequestId,
@@ -95,13 +97,14 @@ public sealed record CashMovementRecord(
 /// <remarks>El costo original y la unidad de cantidad son provisionales, a verificar con contador.</remarks>
 /// <param name="Id">Identificador que el writer usará para ligar el detalle.</param>
 /// <param name="ProductId">Producto afectado.</param>
+/// <param name="MovementType">Columna <c>MovementType</c>; siempre ENTRADA_DEVOLUCION.</param>
 /// <param name="OrderId">Orden original asociada.</param>
 /// <param name="EmployeeId">Empleado que ejecuta.</param>
 /// <param name="Quantity">Cantidad en la unidad descontada por la venta.</param>
 /// <param name="UnitCost">Costo original de <c>OrderDetails.UnitCost</c>.</param>
 /// <param name="Reason">Motivo legible del movimiento.</param>
 /// <param name="CreatedAt">Fecha UTC del movimiento.</param>
-public sealed record InventoryMovementRecord(Guid Id, Guid ProductId, Guid OrderId, Guid EmployeeId, decimal Quantity, decimal UnitCost, string Reason, DateTime CreatedAt);
+public sealed record InventoryMovementRecord(Guid Id, Guid ProductId, string MovementType, Guid OrderId, Guid EmployeeId, decimal Quantity, decimal UnitCost, string Reason, DateTime CreatedAt);
 
 /// <summary>Conjunto inmutable de inserciones atómicas de una devolución.</summary>
 /// <param name="Header">Cabecera de <c>sales."Returns"</c>.</param>

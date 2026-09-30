@@ -150,7 +150,7 @@ public sealed class ReturnService : IReturnService
             throw new ReturnsUnavailableException(ConfirmationUnavailableMessage);
         }
 
-        for (var attempt = 0; attempt <= MaximumSerializationRetries; attempt++)
+        for (var attempt = 0; ; attempt++)
         {
             try
             {
@@ -168,8 +168,6 @@ public sealed class ReturnService : IReturnService
                 throw new ReturnsUnavailableException("No se pudo confirmar la devolución por concurrencia. Intente de nuevo.");
             }
         }
-
-        throw new ReturnsUnavailableException("No se pudo confirmar la devolución por concurrencia. Intente de nuevo.");
     }
 
     private async Task<ReturnResult> CreateReturnOnceAsync(ReturnRequest request, CancellationToken cancellationToken)
@@ -228,16 +226,16 @@ public sealed class ReturnService : IReturnService
             var movementId = line.Restocked ? Guid.NewGuid() : Guid.Empty;
             if (line.Restocked)
             {
-                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, "ENTRADA_DEVOLUCION", now));
+                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, "ENTRADA_DEVOLUCION", request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, "ENTRADA_DEVOLUCION", now));
             }
 
             return new ReturnDetailRecord(source.OrderDetailId, source.ProductId, line.Quantity, line.UnitsPerPackage, line.UnitPrice, line.UnitCost, line.DiscountAmount, line.Subtotal, line.TaxAmount, line.Restocked, line.RestockQuantity, line.Restocked ? movementId : null, now);
         }).ToArray();
         var cashMovement = request.RefundMethod.Equals(ReturnDomainConstants.RefundMethods.Cash, StringComparison.OrdinalIgnoreCase)
-            ? new CashMovementRecord(openSession?.Id ?? throw new InvalidReturnException("La sesión de caja ya no está disponible."), employee.Id, authorized.Id, request.ClientRequestId, calculation.Total, TruncateReason($"Devolución ORD-{sale.ShortOrderId}"), now)
+            ? new CashMovementRecord(openSession?.Id ?? throw new InvalidReturnException("La sesión de caja ya no está disponible."), ReturnDomainConstants.CashMovementTypes.CashRefund, employee.Id, authorized.Id, request.ClientRequestId, request.RefundAmount, TruncateReason($"Devolución ORD-{sale.ShortOrderId}"), now)
             : null;
         return new ReturnPersistenceRecord(
-            new ReturnHeaderRecord(request.OrderId, openSession?.Id, employee.Id, authorized.Id, request.ClientRequestId, calculation.ReturnType, ReturnDomainConstants.Statuses.Completed, fiscal.FiscalStatus, null, request.ReasonCode.Trim(), request.Notes?.Trim(), calculation.Subtotal, calculation.DiscountAmount, calculation.TaxAmount, calculation.Total, request.RefundMethod.Trim(), request.RefundMethod.Equals(ReturnDomainConstants.RefundMethods.None, StringComparison.OrdinalIgnoreCase) ? 0m : calculation.Total, now, now),
+            new ReturnHeaderRecord(request.OrderId, openSession?.Id, employee.Id, authorized.Id, request.ClientRequestId, calculation.ReturnType, ReturnDomainConstants.Statuses.Completed, fiscal.FiscalStatus, null, request.ReasonCode.Trim(), request.Notes?.Trim(), calculation.Subtotal, calculation.DiscountAmount, calculation.TaxAmount, calculation.Total, request.RefundMethod.Trim(), request.RefundAmount, now, now),
             details,
             movements,
             cashMovement);

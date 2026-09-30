@@ -116,7 +116,7 @@ public static class ReturnCalculator
             throw new InvalidReturnException("El reintegro NINGUNO debe tener monto cero.");
         }
 
-        if (!isNoRefund && RoundMoney(request.RefundAmount) != resultTotal)
+        if (!isNoRefund && request.RefundAmount != resultTotal)
         {
             throw new InvalidReturnException("El monto de reintegro debe ser igual al total calculado.");
         }

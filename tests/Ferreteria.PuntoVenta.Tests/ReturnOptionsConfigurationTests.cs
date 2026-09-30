@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Services.Returns;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace Ferreteria.PuntoVenta.Tests;
 
@@ -28,7 +29,6 @@ public sealed class ReturnOptionsConfigurationTests
                 ["Devoluciones:Motivos:3:Label"] = "Anulación total",
                 ["Devoluciones:Motivos:3:RequiresNotes"] = "true",
                 ["Devoluciones:Motivos:4:Code"] = "CAMBIO",
-                ["Devoluciones:MotodosReintegroPermitidos:0"] = "EFECTIVO",
                 ["Devoluciones:MetodosReintegroPermitidos:0"] = "EFECTIVO",
                 ["Devoluciones:MetodosReintegroPermitidos:1"] = "TARJETA",
                 ["Devoluciones:MetodosReintegroPermitidos:2"] = "TRANSFERENCIA",
