@@ -1,8 +1,15 @@
+using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Returns;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 using Xunit;
@@ -79,6 +86,62 @@ public sealed class CashSessionSummaryIntegrationTests
         }
     }
 
+    /// <summary>Verifica que el servicio usa el lector inyectado de devoluciones en efectivo.</summary>
+    [Fact]
+    public async Task GetSummaryAsync_UsesInjectedCashMovementReader()
+    {
+        var cashRegisterCode = $"CAJA-R-{Guid.NewGuid():N}"[..20];
+        _fixture.SetCashRegisterCode(cashRegisterCode);
+        var session = await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 5m, null);
+        try
+        {
+            var order = PostgreSqlFixture.NewOrder(_fixture.CashierId, PostgreSqlFixture.Now.UtcDateTime, SalesDomainConstants.OrderStatuses.Completed, 12.50m);
+            var saleReturn = new SaleReturn
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                CashSessionId = session.Id,
+                EmployeeId = _fixture.CashierId,
+                AuthorizedByEmployeeId = _fixture.ManagerId,
+                ClientRequestId = Guid.NewGuid(),
+                ReturnType = ReturnDomainConstants.Types.Partial,
+                Status = ReturnDomainConstants.Statuses.Completed,
+                FiscalStatus = ReturnDomainConstants.FiscalStatuses.RequiresValidation,
+                ReasonCode = "CAMBIO",
+                Subtotal = 12.50m,
+                Total = 12.50m,
+                RefundMethod = ReturnDomainConstants.RefundMethods.Cash,
+                RefundAmount = 12.50m
+            };
+            await _fixture.SeedAsync(db =>
+            {
+                db.Orders.Add(order);
+                db.Returns.Add(saleReturn);
+                db.CashMovements.Add(new CashMovement
+                {
+                    Id = Guid.NewGuid(),
+                    CashSessionId = session.Id,
+                    MovementType = ReturnDomainConstants.CashMovementTypes.CashRefund,
+                    Amount = 12.50m,
+                    ReturnId = saleReturn.Id,
+                    EmployeeId = _fixture.CashierId,
+                    AuthorizedByEmployeeId = _fixture.ManagerId,
+                    ClientRequestId = Guid.NewGuid(),
+                    Reason = "Devolución de prueba"
+                });
+            });
+            var summary = await _fixture.CashSessions.GetSummaryAsync(session.Id, _fixture.CashierId);
+
+            Assert.Equal(12.50m, summary.CashRefunds);
+            Assert.Equal(-7.50m, summary.ExpectedCash);
+        }
+        finally
+        {
+            await _fixture.CashSessions.CloseAsync(session.Id, 5m, "Limpieza de prueba", _fixture.CashierId);
+        }
+    }
+
+
     /// <summary>Ejecuta la consulta de control con un parámetro UUID sin concatenar valores.</summary>
     /// <param name="sessionId">Sesión cuyo resumen se consulta.</param>
     /// <returns>Campos agregados de control.</returns>
@@ -117,8 +180,9 @@ public sealed class CashSessionSummaryIntegrationTests
                 (SELECT COUNT(*) FROM latest_dte WHERE "MhStatus" IS NOT NULL),
                 (SELECT COUNT(*) FROM latest_dte WHERE "MhStatus" = 'CONTINGENCIA'),
                 (SELECT COUNT(*) FROM completed c LEFT JOIN latest_dte d ON d."OrderId" = c."id" WHERE d."OrderId" IS NULL),
-                CAST(0 AS numeric),
+                COALESCE((SELECT SUM(m."amount") FROM sales."CashMovements" m WHERE m."CashSessionId" = @sessionId AND m."MovementType" = 'DEVOLUCION_EFECTIVO'), 0),
                 s."OpeningAmount" + COALESCE((SELECT amount FROM payment_totals WHERE "method" = 'EFECTIVO'), 0)
+                    - COALESCE((SELECT SUM(m."amount") FROM sales."CashMovements" m WHERE m."CashSessionId" = @sessionId AND m."MovementType" = 'DEVOLUCION_EFECTIVO'), 0)
             FROM sales."CashSessions" s
             WHERE s."id" = @sessionId;
             """;

@@ -5,6 +5,7 @@ using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.EntityFrameworkCore;
@@ -90,14 +91,23 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 options.UmbralDiferencia = 1m;
                 options.AnchoReporte = 48;
             });
+        services.Configure<ReturnOptions>(ReturnOptions.ApplyDefaults);
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
         services.AddSingleton<IReportService, ReportService>();
+        services.AddSingleton<ICashMovementReader, CashMovementsCashMovementReader>();
+        services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
+        services.AddSingleton<IReturnWriter, EfReturnWriter>();
+        services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
+        services.AddSingleton<IReturnService, ReturnService>();
+        services.AddSingleton<IPinAttemptService, PinAttemptService>();
+        services.AddSingleton<PinAuthService>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
         services.AddSingleton<IOrderService, OrderService>();
         services.AddSingleton<IAuditService, AuditService>();
         services.AddSingleton<ILogger<AuditService>>(_ => NullLogger<AuditService>.Instance);
         services.AddSingleton<ILogger<CashSessionService>>(_ => NullLogger<CashSessionService>.Instance);
         services.AddSingleton<ILogger<OrderService>>(_ => NullLogger<OrderService>.Instance);
+        services.AddSingleton<ILogger<ReturnService>>(_ => NullLogger<ReturnService>.Instance);
         _services = services.BuildServiceProvider();
         TimeZoneSupport.Initialize(_services.GetRequiredService<BusinessTimeZone>());
         await using var scope = _services.CreateAsyncScope();
@@ -137,7 +147,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <returns>Servicio de ventas y facturación de confección.</returns>
     public IOrderService Orders => Services.GetRequiredService<IOrderService>();
 
-    /// <summary>Fija el código esperado por el servicio de órdenes para un caso aislado.</summary>
+    /// <summary>Fija el código de caja que usan tanto el servicio de caja como el servicio de órdenes.</summary>
     /// <param name="cashRegisterCode">Código único de la caja del caso.</param>
     public void SetCashRegisterCode(string cashRegisterCode)
     {

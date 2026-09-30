@@ -121,7 +121,7 @@ public sealed class CashSessionOpeningFlow
         {
             _logger.LogWarning(exception, "No se pudo preparar la sesión de caja para {EmployeeId}", employee.Id);
             _currentSession.ClearActiveCashSession();
-            ShowMessage(owner, "No se pudo abrir o recuperar la caja. Verifique si ya existe un turno abierto.", "Caja no disponible", MessageBoxImage.Warning);
+            ShowMessage(owner, exception.Message, "Caja no disponible", MessageBoxImage.Warning);
             return false;
         }
         catch (Exception exception)

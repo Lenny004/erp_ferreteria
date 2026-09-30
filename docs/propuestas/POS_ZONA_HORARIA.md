@@ -59,6 +59,8 @@ con rangos semiabiertos `[inicio, fin)`. Los reportes agrupan por día local med
 | `ReportService` ventas, compras y productos principales | Cambiado | Recibe `DateOnly`, convierte a UTC y filtra con `>= inicio` y `< fin`; ventas agrupa por fecha local. |
 | `VKpisToday` | Propuesto en backend | El POS no la consulta; la corrección pertenece a Prisma/backend. |
 | `CashRegisterReportComposer` y contratos visibles | Cambiado | Solo formatean instantes para pantalla/impresión con la zona configurada; el corte sigue siendo por sesión. |
+| `ReturnReceiptComposer` (devoluciones, llegó con #6) | Cambiado | Solo formatea la fecha de la venta original con la zona configurada. |
+| `ReturnService` (búsqueda y plazo de devolución) | Sin cambio | Usa ventanas móviles en días (`now - N días`), no un corte por día calendario. |
 | DTE y servicios de impresión | Sin cambio | Quedan fuera de este PR porque sus fechas fiscales/impresas requieren una revisión específica. |
 | `UsuariosView` (fecha de contratación) | Sin cambio | Es un valor de formulario, no un corte de día de negocio. |
 

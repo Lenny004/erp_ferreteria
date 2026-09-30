@@ -171,7 +171,8 @@ public sealed class CashSessionIntegrationTests
         {
             var exception = await Assert.ThrowsAsync<CashSessionException>(() =>
                 _fixture.CashSessions.OpenAsync(_fixture.SecondCashierId, cashRegisterCode, 15m, null));
-            Assert.Contains("Ya hay una caja abierta", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("otro cajero", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("una sesión abierta por caja", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -195,6 +196,26 @@ public sealed class CashSessionIntegrationTests
         if (winner is not null)
         {
             await CloseIfOpenAsync(winner.Id, cashRegisterCode, _fixture.CashierId);
+        }
+    }
+
+    /// <summary>Dos cajeros concurrentes dejan un solo ganador para la misma caja física.</summary>
+    [Fact]
+    public async Task ConcurrentOpenings_ByDifferentCashiers_HaveOneControlledWinner()
+    {
+        var cashRegisterCode = UniqueCashRegisterCode();
+        var results = await Task.WhenAll(
+            ObserveOpenAsync(_fixture.CashierId, cashRegisterCode),
+            ObserveOpenAsync(_fixture.SecondCashierId, cashRegisterCode));
+
+        Assert.Equal(1, results.Count(result => result is not null));
+        Assert.Equal(1, results.Count(result => result is null));
+
+        var winner = results.Single(result => result is not null);
+        if (winner is not null)
+        {
+            var owner = winner.EmployeeId;
+            await CloseIfOpenAsync(winner.Id, cashRegisterCode, owner);
         }
     }
 

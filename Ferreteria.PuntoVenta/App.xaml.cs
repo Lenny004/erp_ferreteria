@@ -3,6 +3,7 @@ using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Printing;
+using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
 using Ferreteria.PuntoVenta.Views.Caja;
@@ -66,6 +67,8 @@ public partial class App : Application
                     BusinessTimeZoneFactory.Create(
                         serviceProvider.GetRequiredService<IOptions<BusinessTimeOptions>>()));
                 services.AddSingleton<BusinessCalendar>();
+                services.Configure<ReturnOptions>(context.Configuration.GetSection(ReturnOptions.SectionName));
+                services.PostConfigure<ReturnOptions>(ReturnOptions.ApplyDefaults);
                 services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
@@ -81,6 +84,11 @@ public partial class App : Application
                 services.AddSingleton<IReportService, ReportService>();
                 services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
                 services.AddSingleton<ICashSessionService, CashSessionService>();
+                services.AddSingleton<ICashMovementReader, CashMovementsCashMovementReader>();
+                services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
+                services.AddSingleton<IReturnWriter, EfReturnWriter>();
+                services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
+                services.AddSingleton<IReturnService, ReturnService>();
                 services.AddSingleton<CashSessionOpeningFlow>();
                 services.AddSingleton<IPrinterConfigService, PrinterConfigService>();
                 services.AddSingleton<IReceiptPrintService, ReceiptPrintService>();
@@ -102,6 +110,7 @@ public partial class App : Application
                 services.AddTransient<CorteCajaView>();
                 services.AddTransient<ImpresorasView>();
                 services.AddTransient<HistorialFacturasView>();
+                services.AddTransient<DevolucionesView>();
                 services.AddTransient<ConsultarStockView>();
                 services.AddTransient<ProductosView>();
                 services.AddTransient<ProveedoresView>();

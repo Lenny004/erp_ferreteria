@@ -69,8 +69,7 @@ public sealed record CashRegisterSaleSnapshot(
 /// <param name="Sales">Ventas y pagos asociados.</param>
 /// <param name="CashRefunds">Devoluciones en efectivo registradas.</param>
 /// <remarks>
-/// Actualmente <paramref name="CashRefunds"/> debe ser cero porque el esquema no tiene un movimiento
-/// de caja para devoluciones; el módulo de devoluciones queda como dependencia futura.
+/// El lector de movimientos suma los reintegros persistidos en CashMovements.
 /// </remarks>
 public sealed record CashRegisterSnapshot(
     Guid SessionId,
