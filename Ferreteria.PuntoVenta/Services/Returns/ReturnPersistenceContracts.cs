@@ -193,6 +193,7 @@ public sealed class EfReturnWriter : IReturnWriter
             var product = await db.Products.FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = {movement.ProductId} FOR UPDATE").SingleAsync(cancellationToken);
             var stockBefore = product.CurrentStock;
             product.CurrentStock += movement.Quantity;
+            product.UpdatedAt = DateTime.UtcNow;
             var inventoryMovement = new InventoryMovement
             {
                 Id = movement.Id,

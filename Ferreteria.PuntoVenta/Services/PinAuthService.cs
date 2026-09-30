@@ -21,10 +21,10 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
         ValidatePinAsync(pin, OperationalModule.Caja, cancellationToken);
 
     /// <summary>
-    /// Valida el PIN de cualquier empleado activo para flujos que aplican su propia regla de autorizaciÃ³n.
+    /// Valida el PIN de cualquier empleado activo para flujos que aplican su propia regla de autorización.
     /// </summary>
-    /// <param name="pin">PIN de 4 dÃ­gitos en claro, solo durante la validaciÃ³n.</param>
-    /// <param name="cancellationToken">Token de cancelaciÃ³n.</param>
+    /// <param name="pin">PIN de 4 dígitos en claro, solo durante la validación.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
     /// <returns>Empleado autenticado o null si el PIN no coincide.</returns>
     public async Task<Employee?> ValidateActiveEmployeePinAsync(string pin, CancellationToken cancellationToken = default)
     {
