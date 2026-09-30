@@ -23,6 +23,7 @@ public sealed class CashSessionService : ICashSessionService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IReadOnlyList<string> _fullHistoryPositionNames;
     private readonly CashRegisterOptions _options;
+    private readonly ICashMovementReader _cashMovementReader;
     private readonly TimeProvider _clock;
     private readonly ILogger<CashSessionService> _logger;
 
@@ -32,10 +33,12 @@ public sealed class CashSessionService : ICashSessionService
     /// <param name="clock">Reloj inyectado para timestamps UTC deterministas.</param>
     /// <param name="logger">Logger de conflictos y fallos técnicos.</param>
     /// <param name="salesHistoryOptions">Puestos de acceso completo compartidos con el historial.</param>
+    /// <param name="cashMovementReader">Lector abstracto de devoluciones en efectivo por sesión.</param>
     public CashSessionService(
         IServiceScopeFactory scopeFactory,
         IOptions<CashRegisterOptions> options,
         IOptions<SalesHistoryOptions> salesHistoryOptions,
+        ICashMovementReader cashMovementReader,
         TimeProvider clock,
         ILogger<CashSessionService> logger)
     {
@@ -44,6 +47,7 @@ public sealed class CashSessionService : ICashSessionService
         _options = options.Value;
         ArgumentNullException.ThrowIfNull(salesHistoryOptions);
         _fullHistoryPositionNames = salesHistoryOptions.Value.FullHistoryPositionNames.ToArray();
+        _cashMovementReader = cashMovementReader ?? throw new ArgumentNullException(nameof(cashMovementReader));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -366,7 +370,7 @@ public sealed class CashSessionService : ICashSessionService
     /// <param name="session">Sesión cuyo movimiento se consulta.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
     /// <returns>Instantánea de ventas, pagos y fondo inicial.</returns>
-    private static async Task<CashRegisterSnapshot> LoadSnapshotAsync(
+    private async Task<CashRegisterSnapshot> LoadSnapshotAsync(
         FerreteriaDbContext dbContext,
         CashSession session,
         CancellationToken cancellationToken)
@@ -423,9 +427,13 @@ public sealed class CashSessionService : ICashSessionService
                 order.DocumentNumber))
             .ToList();
 
-        // TODO: las devoluciones en efectivo quedan en cero (limitación conocida) hasta que exista
-        // sales.CashMovements o una fuente confiable de reembolsos por sesión; ver docs/propuestas/POS_CORTE_CAJA.md.
-        return new CashRegisterSnapshot(session.Id, session.OpeningAmount, sales, 0m);
+        var cashRefunds = await _cashMovementReader.GetCashRefundsAsync(dbContext, session.Id, cancellationToken);
+        if (cashRefunds < 0m)
+        {
+            throw new CashSessionException("La fuente de devoluciones de caja devolvió un monto inválido.");
+        }
+
+        return new CashRegisterSnapshot(session.Id, session.OpeningAmount, sales, cashRefunds);
     }
 
     /// <summary>Obtiene un empleado activo para autorizar una operación de caja.</summary>

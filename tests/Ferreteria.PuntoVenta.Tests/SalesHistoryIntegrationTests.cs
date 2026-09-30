@@ -85,6 +85,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 options.AnchoReporte = 48;
             });
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
+        services.AddSingleton<ICashMovementReader, PendingMigrationCashMovementReader>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
         services.AddSingleton<IOrderService, OrderService>();
         services.AddSingleton<IAuditService, AuditService>();
@@ -123,7 +124,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <returns>Servicio de ventas y facturación de confección.</returns>
     public IOrderService Orders => Services.GetRequiredService<IOrderService>();
 
-    /// <summary>Fija el código esperado por el servicio de órdenes para un caso aislado.</summary>
+    /// <summary>Fija el código de caja que usan tanto el servicio de caja como el servicio de órdenes.</summary>
     /// <param name="cashRegisterCode">Código único de la caja del caso.</param>
     public void SetCashRegisterCode(string cashRegisterCode)
     {

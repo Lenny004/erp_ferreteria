@@ -77,7 +77,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IdxCashSessionOpenByRegister"
     WHERE "status" = 'ABIERTA';
 ```
 
-También queda propuesto, sin aplicar, `sales."CashMovements"` para registrar `EGRESO_DEVOLUCION`, `RETIRO` e `INGRESO`. Debería incluir como mínimo `id`, `CashSessionId`, `MovementType`, `Amount`, `Reason`, `EmployeeId`, `CreatedAt` y una referencia opcional a la orden. Hasta que exista ese módulo, el corte documenta devoluciones en efectivo como cero; no inventa movimientos.
+También queda propuesto, sin aplicar, `sales."CashMovements"` para registrar `DEVOLUCION_EFECTIVO`, `RETIRO` e `INGRESO`. Debería incluir como mínimo `id`, `CashSessionId`, `MovementType`, `Amount`, `Reason`, `EmployeeId`, `CreatedAt` y una referencia opcional a la orden. Hasta que exista ese módulo, `ICashMovementReader` devuelve cero y el corte no inventa movimientos.
+
+El POS lee las devoluciones mediante `ICashMovementReader` dentro de la transacción Serializable del resumen o cierre. La implementación actual es `PendingMigrationCashMovementReader`; cuando exista la migración sumará los movimientos `DEVOLUCION_EFECTIVO` de la sesión.
 
 Si se necesita trazabilidad directa en la sesión, se proponen columnas `ClosedByEmployeeId`, `CancelledByEmployeeId` y `CancelledAt`. Actualmente quién cerró o canceló se conserva en `system."AuditLog"` mediante `UserId` y `NewData`; no se agregan columnas en esta entrega.
 

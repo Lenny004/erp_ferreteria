@@ -53,6 +53,7 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterContracts.cs" Link="CashRegister/CashRegisterContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashSessionService.cs" Link="CashRegister/ICashSessionService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashSessionService.cs" Link="CashRegister/CashSessionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashMovementReader.cs" Link="CashRegister/ICashMovementReader.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterCalculator.cs" Link="CashRegister/CashRegisterCalculator.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterInputRules.cs" Link="CashRegister/CashRegisterInputRules.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterReportComposer.cs" Link="CashRegister/CashRegisterReportComposer.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderExceptions.cs" Link="Services/OrderExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderService.cs" Link="Services/OrderService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAuthService.cs" Link="Services/PinAuthService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Returns/*.cs" LinkBase="Returns" />
     <Compile Include="../../Ferreteria.PuntoVenta/Data/FerreteriaDbContext.cs" Link="Data/FerreteriaDbContext.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />
     <None Include="../../Ferreteria.PuntoVenta/Squema.sql" Link="Data/Squema.sql" CopyToOutputDirectory="PreserveNewest" />

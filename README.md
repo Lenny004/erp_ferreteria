@@ -716,7 +716,7 @@ Resumen alineado al plan v3.0 (`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`):
 | Caja | `HistorialFacturasView` | UI shell |
 | Caja | `ConsultarStockView` | ✅ conectado a inventario |
 | Caja | `CorteCajaView` | Apertura, resumen, conciliación y cierre; impresión física pendiente de probar |
-| Caja | `DevolucionesView` | UI shell |
+| Caja | `DevolucionesView` | Búsqueda y cálculo de devoluciones; confirmación bloqueada hasta la migración |
 | Caja | `ImpresorasView` | UI shell |
 | Confección | `HistorialVentasView` | UI + servicios parciales |
 | Confección | `OrdenesConfeccionView` | UI + servicios parciales |
