@@ -112,7 +112,7 @@ public sealed class CashSessionService : ICashSessionService
             }
             catch (Exception exception) when (IsUniqueViolation(exception))
             {
-                throw new CashSessionException("Ya hay una caja abierta.");
+                throw new CashSessionException($"La caja {normalizedCode} ya tiene una sesión abierta. Solo puede haber una sesión abierta por caja.");
             }
         }
 
@@ -226,13 +226,18 @@ public sealed class CashSessionService : ICashSessionService
             throw new CashSessionException("El empleado no tiene permiso para abrir caja.");
         }
 
-        var hasOpenSession = await dbContext.CashSessions.AnyAsync(
+        var openSession = await dbContext.CashSessions.SingleOrDefaultAsync(
             session => session.CashRegisterCode == cashRegisterCode
                 && session.Status == SalesDomainConstants.CashSessionStatuses.Open,
             cancellationToken);
-        if (hasOpenSession)
+        if (openSession is not null)
         {
-            throw new CashSessionException("Ya hay una caja abierta.");
+            if (openSession.EmployeeId == employeeId)
+            {
+                throw new CashSessionException($"Ya tiene una sesión abierta en la caja {cashRegisterCode}.");
+            }
+
+            throw new CashSessionException($"La caja {cashRegisterCode} ya tiene una sesión abierta de otro cajero. Solo puede haber una sesión abierta por caja: ciérrela antes de abrir otra.");
         }
 
         var now = _clock.GetUtcNow().UtcDateTime;

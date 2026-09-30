@@ -15,6 +15,7 @@ public partial class DevolucionesView : UserControl
     private readonly ReturnOptions _options;
     private readonly Dictionary<Guid, ReturnableLine> _lines = new();
     private readonly Dictionary<Guid, decimal> _quantities = new();
+    private readonly Dictionary<Guid, bool> _restock = new();
     private ReturnableSaleSummary? _selectedSale;
 
     /// <summary>Inicializa la vista y carga catálogos configurables.</summary>
@@ -81,10 +82,12 @@ public partial class DevolucionesView : UserControl
             var lines = await _returnService.GetReturnableLinesAsync(sale.OrderId, _currentSession.CurrentEmployee.Id);
             _lines.Clear();
             _quantities.Clear();
+            _restock.Clear();
             foreach (var line in lines)
             {
                 _lines[line.OrderDetailId] = line;
                 _quantities[line.OrderDetailId] = 0m;
+                _restock[line.OrderDetailId] = true;
             }
 
             SelectedSaleText.Text = $"Venta ORD-{sale.ShortOrderId} | {sale.CustomerDisplayName} | Total original ${sale.Total:0.00}";
@@ -110,9 +113,28 @@ public partial class DevolucionesView : UserControl
     }
 
     /// <summary>Mantiene bloqueada la confirmación en esta fase.</summary>
-    private void OnConfirmClick(object sender, RoutedEventArgs e)
+    private async void OnConfirmClick(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(_returnService.Capabilities.Message, "Devoluciones", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (_selectedSale is null || _currentSession.CurrentEmployee is null || !ConfirmButton.IsEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var requestLines = _quantities.Where(item => item.Value > 0m).Select(item => new ReturnLineRequest(item.Key, item.Value, _restock.GetValueOrDefault(item.Key, true))).ToArray();
+            var method = RefundCombo.SelectedItem?.ToString() ?? ReturnDomainConstants.RefundMethods.None;
+            var previewRequest = new ReturnRequest(Guid.NewGuid(), _selectedSale.OrderId, _currentSession.CurrentEmployee.Id, _currentSession.CurrentEmployee.Id, ReasonCombo.SelectedValue?.ToString() ?? string.Empty, NotesBox.Text, ReturnDomainConstants.RefundMethods.None, requestLines, 0m);
+            var preview = ReturnCalculator.Calculate(previewRequest, _selectedSale, _lines.Values.ToArray(), null, _options);
+            var request = previewRequest with { RefundMethod = method, RefundAmount = method.Equals(ReturnDomainConstants.RefundMethods.None, StringComparison.OrdinalIgnoreCase) ? 0m : preview.Total };
+            await _returnService.CreateReturnAsync(request);
+            TechnicalMessageText.Text = "Devolución registrada correctamente.";
+            ConfirmButton.IsEnabled = false;
+        }
+        catch (Exception exception)
+        {
+            TechnicalMessageText.Text = exception.Message;
+        }
     }
 
     private void RenderLines()
@@ -122,6 +144,7 @@ public partial class DevolucionesView : UserControl
         {
             var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
             row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
@@ -134,8 +157,19 @@ public partial class DevolucionesView : UserControl
             };
             Grid.SetColumn(description, 0);
             row.Children.Add(description);
+            var restock = new CheckBox
+            {
+                Content = "Reingresa a inventario",
+                IsChecked = _restock.GetValueOrDefault(line.OrderDetailId, true),
+                FontSize = 16,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            restock.Checked += (_, _) => SetRestock(line.OrderDetailId, true);
+            restock.Unchecked += (_, _) => SetRestock(line.OrderDetailId, false);
+            Grid.SetColumn(restock, 1);
+            row.Children.Add(restock);
             var minus = CreateQuantityButton("−", () => ChangeQuantity(line.OrderDetailId, -1m));
-            Grid.SetColumn(minus, 1);
+            Grid.SetColumn(minus, 2);
             row.Children.Add(minus);
             var quantity = new TextBlock
             {
@@ -145,13 +179,19 @@ public partial class DevolucionesView : UserControl
                 FontSize = 18,
                 FontWeight = FontWeights.Bold
             };
-            Grid.SetColumn(quantity, 2);
+            Grid.SetColumn(quantity, 3);
             row.Children.Add(quantity);
             var plus = CreateQuantityButton("+", () => ChangeQuantity(line.OrderDetailId, 1m));
-            Grid.SetColumn(plus, 3);
+            Grid.SetColumn(plus, 4);
             row.Children.Add(plus);
             LinesPanel.Children.Add(row);
         }
+    }
+
+    private void SetRestock(Guid lineId, bool restock)
+    {
+        _restock[lineId] = restock;
+        UpdateSummary();
     }
 
     private static Button CreateQuantityButton(string text, Action action)
@@ -196,7 +236,7 @@ public partial class DevolucionesView : UserControl
 
         var requests = _quantities
             .Where(item => item.Value > 0m)
-            .Select(item => new ReturnLineRequest(item.Key, item.Value))
+            .Select(item => new ReturnLineRequest(item.Key, item.Value, _restock.GetValueOrDefault(item.Key, true)))
             .ToArray();
         if (requests.Length == 0)
         {
@@ -207,26 +247,33 @@ public partial class DevolucionesView : UserControl
 
         try
         {
-            var request = new ReturnRequest(
+            var previewRequest = new ReturnRequest(
                 Guid.NewGuid(),
                 _selectedSale.OrderId,
                 _currentSession.CurrentEmployee.Id,
                 _currentSession.CurrentEmployee.Id,
                 ReasonCombo.SelectedValue?.ToString() ?? string.Empty,
                 NotesBox.Text,
-                RefundCombo.SelectedItem?.ToString() ?? ReturnDomainConstants.RefundMethods.None,
-                requests);
-            var calculation = ReturnCalculator.Calculate(request, _selectedSale, _lines.Values.ToArray(), null, _options);
+                ReturnDomainConstants.RefundMethods.None,
+                requests,
+                0m);
+            var preview = ReturnCalculator.Calculate(previewRequest, _selectedSale, _lines.Values.ToArray(), null, _options);
+            var refundMethod = RefundCombo.SelectedItem?.ToString() ?? ReturnDomainConstants.RefundMethods.None;
+            var calculation = refundMethod.Equals(ReturnDomainConstants.RefundMethods.None, StringComparison.OrdinalIgnoreCase)
+                ? preview
+                : ReturnCalculator.Calculate(previewRequest with { RefundMethod = refundMethod, RefundAmount = preview.Total }, _selectedSale, _lines.Values.ToArray(), null, _options);
             var fiscal = _fiscalPolicy.Decide(_selectedSale.DteType, calculation.ReturnType);
             SubtotalText.Text = $"Subtotal: ${calculation.Subtotal:0.00}";
             DiscountText.Text = $"Descuento: ${calculation.DiscountAmount:0.00}";
             TaxText.Text = $"IVA: ${calculation.TaxAmount:0.00}";
             TotalText.Text = $"Total crédito: ${calculation.Total:0.00} ({calculation.ReturnType})";
             FiscalText.Text = fiscal.UserMessage;
+            ConfirmButton.IsEnabled = _returnService.Capabilities.CanConfirmReturns && calculation.Total > 0m;
             TechnicalMessageText.Text = string.Empty;
         }
         catch (InvalidReturnException exception)
         {
+            ConfirmButton.IsEnabled = false;
             TechnicalMessageText.Text = exception.Message;
         }
     }

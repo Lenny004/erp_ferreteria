@@ -13,6 +13,7 @@ using Ferreteria.PuntoVenta.Views.Shell;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.IO;
 using System.Windows;
 
@@ -57,6 +58,7 @@ public partial class App : Application
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
                 services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
                 services.Configure<ReturnOptions>(context.Configuration.GetSection(ReturnOptions.SectionName));
+                services.PostConfigure<ReturnOptions>(ReturnOptions.ApplyDefaults);
                 services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
@@ -74,6 +76,7 @@ public partial class App : Application
                 services.AddSingleton<ICashSessionService, CashSessionService>();
                 services.AddSingleton<ICashMovementReader, PendingMigrationCashMovementReader>();
                 services.AddSingleton<IReturnedQuantityReader, PendingMigrationReturnedQuantityReader>();
+                services.AddSingleton<IReturnWriter, PendingMigrationReturnWriter>();
                 services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
                 services.AddSingleton<IReturnService, ReturnService>();
                 services.AddSingleton<CashSessionOpeningFlow>();

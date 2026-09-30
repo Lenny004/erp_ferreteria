@@ -12,7 +12,7 @@ public sealed class ReturnCalculatorTests
     {
         var sale = CreateSale();
         var line = CreateLine(2m, 100m);
-        var first = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line });
+        var first = ReturnCalculator.Calculate(CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None), sale, new[] { line }, null, ReturnOptions.CreateDefault());
         var history = new Dictionary<Guid, ReturnedLineCredit>
         {
             [line.OrderDetailId] = new(1m, first.Lines[0].Subtotal, first.Lines[0].DiscountAmount, first.Lines[0].TaxAmount, first.Lines[0].Total)
@@ -21,7 +21,8 @@ public sealed class ReturnCalculatorTests
             CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None),
             sale,
             new[] { line with { AlreadyReturnedQuantity = 1m, AvailableQuantity = 1m } },
-            history);
+            history,
+            ReturnOptions.CreateDefault());
 
         Assert.Equal(ReturnDomainConstants.Types.Total, second.ReturnType);
         Assert.Equal(sale.Total, first.Total + second.Total);
@@ -38,7 +39,7 @@ public sealed class ReturnCalculatorTests
     {
         var line = CreateLine(2m, 100m);
         var request = CreateRequest(line.OrderDetailId, quantity, ReturnDomainConstants.RefundMethods.None);
-        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }));
+        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, CreateSale(), new[] { line }, null, ReturnOptions.CreateDefault()));
     }
 
     /// <summary>Rechaza líneas repetidas, motivo que exige notas sin observación y vales.</summary>
@@ -50,16 +51,16 @@ public sealed class ReturnCalculatorTests
         {
             Lines = new[] { new ReturnLineRequest(line.OrderDetailId, 1m), new ReturnLineRequest(line.OrderDetailId, 1m) }
         };
-        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(duplicate, CreateSale(), new[] { line }));
+        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(duplicate, CreateSale(), new[] { line }, null, ReturnOptions.CreateDefault()));
 
         var missingNotes = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None) with
         {
             ReasonCode = "ANULACION_TOTAL"
         };
-        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(missingNotes, CreateSale(), new[] { line }));
+        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(missingNotes, CreateSale(), new[] { line }, null, ReturnOptions.CreateDefault()));
 
         var voucher = CreateRequest(line.OrderDetailId, 1m, "VALE");
-        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(voucher, CreateSale(), new[] { line }));
+        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(voucher, CreateSale(), new[] { line }, null, ReturnOptions.CreateDefault()));
     }
 
     /// <summary>Usa descuentos de línea y encabezado, IVA original y monto de reintegro exacto.</summary>
@@ -74,7 +75,7 @@ public sealed class ReturnCalculatorTests
             RefundAmount = 96.05m
         };
 
-        var result = ReturnCalculator.Calculate(request, sale, new[] { line });
+        var result = ReturnCalculator.Calculate(request, sale, new[] { line }, null, ReturnOptions.CreateDefault());
 
         Assert.Equal(100m, result.Subtotal);
         Assert.Equal(15m, result.DiscountAmount);
@@ -90,7 +91,7 @@ public sealed class ReturnCalculatorTests
         var line = CreateLine(1m, 100m) with { OrderId = Guid.NewGuid() };
         var request = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None) with { OrderId = sale.OrderId };
 
-        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, sale, new[] { line }));
+        Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(request, sale, new[] { line }, null, ReturnOptions.CreateDefault()));
     }
 
     /// <summary>Verifica la política fiscal predeterminada para CCF, factura y venta sin DTE.</summary>
