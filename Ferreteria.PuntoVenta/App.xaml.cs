@@ -3,6 +3,7 @@ using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Printing;
+using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
@@ -12,6 +13,7 @@ using Ferreteria.PuntoVenta.Views.Shell;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.IO;
 using System.Windows;
 
@@ -55,6 +57,8 @@ public partial class App : Application
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
                 services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
+                services.Configure<ReturnOptions>(context.Configuration.GetSection(ReturnOptions.SectionName));
+                services.PostConfigure<ReturnOptions>(ReturnOptions.ApplyDefaults);
                 services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
@@ -70,6 +74,11 @@ public partial class App : Application
                 services.AddSingleton<IReportService, ReportService>();
                 services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
                 services.AddSingleton<ICashSessionService, CashSessionService>();
+                services.AddSingleton<ICashMovementReader, CashMovementsCashMovementReader>();
+                services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
+                services.AddSingleton<IReturnWriter, EfReturnWriter>();
+                services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
+                services.AddSingleton<IReturnService, ReturnService>();
                 services.AddSingleton<CashSessionOpeningFlow>();
                 services.AddSingleton<IPrinterConfigService, PrinterConfigService>();
                 services.AddSingleton<IReceiptPrintService, ReceiptPrintService>();
@@ -91,6 +100,7 @@ public partial class App : Application
                 services.AddTransient<CorteCajaView>();
                 services.AddTransient<ImpresorasView>();
                 services.AddTransient<HistorialFacturasView>();
+                services.AddTransient<DevolucionesView>();
                 services.AddTransient<ConsultarStockView>();
                 services.AddTransient<ProductosView>();
                 services.AddTransient<ProveedoresView>();

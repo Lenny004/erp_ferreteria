@@ -68,6 +68,34 @@ public sealed class CashRegisterCalculatorTests
         Assert.True(CashRegisterCalculator.CalculateDifference(100m, 120m, 20m).RequiresObservation);
     }
 
+    /// <summary>Descuenta devoluciones en efectivo y conserva el redondeo monetario.</summary>
+    [Fact]
+    public void Calculate_CashRefundsReduceExpectedCash()
+    {
+        var sale = new CashRegisterSaleSnapshot(
+            Guid.NewGuid(), DateTime.UtcNow, SalesDomainConstants.OrderStatuses.Completed, 100m, 13m,
+            new[] { new CashRegisterPaymentSnapshot(SalesDomainConstants.PaymentMethods.Cash, 100m) });
+        var summary = CashRegisterCalculator.Calculate(new CashRegisterSnapshot(Guid.NewGuid(), 10.005m, new[] { sale }, 12.505m));
+
+        Assert.Equal(10.01m, summary.OpeningAmount);
+        Assert.Equal(12.51m, summary.CashRefunds);
+        Assert.Equal(97.50m, summary.ExpectedCash);
+        Assert.Equal(CashDifferenceClassification.Surplus, CashRegisterCalculator.CalculateDifference(summary.ExpectedCash, 100m, 1m).Classification);
+    }
+
+    /// <summary>Un reembolso mayor que el efectivo cobrado produce un esperado negativo controlado.</summary>
+    [Fact]
+    public void Calculate_RefundGreaterThanCashSalesProducesNegativeExpected()
+    {
+        var sale = new CashRegisterSaleSnapshot(
+            Guid.NewGuid(), DateTime.UtcNow, SalesDomainConstants.OrderStatuses.Completed, 10m, 1.30m,
+            new[] { new CashRegisterPaymentSnapshot(SalesDomainConstants.PaymentMethods.Cash, 10m) });
+        var summary = CashRegisterCalculator.Calculate(new CashRegisterSnapshot(Guid.NewGuid(), 0m, new[] { sale }, 12m));
+
+        Assert.Equal(-2m, summary.ExpectedCash);
+        Assert.Equal(CashDifferenceClassification.Surplus, CashRegisterCalculator.CalculateDifference(summary.ExpectedCash, 0m, 1m).Classification);
+    }
+
     /// <summary>Rechaza montos negativos y superiores al límite configurable.</summary>
     [Fact]
     public void InputRules_RejectNegativeAndOverLimit()

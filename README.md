@@ -161,7 +161,7 @@ El panel lateral **no muestra ambos bloques a la vez**. La visibilidad depende d
 | Facturacion | `FacturacionView` | Venta mostrador + DTE |
 | Historial Facturas | `HistorialFacturasView` | DTEs emitidos y reimpresión |
 | Impresoras | `ImpresorasView` | Configuración de impresión |
-| Devoluciones | `DevolucionesView` | Nota de crédito DTE-05 |
+| Devoluciones | `DevolucionesView` | Búsqueda, cálculo y confirmación con PIN de autorización; impresión física pendiente de probar |
 | Corte de caja | `CorteCajaView` | Cierre de turno |
 
 **Ítems del sidenav — módulo CONFECCION (`can_sell`):**
@@ -270,7 +270,7 @@ Panel de Caja (requiere PIN para entrar)
 | Facturación | `Views/Caja/FacturacionView.xaml` | Venta mostrador, DTE, pago | UI + servicios parciales |
 | Historial de Facturas | `Views/Caja/HistorialFacturasView.xaml` | Consulta y reimpresión de DTEs | UI shell |
 | Consultar Stock | `Views/Caja/ConsultarStockView.xaml` | Vista rápida de inventario | Conectado a `InventoryService` |
-| Nota de Crédito | `Views/Caja/DevolucionesView.xaml` | Devoluciones DTE-05 | UI shell |
+| Devoluciones | `Views/Caja/DevolucionesView.xaml` | Búsqueda, cálculo y confirmación con PIN de autorización; impresión física pendiente de probar | Operativo |
 | Corte de Caja | `Views/Caja/CorteCajaView.xaml` | Apertura, resumen, conciliación y cierre | Operativo; impresión física pendiente de probar |
 | Impresoras | `Views/Caja/ImpresorasView.xaml` | Configuración de impresión | UI shell |
 | PIN | `Views/PIN/PinWindow.xaml` | Modal de autenticación cajero | ✅ `PinAuthService` + bcrypt |
@@ -716,7 +716,7 @@ Resumen alineado al plan v3.0 (`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`):
 | Caja | `HistorialFacturasView` | UI shell |
 | Caja | `ConsultarStockView` | ✅ conectado a inventario |
 | Caja | `CorteCajaView` | Apertura, resumen, conciliación y cierre; impresión física pendiente de probar |
-| Caja | `DevolucionesView` | UI shell |
+| Caja | `DevolucionesView` | Búsqueda, cálculo y confirmación con PIN de autorización; impresión física pendiente de probar |
 | Caja | `ImpresorasView` | UI shell |
 | Confección | `HistorialVentasView` | UI + servicios parciales |
 | Confección | `OrdenesConfeccionView` | UI + servicios parciales |

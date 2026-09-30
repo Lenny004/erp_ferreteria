@@ -20,6 +20,10 @@ public static class CashRegisterCalculator
     public static CashRegisterSummary Calculate(CashRegisterSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.CashRefunds < 0m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(snapshot), "Las devoluciones de efectivo no pueden ser negativas.");
+        }
 
         var completedSales = snapshot.Sales
             .Where(sale => sale.Status == SalesDomainConstants.OrderStatuses.Completed)
