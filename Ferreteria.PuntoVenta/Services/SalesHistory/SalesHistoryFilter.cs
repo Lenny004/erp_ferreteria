@@ -180,50 +180,57 @@ public static class TimeZoneSupport
 /// <summary>Reglas puras para resolver el alcance autorizado del historial.</summary>
 public static class SalesHistoryAccessRules
 {
-    /// <summary>Resuelve el alcance según el puesto y el día local.</summary>
+    /// <summary>Resuelve el alcance según el puesto y las sesiones ABIERTAS del empleado.</summary>
     /// <param name="employeeId">Identificador del empleado solicitante.</param>
     /// <param name="canCashier">Indica si el empleado tiene permiso de caja.</param>
     /// <param name="positionName">Nombre del puesto del empleado.</param>
     /// <param name="fullHistoryPositionNames">Puestos configurados con acceso completo.</param>
-    /// <param name="clock">Reloj usado para calcular el día local.</param>
-    /// <returns>Alcance completo para puestos autorizados o el día propio del empleado.</returns>
+    /// <param name="openCashSessionIds">Sesiones ABIERTAS obtenidas por el servicio desde el servidor.</param>
+    /// <returns>Alcance completo para puestos autorizados o las sesiones abiertas propias.</returns>
     /// <remarks>
-    /// Decisión pendiente del dueño: la lista define los puestos de encargado. Un empleado sin permiso de caja
-    /// y sin puesto de encargado recibe la misma restricción diaria que un cajero para evitar acceso ilimitado.
+    /// La lista define los puestos de acceso completo. Actualmente contiene Administrador; no existe un
+    /// puesto Supervisor sembrado. Si el dueño crea ese puesto, puede agregarlo a la misma configuración.
+    /// Un empleado sin permiso de caja y sin puesto de acceso completo recibe alcance vacío.
     /// </remarks>
     public static SalesHistoryScope ResolveScope(
         Guid employeeId,
         bool canCashier,
         string? positionName,
         IEnumerable<string> fullHistoryPositionNames,
-        TimeProvider clock)
+        IEnumerable<Guid> openCashSessionIds)
     {
         ArgumentNullException.ThrowIfNull(fullHistoryPositionNames);
-        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(openCashSessionIds);
         bool isFullHistory = fullHistoryPositionNames.Any(name =>
             string.Equals(name?.Trim(), positionName?.Trim(), StringComparison.OrdinalIgnoreCase));
         if (isFullHistory)
         {
-            return new SalesHistoryScope(null, null, null);
+            return new SalesHistoryScope(null, null, null, null);
         }
 
-        var localToday = TimeZoneSupport.ToElSalvadorTime(clock.GetUtcNow().UtcDateTime).Date;
+        if (!canCashier)
+        {
+            return new SalesHistoryScope(employeeId, null, null, Array.Empty<Guid>());
+        }
+
+        var sessionIds = openCashSessionIds.Where(id => id != Guid.Empty).Distinct().ToArray();
         return new SalesHistoryScope(
             employeeId,
-            TimeZoneSupport.ToUtc(localToday),
-            TimeZoneSupport.ToUtc(localToday.AddDays(1)));
+            null,
+            null,
+            sessionIds);
     }
 
     /// <summary>Determina si una orden está dentro de un alcance resuelto.</summary>
     /// <param name="scope">Alcance autorizado.</param>
     /// <param name="orderEmployeeId">Empleado que registró la orden.</param>
-    /// <param name="createdAtUtc">Fecha de creación de la orden en UTC.</param>
+    /// <param name="cashSessionId">Sesión de caja asociada a la orden.</param>
     /// <returns><c>true</c> si la orden está dentro del alcance; de lo contrario, <c>false</c>.</returns>
-    public static bool CanView(SalesHistoryScope scope, Guid orderEmployeeId, DateTime createdAtUtc)
+    public static bool CanView(SalesHistoryScope scope, Guid orderEmployeeId, Guid? cashSessionId)
     {
         return (!scope.RestrictToEmployeeId.HasValue || scope.RestrictToEmployeeId.Value == orderEmployeeId)
-            && (!scope.MinCreatedAtUtc.HasValue || createdAtUtc >= scope.MinCreatedAtUtc.Value)
-            && (!scope.MaxCreatedAtUtc.HasValue || createdAtUtc < scope.MaxCreatedAtUtc.Value);
+            && (scope.RestrictToCashSessionIds is null
+                || cashSessionId is Guid sessionId && scope.RestrictToCashSessionIds.Contains(sessionId));
     }
 }
 

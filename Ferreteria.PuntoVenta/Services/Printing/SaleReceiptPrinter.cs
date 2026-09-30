@@ -14,7 +14,9 @@ public enum SaleReceiptPrintStatus
     /// <summary>No se pudo preparar el comprobante.</summary>
     CompositionFailed,
     /// <summary>Falló el envío a la impresora.</summary>
-    PrinterFailed
+    PrinterFailed,
+    /// <summary>El empleado no tiene acceso a la venta solicitada.</summary>
+    NotAuthorized
 }
 
 /// <summary>Resultado detallado y seguro para mostrar al cajero.</summary>
@@ -80,6 +82,25 @@ public sealed class SaleReceiptPrinter : ISaleReceiptPrinter
     {
         try
         {
+            if (isReprint)
+            {
+                var employee = _currentSession.CurrentEmployee;
+                if (employee is null)
+                {
+                    _logger.LogWarning("Se rechazó la reimpresión {OrderId}: no hay empleado autenticado.", orderId);
+                    return new(SaleReceiptPrintStatus.NotAuthorized, "Debe iniciar sesión para reimprimir este comprobante.");
+                }
+
+                if (!await _salesHistory.CanAccessOrderAsync(orderId, employee.Id, cancellationToken))
+                {
+                    _logger.LogWarning(
+                        "Se rechazó la reimpresión {OrderId} para el empleado {EmployeeId}: venta fuera de alcance.",
+                        orderId,
+                        employee.Id);
+                    return new(SaleReceiptPrintStatus.NotAuthorized, "No tiene permiso para reimprimir esta venta.");
+                }
+            }
+
             var printer = await _printerConfig.GetDefaultAsync(cancellationToken);
             if (printer is null)
             {

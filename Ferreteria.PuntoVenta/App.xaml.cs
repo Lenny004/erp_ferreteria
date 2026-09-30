@@ -1,6 +1,7 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Views.Caja;
@@ -53,6 +54,7 @@ public partial class App : Application
                 services.Configure<PrintingOptions>(context.Configuration.GetSection(PrintingOptions.SectionName));
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
+                services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
                 services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
@@ -67,6 +69,8 @@ public partial class App : Application
                 services.AddSingleton<ICustomerService, CustomerService>();
                 services.AddSingleton<IReportService, ReportService>();
                 services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
+                services.AddSingleton<ICashSessionService, CashSessionService>();
+                services.AddSingleton<CashSessionOpeningFlow>();
                 services.AddSingleton<IPrinterConfigService, PrinterConfigService>();
                 services.AddSingleton<IReceiptPrintService, ReceiptPrintService>();
                 services.AddSingleton<IReceiptCompositionService, ReceiptCompositionService>();
@@ -84,6 +88,7 @@ public partial class App : Application
                 services.AddTransient<InicioWindow>();
                 services.AddTransient<MainShellWindow>();
                 services.AddTransient<FacturacionView>();
+                services.AddTransient<CorteCajaView>();
                 services.AddTransient<ImpresorasView>();
                 services.AddTransient<HistorialFacturasView>();
                 services.AddTransient<ConsultarStockView>();

@@ -13,6 +13,36 @@ public sealed class AuditService(
     IServiceScopeFactory scopeFactory,
     ILogger<AuditService> logger) : IAuditService
 {
+    /// <summary>Crea una fila de auditoría serializada para reutilizarla en una transacción existente.</summary>
+    /// <param name="action">Código persistido de acción, de hasta 10 caracteres.</param>
+    /// <param name="tableName">Nombre lógico de la tabla afectada.</param>
+    /// <param name="recordId">Identificador textual del registro afectado.</param>
+    /// <param name="oldData">Estado anterior sin secretos.</param>
+    /// <param name="newData">Estado nuevo sin secretos.</param>
+    /// <param name="userId">Empleado que ejecutó la acción.</param>
+    /// <returns>Entidad lista para agregar al mismo <see cref="FerreteriaDbContext"/> de la operación.</returns>
+    /// <remarks>El método no guarda por sí mismo; permite que la auditoría comparta transacción y rollback.</remarks>
+    internal static AuditLog CreateChangeEntry(
+        string action,
+        string tableName,
+        string recordId,
+        object? oldData,
+        object? newData,
+        Guid? userId)
+    {
+        return new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            TableName = tableName,
+            RecordId = recordId,
+            Action = action,
+            UserId = userId,
+            OldData = oldData is null ? null : JsonSerializer.Serialize(oldData),
+            NewData = newData is null ? null : JsonSerializer.Serialize(newData),
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
     /// <inheritdoc />
     public Task RecordLoginAsync(Employee employee, string module, CancellationToken cancellationToken = default)
     {
@@ -40,17 +70,7 @@ public sealed class AuditService(
             using var scope = scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
-            db.AuditLogs.Add(new AuditLog
-            {
-                Id = Guid.NewGuid(),
-                TableName = tableName,
-                RecordId = recordId,
-                Action = action,
-                UserId = userId,
-                OldData = oldData is null ? null : JsonSerializer.Serialize(oldData),
-                NewData = newData is null ? null : JsonSerializer.Serialize(newData),
-                CreatedAt = DateTime.UtcNow
-            });
+            db.AuditLogs.Add(CreateChangeEntry(action, tableName, recordId, oldData, newData, userId));
 
             await db.SaveChangesAsync(cancellationToken);
         }

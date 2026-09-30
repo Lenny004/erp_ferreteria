@@ -63,7 +63,10 @@ public sealed class SalesHistoryOptions
     public const string SectionName = "SalesHistory";
 
     /// <summary>Nombres de puesto que pueden consultar el historial completo.</summary>
-    /// <remarks>Decisión pendiente del dueño; la lista vacía trata a todos como cajeros.</remarks>
+    /// <remarks>
+    /// Solo Administrador está configurado actualmente. No existe el puesto Supervisor en el esquema;
+    /// si el dueño lo crea, se agrega aquí. Una lista vacía deja a todos como cajeros sin acceso completo.
+    /// </remarks>
     public IList<string> FullHistoryPositionNames { get; set; } = new List<string>();
 }
 
@@ -174,7 +177,12 @@ public sealed record SalesHistoryMovement(string Product, string Type, decimal Q
 /// <param name="RestrictToEmployeeId">Empleado al que se limita el alcance, si aplica.</param>
 /// <param name="MinCreatedAtUtc">Límite inferior UTC, si aplica.</param>
 /// <param name="MaxCreatedAtUtc">Límite superior UTC exclusivo, si aplica.</param>
-public sealed record SalesHistoryScope(Guid? RestrictToEmployeeId, DateTime? MinCreatedAtUtc, DateTime? MaxCreatedAtUtc);
+/// <param name="RestrictToCashSessionIds">Sesiones ABIERTAS autorizadas, si aplica.</param>
+public sealed record SalesHistoryScope(
+    Guid? RestrictToEmployeeId,
+    DateTime? MinCreatedAtUtc,
+    DateTime? MaxCreatedAtUtc,
+    IReadOnlyList<Guid>? RestrictToCashSessionIds = null);
 
 /// <summary>Contrato de consulta y detalle del historial.</summary>
 public interface ISalesHistoryService
@@ -192,6 +200,14 @@ public interface ISalesHistoryService
     /// <param name="cancellationToken">Token para cancelar la consulta.</param>
     /// <returns>El detalle o <c>null</c> cuando no existe o no está autorizado.</returns>
     Task<SalesHistoryDetail?> GetDetailAsync(Guid orderId, Guid employeeId, CancellationToken cancellationToken = default);
+
+    /// <summary>Comprueba en el servidor si el empleado puede acceder a una orden para reimprimirla.</summary>
+    /// <param name="orderId">Identificador de la orden.</param>
+    /// <param name="employeeId">Empleado autenticado que solicita la reimpresión.</param>
+    /// <param name="cancellationToken">Token para cancelar la consulta.</param>
+    /// <returns><c>true</c> si la orden está dentro del alcance vigente.</returns>
+    /// <remarks>Usa exactamente el mismo alcance que la búsqueda y exige empleado activo.</remarks>
+    Task<bool> CanAccessOrderAsync(Guid orderId, Guid employeeId, CancellationToken cancellationToken = default);
 
     /// <summary>Incrementa de manera atómica el contador de reimpresiones de los DTE de una orden.</summary>
     /// <remarks>No modifica nada cuando la orden no tiene DTE.</remarks>

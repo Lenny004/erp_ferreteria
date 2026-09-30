@@ -22,6 +22,9 @@ public sealed class CurrentSessionService : ICurrentSessionService
     public DateTime? StartedAtUtc { get; private set; }
 
     /// <inheritdoc />
+    public Guid? ActiveCashSessionId { get; private set; }
+
+    /// <inheritdoc />
     public bool IsActive => CurrentEmployee is not null && ActiveModule is not null;
 
     /// <inheritdoc />
@@ -32,6 +35,24 @@ public sealed class CurrentSessionService : ICurrentSessionService
         CurrentModule = module.ToString();
         StartedAtUtc = DateTime.UtcNow;
         _initialSection = initialSection;
+        ActiveCashSessionId = null;
+    }
+
+    /// <inheritdoc />
+    public void SetActiveCashSession(Guid cashSessionId)
+    {
+        if (cashSessionId == Guid.Empty)
+        {
+            throw new ArgumentException("El identificador de sesión de caja no puede estar vacío.", nameof(cashSessionId));
+        }
+
+        ActiveCashSessionId = cashSessionId;
+    }
+
+    /// <inheritdoc />
+    public void ClearActiveCashSession()
+    {
+        ActiveCashSessionId = null;
     }
 
     /// <inheritdoc />
@@ -59,5 +80,6 @@ public sealed class CurrentSessionService : ICurrentSessionService
         CurrentModule = null;
         StartedAtUtc = null;
         _initialSection = null;
+        ActiveCashSessionId = null;
     }
 }

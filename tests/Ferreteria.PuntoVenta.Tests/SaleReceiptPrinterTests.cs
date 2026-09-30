@@ -72,6 +72,34 @@ public sealed class SaleReceiptPrinterTests
         Assert.Empty(doubles.Audit.Records);
     }
 
+    /// <summary>Una reimpresión fuera del alcance no compone ni envía el comprobante.</summary>
+    [Fact]
+    public async Task ReprintOutsideScope_IsNotAuthorized()
+    {
+        var doubles = new TestDoubles { HasOrderAccess = false };
+        var printer = doubles.CreateSystem();
+
+        var result = await printer.PrintSaleAsync(doubles.OrderId, isReprint: true);
+
+        Assert.Equal(SaleReceiptPrintStatus.NotAuthorized, result.Status);
+        Assert.Equal(0, doubles.Printing.Calls);
+        Assert.Empty(doubles.Audit.Records);
+    }
+
+    /// <summary>Una reimpresión sin empleado autenticado se rechaza antes de consultar la impresora.</summary>
+    [Fact]
+    public async Task ReprintWithoutEmployee_IsNotAuthorized()
+    {
+        var doubles = new TestDoubles { HasEmployee = false };
+        var printer = doubles.CreateSystem();
+
+        var result = await printer.PrintSaleAsync(doubles.OrderId, isReprint: true);
+
+        Assert.Equal(SaleReceiptPrintStatus.NotAuthorized, result.Status);
+        Assert.Equal(0, doubles.Printing.Calls);
+        Assert.Empty(doubles.Audit.Records);
+    }
+
     private sealed class TestDoubles
     {
         public Guid OrderId { get; } = Guid.NewGuid();
@@ -79,6 +107,10 @@ public sealed class SaleReceiptPrinterTests
         public bool HasDefaultPrinter { get; init; } = true;
 
         public bool PrinterThrows { get; init; }
+
+        public bool HasOrderAccess { get; init; } = true;
+
+        public bool HasEmployee { get; init; } = true;
 
         public PrintingDouble Printing { get; } = new();
 
@@ -89,6 +121,7 @@ public sealed class SaleReceiptPrinterTests
         public SaleReceiptPrinter CreateSystem()
         {
             Printing.ThrowOnPrint = PrinterThrows;
+            History.HasOrderAccess = HasOrderAccess;
             return new SaleReceiptPrinter(
                 new PrinterConfigDouble(HasDefaultPrinter),
                 new CompositionDouble(),
@@ -96,7 +129,7 @@ public sealed class SaleReceiptPrinterTests
                 NullLogger<SaleReceiptPrinter>.Instance,
                 History,
                 Audit,
-                new SessionDouble());
+                new SessionDouble(HasEmployee));
         }
     }
 
@@ -199,6 +232,8 @@ public sealed class SaleReceiptPrinterTests
 
     private sealed class HistoryDouble : ISalesHistoryService
     {
+        public bool HasOrderAccess { get; set; } = true;
+
         public int IncrementCalls { get; private set; }
 
         public Task<SalesHistoryPage> SearchAsync(SalesHistoryFilter filter, Guid employeeId, CancellationToken cancellationToken = default)
@@ -209,6 +244,11 @@ public sealed class SaleReceiptPrinterTests
         public Task<SalesHistoryDetail?> GetDetailAsync(Guid orderId, Guid employeeId, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+
+        public Task<bool> CanAccessOrderAsync(Guid orderId, Guid employeeId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(HasOrderAccess);
         }
 
         public Task<bool> IncrementReprintsAsync(Guid orderId, CancellationToken cancellationToken = default)
@@ -241,9 +281,9 @@ public sealed class SaleReceiptPrinterTests
 
     private sealed record AuditRecord(string Action, string TableName, string RecordId, object? OldData, object? NewData, Guid? UserId);
 
-    private sealed class SessionDouble : ICurrentSessionService
+    private sealed class SessionDouble(bool hasEmployee) : ICurrentSessionService
     {
-        public Employee? CurrentEmployee { get; } = new() { Id = Guid.NewGuid() };
+        public Employee? CurrentEmployee { get; } = hasEmployee ? new() { Id = Guid.NewGuid() } : null;
 
         public OperationalModule? ActiveModule => OperationalModule.Caja;
 
@@ -252,6 +292,18 @@ public sealed class SaleReceiptPrinterTests
         public DateTime? StartedAtUtc => DateTime.UtcNow;
 
         public bool IsActive => true;
+
+        public Guid? ActiveCashSessionId => Guid.NewGuid();
+
+        public void SetActiveCashSession(Guid cashSessionId)
+        {
+            throw new NotSupportedException();
+        }
+
+        public void ClearActiveCashSession()
+        {
+            throw new NotSupportedException();
+        }
 
         public void StartSession(Employee employee, OperationalModule module, string initialSection)
         {

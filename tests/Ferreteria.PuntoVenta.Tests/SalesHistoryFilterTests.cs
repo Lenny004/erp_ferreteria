@@ -69,18 +69,37 @@ public sealed class SalesHistoryFilterTests
     public void ResolveScope_UsesPositionNamesCaseInsensitive()
     {
         var employee = Guid.NewGuid();
-        var clock = new FixedTimeProvider(new DateTimeOffset(2026, 9, 27, 6, 1, 0, TimeSpan.Zero));
-        var cashier = SalesHistoryAccessRules.ResolveScope(employee, true, "Cajero", Array.Empty<string>(), clock);
-        var restrictedWithoutCashier = SalesHistoryAccessRules.ResolveScope(employee, false, "Sin puesto de encargado", Array.Empty<string>(), clock);
-        var manager = SalesHistoryAccessRules.ResolveScope(employee, true, "Encargado", new[] { "encargado" }, clock);
-        var empty = SalesHistoryAccessRules.ResolveScope(employee, true, "Encargado", Array.Empty<string>(), clock);
+        var openSession = Guid.NewGuid();
+        var cashier = SalesHistoryAccessRules.ResolveScope(employee, true, "Cajero", Array.Empty<string>(), new[] { openSession });
+        var restrictedWithoutCashier = SalesHistoryAccessRules.ResolveScope(employee, false, "Sin puesto de encargado", Array.Empty<string>(), new[] { openSession });
+        var manager = SalesHistoryAccessRules.ResolveScope(employee, true, "Administrador", new[] { "administrador" }, Array.Empty<Guid>());
+        var empty = SalesHistoryAccessRules.ResolveScope(employee, true, "Cajero", Array.Empty<string>(), Array.Empty<Guid>());
         Assert.Equal(employee, cashier.RestrictToEmployeeId);
-        Assert.Equal(new DateTime(2026, 9, 27, 6, 0, 0, DateTimeKind.Utc), cashier.MinCreatedAtUtc);
+        Assert.Equal(new[] { openSession }, cashier.RestrictToCashSessionIds);
         Assert.Equal(employee, restrictedWithoutCashier.RestrictToEmployeeId);
-        Assert.Equal(cashier.MinCreatedAtUtc, restrictedWithoutCashier.MinCreatedAtUtc);
-        Assert.Equal(cashier.MaxCreatedAtUtc, restrictedWithoutCashier.MaxCreatedAtUtc);
+        Assert.Empty(restrictedWithoutCashier.RestrictToCashSessionIds ?? Array.Empty<Guid>());
         Assert.Null(manager.RestrictToEmployeeId);
-        Assert.Equal(employee, empty.RestrictToEmployeeId);
+        Assert.Null(manager.RestrictToCashSessionIds);
+        Assert.Empty(empty.RestrictToCashSessionIds ?? Array.Empty<Guid>());
+    }
+
+    /// <summary>Exige que la orden pertenezca a una sesión ABIERTA autorizada.</summary>
+    [Fact]
+    public void CanView_RequiresAuthorizedOpenCashSession()
+    {
+        var employeeId = Guid.NewGuid();
+        var openSessionId = Guid.NewGuid();
+        var scope = SalesHistoryAccessRules.ResolveScope(
+            employeeId,
+            true,
+            "Cajero",
+            Array.Empty<string>(),
+            new[] { openSessionId });
+
+        Assert.True(SalesHistoryAccessRules.CanView(scope, employeeId, openSessionId));
+        Assert.False(SalesHistoryAccessRules.CanView(scope, employeeId, Guid.NewGuid()));
+        Assert.False(SalesHistoryAccessRules.CanView(scope, employeeId, null));
+        Assert.False(SalesHistoryAccessRules.CanView(scope, Guid.NewGuid(), openSessionId));
     }
 
     /// <summary>Verifica la etiqueta de DTE y canal de una fila.</summary>

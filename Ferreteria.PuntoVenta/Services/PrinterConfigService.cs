@@ -1,5 +1,6 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
+using Ferreteria.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -99,11 +100,20 @@ public sealed class PrinterConfigService : IPrinterConfigService
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await _auditService.RecordChangeAsync(
-            "CONFIGURACION_IMPRESORA",
-            "system.Printers",
+            SalesDomainConstants.PrintingAuditActions.PrinterConfiguration,
+            SalesDomainConstants.PrintingAuditActions.PrintersTableName,
             printer.Id.ToString(),
             oldData,
-            new { printer.Name, printer.ConnectionType, printer.IpAddress, printer.NetworkPort, printer.PaperWidth, printer.IsDefault },
+            new
+            {
+                Evento = SalesDomainConstants.PrintingAuditActions.PrinterConfigurationEvent,
+                printer.Name,
+                printer.ConnectionType,
+                printer.IpAddress,
+                printer.NetworkPort,
+                printer.PaperWidth,
+                printer.IsDefault
+            },
             _currentSession.CurrentEmployee?.Id,
             cancellationToken);
         return printer;
@@ -135,11 +145,15 @@ public sealed class PrinterConfigService : IPrinterConfigService
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await _auditService.RecordChangeAsync(
-            "IMPRESORA_PREDETERMINADA",
-            "system.Printers",
+            SalesDomainConstants.PrintingAuditActions.DefaultPrinter,
+            SalesDomainConstants.PrintingAuditActions.PrintersTableName,
             printer.Id.ToString(),
             previousDefault,
-            new { printer.IsDefault },
+            new
+            {
+                Evento = SalesDomainConstants.PrintingAuditActions.DefaultPrinterEvent,
+                printer.IsDefault
+            },
             _currentSession.CurrentEmployee?.Id,
             cancellationToken);
     }
