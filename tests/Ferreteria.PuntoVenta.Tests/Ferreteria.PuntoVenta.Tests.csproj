@@ -49,6 +49,9 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryFilter.cs" Link="SalesHistory/SalesHistoryFilter.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryContracts.cs" Link="SalesHistory/SalesHistoryContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryService.cs" Link="SalesHistory/SalesHistoryService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/ReportService.cs" Link="Services/ReportService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IReportService.cs" Link="Services/IReportService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Time/*.cs" LinkBase="Services/Time" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SalesDomainConstants.cs" Link="Domain/SalesDomainConstants.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterContracts.cs" Link="CashRegister/CashRegisterContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashSessionService.cs" Link="CashRegister/ICashSessionService.cs" />

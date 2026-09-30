@@ -7,6 +7,12 @@ namespace Ferreteria.PuntoVenta.Tests;
 /// <summary>Pruebas de cálculo y reporte del corte sin WPF ni base de datos.</summary>
 public sealed class CashRegisterCalculatorTests
 {
+    /// <summary>Inicializa la zona de negocio usada al formatear las fechas del reporte.</summary>
+    public CashRegisterCalculatorTests()
+    {
+        TestBusinessTime.EnsureInitialized();
+    }
+
     /// <summary>Incluye pagos mixtos y excluye órdenes pendientes o canceladas.</summary>
     [Fact]
     public void Calculate_MixedPayments_ExcludesNonCompletedSales()

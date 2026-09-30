@@ -6,6 +6,7 @@ using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +75,11 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddDbContext<FerreteriaDbContext>(options => options.UseNpgsql(ConnectionString));
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
+        services.AddOptions<BusinessTimeOptions>()
+            .Configure(options => options.ZonaHoraria = "America/El_Salvador");
+        services.AddSingleton<BusinessTimeZone>(serviceProvider =>
+            BusinessTimeZoneFactory.Create(serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<BusinessTimeOptions>>()));
+        services.AddSingleton<BusinessCalendar>();
         services.AddOptions<SalesHistoryOptions>()
             .Configure(options => options.FullHistoryPositionNames = new List<string> { "Administrador" });
         services.AddOptions<CashRegisterOptions>()
@@ -85,6 +91,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 options.AnchoReporte = 48;
             });
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
+        services.AddSingleton<IReportService, ReportService>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
         services.AddSingleton<IOrderService, OrderService>();
         services.AddSingleton<IAuditService, AuditService>();
@@ -92,6 +99,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<ILogger<CashSessionService>>(_ => NullLogger<CashSessionService>.Instance);
         services.AddSingleton<ILogger<OrderService>>(_ => NullLogger<OrderService>.Instance);
         _services = services.BuildServiceProvider();
+        TimeZoneSupport.Initialize(_services.GetRequiredService<BusinessTimeZone>());
         await using var scope = _services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         CashierId = await ResolveEmployeeIdAsync(db, "00000002-0", "Cajero", true);
@@ -114,6 +122,12 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <summary>Obtiene el servicio de historial registrado en el fixture.</summary>
     /// <returns>Servicio bajo prueba.</returns>
     public ISalesHistoryService History => Services.GetRequiredService<ISalesHistoryService>();
+
+    /// <summary>Obtiene el calendario de negocio compartido por las pruebas.</summary>
+    public BusinessCalendar Calendar => Services.GetRequiredService<BusinessCalendar>();
+
+    /// <summary>Obtiene el servicio de reportes registrado en el fixture.</summary>
+    public IReportService Reports => Services.GetRequiredService<IReportService>();
 
     /// <summary>Obtiene el servicio de sesiones de caja registrado en el fixture.</summary>
     /// <returns>Servicio transaccional bajo prueba.</returns>
@@ -413,7 +427,7 @@ public sealed class SalesHistoryIntegrationTests
             db.DteIssued.AddRange(dte1, dte2);
         });
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 3, 10), new DateOnly(2026, 3, 10));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 3, 10), new DateOnly(2026, 3, 10), _fixture.Calendar);
         var baseFilter = new SalesHistoryFilter(FromUtc: fromUtc, ToUtc: toUtc, Shortcut: SalesHistoryDateShortcut.None,
             OrderStatus: SalesDomainConstants.OrderStatuses.All, PageSize: 50);
 
@@ -483,7 +497,7 @@ public sealed class SalesHistoryIntegrationTests
                 _fixture.NewReprintAudit(nextDay.Id));
         });
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 4, 15), new DateOnly(2026, 4, 15));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 4, 15), new DateOnly(2026, 4, 15), _fixture.Calendar);
         var page = await _fixture.History.SearchAsync(
             new SalesHistoryFilter(FromUtc: fromUtc, ToUtc: toUtc, Shortcut: SalesHistoryDateShortcut.None,
                 OrderStatus: SalesDomainConstants.OrderStatuses.All),
@@ -551,7 +565,7 @@ public sealed class SalesHistoryIntegrationTests
             },
             _fixture.ManagerId);
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 8, 8), new DateOnly(2026, 8, 8));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 8, 8), new DateOnly(2026, 8, 8), _fixture.Calendar);
         var page = await _fixture.History.SearchAsync(
             new SalesHistoryFilter(
                 FromUtc: fromUtc,
@@ -578,7 +592,7 @@ public sealed class SalesHistoryIntegrationTests
             .ToList();
         await _fixture.SeedAsync(db => db.Orders.AddRange(orders));
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 5, 20), new DateOnly(2026, 5, 20));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 5, 20), new DateOnly(2026, 5, 20), _fixture.Calendar);
         var collected = new List<Guid>();
         var pageNumber = 1;
         SalesHistoryPage page;
@@ -655,7 +669,7 @@ public sealed class SalesHistoryIntegrationTests
             db.Orders.AddRange(cashierToday, cashierYesterday, managerToday);
         });
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), _fixture.Calendar);
         var filter = new SalesHistoryFilter(FromUtc: fromUtc, ToUtc: toUtc, Shortcut: SalesHistoryDateShortcut.None,
             SearchText: tag, OrderStatus: SalesDomainConstants.OrderStatuses.All);
 
@@ -789,7 +803,7 @@ public sealed class SalesHistoryIntegrationTests
             await command.ExecuteNonQueryAsync();
         }
 
-        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 31));
+        var (fromUtc, toUtc) = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 31), _fixture.Calendar);
         var filter = new SalesHistoryFilter(FromUtc: fromUtc, ToUtc: toUtc, Shortcut: SalesHistoryDateShortcut.None,
             OrderStatus: SalesDomainConstants.OrderStatuses.All, PageSize: SalesHistoryFilter.MaximumPageSize);
 
