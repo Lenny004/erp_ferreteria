@@ -2,8 +2,10 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -11,16 +13,37 @@ namespace Ferreteria.PuntoVenta.Services;
 /// Implementación transaccional de ventas y órdenes de confección.
 /// Usa aislamiento <see cref="IsolationLevel.Serializable"/> en operaciones que modifican stock.
 /// </summary>
-public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderService
+public sealed class OrderService : IOrderService
 {
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly CashRegisterOptions _cashRegisterOptions;
+
+    /// <summary>Inicializa el servicio de órdenes con el alcance de datos y la caja configurada.</summary>
+    /// <param name="scopeFactory">Fábrica de ámbitos para crear contextos EF por operación.</param>
+    /// <param name="cashRegisterOptions">Configuración del código de caja activa.</param>
+    public OrderService(
+        IServiceScopeFactory scopeFactory,
+        IOptions<CashRegisterOptions> cashRegisterOptions)
+    {
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentNullException.ThrowIfNull(cashRegisterOptions);
+        _cashRegisterOptions = cashRegisterOptions.Value;
+    }
+
     /// <inheritdoc />
+    /// <remarks>
+    /// La búsqueda por <c>ClientRequestId</c> ocurre dentro de la transacción Serializable y antes de
+    /// exigir una sesión abierta. Así, un reintento de una venta ya persistida devuelve el resultado
+    /// idempotente aunque la sesión haya cambiado; una orden nueva valida la sesión antes de crear orden,
+    /// detalle o pago.
+    /// </remarks>
     public async Task<CashSaleResult> CreateCashSaleAsync(
         CreateCashSaleRequest request,
         CancellationToken cancellationToken = default)
     {
         ValidateCashSaleRequest(request);
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
 
@@ -33,6 +56,12 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         {
             return MapToCashSaleResult(existingOrder);
         }
+
+        await EnsureOpenCashSessionAsync(
+            dbContext,
+            request.CashSessionId,
+            request.EmployeeId,
+            cancellationToken);
 
         var order = new Order
         {
@@ -77,7 +106,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
     {
         ValidateConfectionOrderRequest(request);
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
 
@@ -130,7 +159,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
     {
         take = Math.Clamp(take, 1, 500);
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
         var ordersQuery = dbContext.Orders
@@ -184,11 +213,17 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
             throw new InvalidOrderException("La facturacion requiere empleado autenticado.");
         }
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
+            cancellationToken);
+
+        await EnsureOpenCashSessionAsync(
+            dbContext,
+            request.CashSessionId,
+            request.EmployeeId,
             cancellationToken);
 
         var order = await dbContext.Orders
@@ -216,6 +251,9 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
 
         ValidatePaymentTotals(request.Payments, order.Total);
 
+        var existingPaymentIds = order.Payments.Select(payment => payment.Id).ToHashSet();
+        var existingMovementIds = order.InventoryMovements.Select(movement => movement.Id).ToHashSet();
+
         foreach (var detail in order.OrderDetails)
         {
             DeductInventoryForCompletedSale(
@@ -227,6 +265,15 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         }
 
         AddPayments(order, request.Payments, request.CashSessionId);
+
+        // La orden ya existe y está rastreada: los hijos nuevos traen Id asignado y EF los
+        // trataría como filas existentes (UPDATE sin filas afectadas). Se registran como altas.
+        dbContext.Payments.AddRange(
+            order.Payments.Where(payment => !existingPaymentIds.Contains(payment.Id)).ToList());
+        dbContext.InventoryMovements.AddRange(
+            order.InventoryMovements.Where(movement => !existingMovementIds.Contains(movement.Id)).ToList());
+
+        order.CashSessionId = request.CashSessionId;
         order.Status = SalesDomainConstants.OrderStatuses.Completed;
         order.UpdatedAt = DateTime.UtcNow;
 
@@ -244,7 +291,7 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
     {
         take = Math.Clamp(take, 1, 500);
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
         var ordersQuery = dbContext.Orders
@@ -294,6 +341,54 @@ public sealed class OrderService(IServiceScopeFactory scopeFactory) : IOrderServ
         return await dbContext.Orders
             .AsNoTracking()
             .FirstOrDefaultAsync(order => order.ClientRequestId == clientRequestId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Comprueba dentro de la transacción que el cobro usa una sesión abierta de la caja configurada.
+    /// </summary>
+    /// <param name="dbContext">Contexto de datos de la operación.</param>
+    /// <param name="cashSessionId">Sesión propuesta por la UI.</param>
+    /// <param name="employeeId">Empleado que intenta cobrar.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <exception cref="InvalidOrderException">Si falta, no existe, está cerrada o pertenece a otra caja.</exception>
+    /// <remarks>
+    /// La consulta ocurre después de abrir la transacción Serializable y antes de crear orden, detalle o pago.
+    /// Así una UI con estado antiguo no puede persistir un cobro en una sesión cerrada o de otra caja.
+    /// </remarks>
+    private async Task EnsureOpenCashSessionAsync(
+        FerreteriaDbContext dbContext,
+        Guid? cashSessionId,
+        Guid employeeId,
+        CancellationToken cancellationToken)
+    {
+        if (cashSessionId is not Guid sessionId || sessionId == Guid.Empty)
+        {
+            throw new InvalidOrderException("No se puede cobrar sin una sesión de caja abierta.");
+        }
+
+        var session = await dbContext.CashSessions
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == sessionId, cancellationToken);
+        if (session is null)
+        {
+            throw new InvalidOrderException("La sesión de caja no existe. Abra la caja antes de cobrar.");
+        }
+
+        if (session.Status != SalesDomainConstants.CashSessionStatuses.Open)
+        {
+            throw new InvalidOrderException("La sesión de caja ya está cerrada. Abra una nueva sesión antes de cobrar.");
+        }
+
+        var configuredCode = CashRegisterInputRules.ValidateCashRegisterCode(_cashRegisterOptions.Codigo);
+        if (session.CashRegisterCode != configuredCode)
+        {
+            throw new InvalidOrderException("La sesión pertenece a otra caja.");
+        }
+
+        if (session.EmployeeId != employeeId)
+        {
+            throw new InvalidOrderException("La sesión de caja pertenece a otro cajero autenticado.");
+        }
     }
 
     private static async Task AddSaleLineAsync(

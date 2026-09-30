@@ -200,6 +200,30 @@ public sealed class SalesHistoryService : ISalesHistoryService
         return detail is null ? null : detail with { Notes = OrderNotesFormatter.FormatForDisplay(detail.Notes) };
     }
 
+    /// <inheritdoc />
+    public async Task<bool> CanAccessOrderAsync(
+        Guid orderId,
+        Guid employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        var accessScope = await ResolveScopeAsync(db, employeeId, cancellationToken);
+        if (accessScope is null)
+        {
+            return false;
+        }
+
+        return await ApplyScope(db.Orders.AsNoTracking(), accessScope, new SalesHistoryFilter())
+            .AnyAsync(order => order.Id == orderId, cancellationToken);
+    }
+
+    /// <summary>Resuelve en servidor el alcance de un empleado y sus sesiones ABIERTAS.</summary>
+    /// <param name="db">Contexto EF de la consulta.</param>
+    /// <param name="employeeId">Empleado solicitante.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Alcance autorizado o <c>null</c> para empleado inexistente o inactivo.</returns>
+    /// <remarks>No confía en el estado de la UI; vuelve a leer empleado, puesto y sesiones desde PostgreSQL.</remarks>
     private async Task<SalesHistoryScope?> ResolveScopeAsync(
         FerreteriaDbContext db,
         Guid employeeId,
@@ -208,19 +232,31 @@ public sealed class SalesHistoryService : ISalesHistoryService
         var employee = await db.Employees.AsNoTracking()
             .Include(item => item.Position)
             .SingleOrDefaultAsync(item => item.Id == employeeId, cancellationToken);
-        if (employee is null)
+        if (employee is null || !employee.IsActive)
         {
             return null;
         }
+
+        var openCashSessionIds = await db.CashSessions
+            .AsNoTracking()
+            .Where(session => session.EmployeeId == employee.Id
+                && session.Status == SalesDomainConstants.CashSessionStatuses.Open)
+            .Select(session => session.Id)
+            .ToListAsync(cancellationToken);
 
         return SalesHistoryAccessRules.ResolveScope(
             employee.Id,
             employee.CanCashier,
             employee.Position?.Name,
             _options.FullHistoryPositionNames,
-            _clock);
+            openCashSessionIds);
     }
 
+    /// <summary>Aplica al IQueryable las restricciones de empleado, sesión y fechas.</summary>
+    /// <param name="query">Consulta base de órdenes.</param>
+    /// <param name="accessScope">Alcance autorizado ya resuelto.</param>
+    /// <param name="filter">Filtro de fechas solicitado.</param>
+    /// <returns>Consulta con las restricciones aplicadas.</returns>
     private static IQueryable<Order> ApplyScope(
         IQueryable<Order> query,
         SalesHistoryScope accessScope,
@@ -241,6 +277,9 @@ public sealed class SalesHistoryService : ISalesHistoryService
 
         return query.Where(order =>
             (!accessScope.RestrictToEmployeeId.HasValue || order.EmployeeId == accessScope.RestrictToEmployeeId.Value)
+            && (accessScope.RestrictToCashSessionIds == null
+                || (order.CashSessionId.HasValue
+                    && accessScope.RestrictToCashSessionIds.Contains(order.CashSessionId.Value)))
             && (!fromUtc.HasValue || order.CreatedAt >= fromUtc.Value)
             && (!toUtc.HasValue || order.CreatedAt < toUtc.Value));
     }

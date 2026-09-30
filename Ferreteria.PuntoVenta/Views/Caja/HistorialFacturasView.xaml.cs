@@ -282,6 +282,16 @@ public partial class HistorialFacturasView : UserControl
                 PageSize: PageSize);
             _currentPage = await _history.SearchAsync(filter, employee.Id, cancellationToken);
             SalesListBox.ItemsSource = _currentPage.Rows;
+            if (_currentPage.Rows.Count == 0
+                && employee.CanCashier
+                && _session.ActiveCashSessionId is null)
+            {
+                EmptyStateText.Text = "Abra caja para ver las ventas de su turno.";
+            }
+            else
+            {
+                EmptyStateText.Text = "No hay ventas para este filtro";
+            }
             EmptyStateText.Visibility = _currentPage.Rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             SalesCountText.Text = _currentPage.Summary.Sales.ToString();
             TotalBilledText.Text = _currentPage.Summary.Total.ToString("C2");

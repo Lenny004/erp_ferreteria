@@ -20,6 +20,12 @@ public interface ICurrentSessionService
     /// <summary>Marca de tiempo UTC del inicio de sesión.</summary>
     DateTime? StartedAtUtc { get; }
 
+    /// <summary>
+    /// Identificador de la sesión de caja activa para el empleado autenticado.
+    /// Es <c>null</c> mientras no se haya abierto o recuperado un turno.
+    /// </summary>
+    Guid? ActiveCashSessionId { get; }
+
     /// <summary>True cuando hay empleado y módulo activos.</summary>
     bool IsActive { get; }
 
@@ -30,6 +36,13 @@ public interface ICurrentSessionService
     /// <param name="module">Módulo operativo elegido en la pantalla de inicio.</param>
     /// <param name="initialSection">Clave de sección del panel lateral (ver <see cref="NavSections"/>).</param>
     void StartSession(Employee employee, OperationalModule module, string initialSection);
+
+    /// <summary>Asocia una sesión ABIERTA de base de datos al estado local del POS.</summary>
+    /// <param name="cashSessionId">Identificador de la sesión que se usará para cobrar.</param>
+    void SetActiveCashSession(Guid cashSessionId);
+
+    /// <summary>Desasocia la sesión de caja para bloquear nuevos cobros.</summary>
+    void ClearActiveCashSession();
 
     /// <summary>
     /// Resuelve la sección inicial válida para el módulo activo.

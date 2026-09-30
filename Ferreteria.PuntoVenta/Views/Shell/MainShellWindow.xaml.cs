@@ -21,6 +21,7 @@ public partial class MainShellWindow : Window
     private readonly ICurrentSessionService _currentSession;
     private readonly IAuditService _auditService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly CashSessionOpeningFlow _cashSessionOpeningFlow;
     private readonly DispatcherTimer _connectivityTimer;
 
     /// <summary>
@@ -30,12 +31,14 @@ public partial class MainShellWindow : Window
         IConnectivityService connectivityService,
         ICurrentSessionService currentSession,
         IAuditService auditService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        CashSessionOpeningFlow cashSessionOpeningFlow)
     {
         _connectivityService = connectivityService;
         _currentSession = currentSession;
         _auditService = auditService;
         _serviceProvider = serviceProvider;
+        _cashSessionOpeningFlow = cashSessionOpeningFlow ?? throw new ArgumentNullException(nameof(cashSessionOpeningFlow));
 
         InitializeComponent();
 
@@ -46,7 +49,7 @@ public partial class MainShellWindow : Window
             [NavSections.HistorialFacturas] = (BtnHistorialFacturas, "Historial de Facturas", () => _serviceProvider.GetRequiredService<HistorialFacturasView>()),
             [NavSections.Impresoras] = (BtnImpresoras, "Impresoras", () => _serviceProvider.GetRequiredService<ImpresorasView>()),
             [NavSections.Devoluciones] = (BtnDevoluciones, "Devoluciones", () => new DevolucionesView()),
-            [NavSections.CorteCaja] = (BtnCorteCaja, "Corte de Caja", () => new CorteCajaView()),
+            [NavSections.CorteCaja] = (BtnCorteCaja, "Corte de Caja", () => _serviceProvider.GetRequiredService<CorteCajaView>()),
             [NavSections.Productos] = (BtnProductos, "Catalogo de Productos", () => _serviceProvider.GetRequiredService<InventarioViews.ProductosView>()),
             [NavSections.Proveedores] = (BtnProveedores, "Proveedores", () => _serviceProvider.GetRequiredService<InventarioViews.ProveedoresView>()),
             [NavSections.Movimientos] = (BtnMovimientos, "Entradas y Kardex", () => _serviceProvider.GetRequiredService<InventarioViews.MovimientosView>()),
@@ -125,6 +128,25 @@ public partial class MainShellWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await RefreshConnectivityStatusAsync();
+        await EnsureCashSessionAsync();
+    }
+
+    /// <summary>
+    /// Recupera la sesión ABIERTA de la caja configurada o solicita el fondo inicial al entrar a Caja.
+    /// </summary>
+    /// <remarks>
+    /// La apertura se confirma en un diálogo táctil y la persistencia se delega al servicio serializable.
+    /// Si el acceso a datos falla, la sesión local permanece sin caja activa y el cobro queda bloqueado.
+    /// </remarks>
+    private async Task EnsureCashSessionAsync()
+    {
+        if (_currentSession.ActiveModule != OperationalModule.Caja
+            || _currentSession.CurrentEmployee is null)
+        {
+            return;
+        }
+
+        await _cashSessionOpeningFlow.EnsureOpenAsync(this);
     }
 
     /// <summary>Timer periódico de conectividad (cada 15 s).</summary>

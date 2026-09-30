@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
@@ -31,6 +32,9 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 {
     /// <summary>Id del empleado semilla con puesto "Cajero".</summary>
     public Guid CashierId { get; private set; }
+
+    /// <summary>Id de un segundo cajero creado por el fixture para casos de concurrencia y permisos.</summary>
+    public Guid SecondCashierId { get; private set; }
 
     /// <summary>Id del empleado semilla con puesto "Encargado de Inventario".</summary>
     public Guid NonCashierId { get; private set; }
@@ -72,13 +76,26 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(Now));
         services.AddOptions<SalesHistoryOptions>()
             .Configure(options => options.FullHistoryPositionNames = new List<string> { "Administrador" });
+        services.AddOptions<CashRegisterOptions>()
+            .Configure(options =>
+            {
+                options.Codigo = "CAJA-INT";
+                options.MontoMaximo = 100000m;
+                options.UmbralDiferencia = 1m;
+                options.AnchoReporte = 48;
+            });
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
+        services.AddSingleton<ICashSessionService, CashSessionService>();
+        services.AddSingleton<IOrderService, OrderService>();
         services.AddSingleton<IAuditService, AuditService>();
         services.AddSingleton<ILogger<AuditService>>(_ => NullLogger<AuditService>.Instance);
+        services.AddSingleton<ILogger<CashSessionService>>(_ => NullLogger<CashSessionService>.Instance);
+        services.AddSingleton<ILogger<OrderService>>(_ => NullLogger<OrderService>.Instance);
         _services = services.BuildServiceProvider();
         await using var scope = _services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         CashierId = await ResolveEmployeeIdAsync(db, "00000002-0", "Cajero", true);
+        SecondCashierId = await EnsureSecondCashierAsync(db);
         NonCashierId = await ResolveEmployeeIdAsync(db, "00000003-0", "Encargado de Inventario", false);
         ManagerId = await ResolveEmployeeIdAsync(db, "00000001-0", "Administrador", true);
     }
@@ -97,6 +114,22 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <summary>Obtiene el servicio de historial registrado en el fixture.</summary>
     /// <returns>Servicio bajo prueba.</returns>
     public ISalesHistoryService History => Services.GetRequiredService<ISalesHistoryService>();
+
+    /// <summary>Obtiene el servicio de sesiones de caja registrado en el fixture.</summary>
+    /// <returns>Servicio transaccional bajo prueba.</returns>
+    public ICashSessionService CashSessions => Services.GetRequiredService<ICashSessionService>();
+
+    /// <summary>Obtiene el servicio de órdenes transaccional enlazado al fixture.</summary>
+    /// <returns>Servicio de ventas y facturación de confección.</returns>
+    public IOrderService Orders => Services.GetRequiredService<IOrderService>();
+
+    /// <summary>Fija el código esperado por el servicio de órdenes para un caso aislado.</summary>
+    /// <param name="cashRegisterCode">Código único de la caja del caso.</param>
+    public void SetCashRegisterCode(string cashRegisterCode)
+    {
+        var options = Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<CashRegisterOptions>>();
+        options.Value.Codigo = cashRegisterCode;
+    }
 
     /// <summary>Ejecuta una acción de siembra con un contexto EF propio y guarda los cambios.</summary>
     /// <param name="seed">Acción que agrega entidades al contexto.</param>
@@ -208,6 +241,43 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
 
         return employee.Id;
+    }
+
+    /// <summary>Crea o recupera un segundo empleado activo con permiso de cajero.</summary>
+    /// <param name="db">Contexto del contenedor de pruebas.</param>
+    /// <returns>Identificador del segundo cajero.</returns>
+    private static async Task<Guid> EnsureSecondCashierAsync(FerreteriaDbContext db)
+    {
+        var existing = await db.Employees.SingleOrDefaultAsync(item => item.Dui == "00000004-0");
+        if (existing is not null)
+        {
+            existing.IsActive = true;
+            existing.CanCashier = true;
+            await db.SaveChangesAsync();
+            return existing.Id;
+        }
+
+        var source = await db.Employees.SingleAsync(item => item.Dui == "00000002-0");
+        var secondCashier = new Employee
+        {
+            Id = Guid.NewGuid(),
+            FirstName = "Segundo",
+            LastName = "Cajero",
+            Dui = "00000004-0",
+            PositionId = source.PositionId,
+            DepartmentId = source.DepartmentId,
+            HireDate = DateTime.UtcNow.Date,
+            BaseSalary = 0m,
+            ContractType = "PLAZO_FIJO",
+            SalaryType = "MENSUAL",
+            CanCashier = true,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Employees.Add(secondCashier);
+        await db.SaveChangesAsync();
+        return secondCashier.Id;
     }
     private sealed class FixedTimeProvider(DateTimeOffset value) : TimeProvider
     {
@@ -545,7 +615,7 @@ public sealed class SalesHistoryIntegrationTests
         Assert.Equal(expected, collected);
     }
 
-    /// <summary>El cajero solo ve sus ventas del día local; el encargado ve todas; el detalle respeta el alcance.</summary>
+    /// <summary>El cajero solo ve sus ventas de sesiones ABIERTAS; el administrador ve todas.</summary>
     [Fact]
     public async Task SearchAndDetail_RespectCashierAndManagerScope()
     {
@@ -554,6 +624,25 @@ public sealed class SalesHistoryIntegrationTests
         var cashierToday = PostgreSqlFixture.NewOrder(_fixture.CashierId, PostgreSqlFixture.Local(2026, 9, 27, 0, 5), SalesDomainConstants.OrderStatuses.Completed);
         var cashierYesterday = PostgreSqlFixture.NewOrder(_fixture.CashierId, PostgreSqlFixture.Local(2026, 9, 26, 23, 55), SalesDomainConstants.OrderStatuses.Completed);
         var managerToday = PostgreSqlFixture.NewOrder(_fixture.ManagerId, PostgreSqlFixture.Local(2026, 9, 27, 9), SalesDomainConstants.OrderStatuses.Completed);
+        var openSession = new CashSession
+        {
+            Id = Guid.NewGuid(),
+            EmployeeId = _fixture.CashierId,
+            CashRegisterCode = "CAJA-HIST-" + Guid.NewGuid().ToString("N")[..8],
+            OpenedAt = PostgreSqlFixture.Local(2026, 9, 27, 0),
+            Status = SalesDomainConstants.CashSessionStatuses.Open
+        };
+        var closedSession = new CashSession
+        {
+            Id = Guid.NewGuid(),
+            EmployeeId = _fixture.CashierId,
+            CashRegisterCode = "CAJA-HIST-CERRADA-" + Guid.NewGuid().ToString("N")[..8],
+            OpenedAt = PostgreSqlFixture.Local(2026, 9, 26, 0),
+            ClosedAt = PostgreSqlFixture.Local(2026, 9, 26, 23),
+            Status = SalesDomainConstants.CashSessionStatuses.Closed
+        };
+        cashierToday.CashSessionId = openSession.Id;
+        cashierYesterday.CashSessionId = closedSession.Id;
         foreach (var order in new[] { cashierToday, cashierYesterday, managerToday })
         {
             order.CustomerId = customer.Id;
@@ -562,6 +651,7 @@ public sealed class SalesHistoryIntegrationTests
         await _fixture.SeedAsync(db =>
         {
             db.Customers.Add(customer);
+            db.CashSessions.AddRange(openSession, closedSession);
             db.Orders.AddRange(cashierToday, cashierYesterday, managerToday);
         });
 
@@ -585,6 +675,10 @@ public sealed class SalesHistoryIntegrationTests
         Assert.Null(await _fixture.History.GetDetailAsync(cashierYesterday.Id, _fixture.CashierId));
         Assert.NotNull(await _fixture.History.GetDetailAsync(cashierYesterday.Id, _fixture.ManagerId));
         Assert.Null(await _fixture.History.GetDetailAsync(managerToday.Id, Guid.NewGuid()));
+        Assert.True(await _fixture.History.CanAccessOrderAsync(cashierToday.Id, _fixture.CashierId));
+        Assert.False(await _fixture.History.CanAccessOrderAsync(cashierYesterday.Id, _fixture.CashierId));
+        Assert.False(await _fixture.History.CanAccessOrderAsync(managerToday.Id, _fixture.CashierId));
+        Assert.True(await _fixture.History.CanAccessOrderAsync(managerToday.Id, _fixture.ManagerId));
     }
 
     /// <summary>El detalle trae líneas, pagos, DTE con NC relacionada, movimientos de inventario y notas.</summary>

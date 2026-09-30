@@ -131,6 +131,19 @@ public static class SalesDomainConstants
         public const string PaymentMethodNotAvailable = "N/D";
     }
 
+    /// <summary>Estados persistidos en <c>sales.CashSessions.status</c>.</summary>
+    public static class CashSessionStatuses
+    {
+        /// <summary>Sesión que acepta ventas y aún no ha sido cerrada.</summary>
+        public const string Open = "ABIERTA";
+
+        /// <summary>Sesión cerrada y no editable.</summary>
+        public const string Closed = "CERRADA";
+
+        /// <summary>Sesión cancelada por una operación autorizada.</summary>
+        public const string Cancelled = "CANCELADA";
+    }
+
     /// <summary>Acciones de auditoría del historial.</summary>
     public static class SalesHistoryAuditActions
     {
@@ -146,6 +159,39 @@ public static class SalesDomainConstants
 
         /// <summary>Nombre lógico de la tabla de órdenes usado en la auditoría.</summary>
         public const string OrdersTableName = "sales.Orders";
+    }
+
+    /// <summary>Códigos de auditoría del módulo de impresión.</summary>
+    /// <remarks>
+    /// Los campos terminados en <c>Event</c> son nombres lógicos guardados en <c>NewData</c>;
+    /// los terminados en <c>TableName</c> son tablas. Los demás campos son códigos persistidos
+    /// y deben caber en <c>system.AuditLog.action VARCHAR(10)</c>.
+    /// </remarks>
+    public static class PrintingAuditActions
+    {
+        /// <summary>Código persistido para impresión de ticket.</summary>
+        public const string TicketPrint = "IMPRIMIR";
+
+        /// <summary>Código persistido para guardar configuración de impresora.</summary>
+        public const string PrinterConfiguration = "CFG_IMPRES";
+
+        /// <summary>Código persistido para cambiar la impresora predeterminada.</summary>
+        public const string DefaultPrinter = "PREDET_IMP";
+
+        /// <summary>Nombre lógico del evento de impresión de ticket.</summary>
+        public const string TicketPrintEvent = "IMPRESION_TICKET";
+
+        /// <summary>Nombre lógico del evento de configuración de impresora.</summary>
+        public const string PrinterConfigurationEvent = "CONFIGURACION_IMPRESORA";
+
+        /// <summary>Nombre lógico del evento de impresora predeterminada.</summary>
+        public const string DefaultPrinterEvent = "IMPRESORA_PREDETERMINADA";
+
+        /// <summary>Nombre lógico de la tabla de órdenes.</summary>
+        public const string OrdersTableName = "sales.Orders";
+
+        /// <summary>Nombre lógico de la tabla de impresoras.</summary>
+        public const string PrintersTableName = "system.Printers";
     }
 
     /// <summary>Códigos de unidades de venta usados por el dominio.</summary>

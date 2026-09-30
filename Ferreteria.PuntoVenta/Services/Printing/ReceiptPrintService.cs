@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
+using Ferreteria.PuntoVenta.Services.Domain;
 
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
@@ -12,8 +13,6 @@ namespace Ferreteria.PuntoVenta.Services.Printing;
 public sealed class ReceiptPrintService : IReceiptPrintService
 {
     private const int DefaultNetworkPort = 9100;
-    private const string AuditActionPrintTicket = "IMPRESION_TICKET";
-    private const string AuditTableOrders = "sales.Orders";
 
     private readonly PrintingOptions _options;
     private readonly ILogger<ReceiptPrintService> _logger;
@@ -101,7 +100,7 @@ public sealed class ReceiptPrintService : IReceiptPrintService
     /// <inheritdoc />
     /// <remarks>
     /// Si el documento trae <see cref="ReceiptDocument.OrderId"/>, tras un envío correcto se
-    /// registra la acción <c>IMPRESION_TICKET</c> en la bitácora. Un fallo de impresión no
+    /// registra el código <c>IMPRIMIR</c> y el evento lógico <c>IMPRESION_TICKET</c> en la bitácora. Un fallo de impresión no
     /// modifica la venta: solo se propaga como <see cref="PrinterException"/>.
     /// </remarks>
     public Task PrintReceiptAsync(ReceiptDocument document, PrinterConfig printer, CancellationToken cancellationToken = default)
@@ -175,11 +174,16 @@ public sealed class ReceiptPrintService : IReceiptPrintService
         {
             // Solo datos no sensibles: nombre y tipo de conexión de la impresora.
             await _auditService.RecordChangeAsync(
-                AuditActionPrintTicket,
-                AuditTableOrders,
+                SalesDomainConstants.PrintingAuditActions.TicketPrint,
+                SalesDomainConstants.PrintingAuditActions.OrdersTableName,
                 id.ToString(),
                 null,
-                new { printer.Name, printer.ConnectionType },
+                new
+                {
+                    Evento = SalesDomainConstants.PrintingAuditActions.TicketPrintEvent,
+                    printer.Name,
+                    printer.ConnectionType
+                },
                 _currentSession.CurrentEmployee?.Id,
                 cancellationToken);
         }
