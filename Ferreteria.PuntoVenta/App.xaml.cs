@@ -1,7 +1,9 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Printing;
+using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -49,6 +51,11 @@ public partial class App : Application
             .ConfigureServices((context, services) =>
             {
                 services.AddFerreteriaDatabase(context.Configuration);
+                services.Configure<PrintingOptions>(context.Configuration.GetSection(PrintingOptions.SectionName));
+                services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
+                services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
+                services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
+                services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
                 services.AddSingleton<IConnectivityService, ConnectivityService>();
@@ -61,12 +68,28 @@ public partial class App : Application
                 services.AddSingleton<IEmployeeService, EmployeeService>();
                 services.AddSingleton<ICustomerService, CustomerService>();
                 services.AddSingleton<IReportService, ReportService>();
+                services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
+                services.AddSingleton<ICashSessionService, CashSessionService>();
+                services.AddSingleton<CashSessionOpeningFlow>();
+                services.AddSingleton<IPrinterConfigService, PrinterConfigService>();
+                services.AddSingleton<IReceiptPrintService, ReceiptPrintService>();
+                services.AddSingleton<IReceiptCompositionService, ReceiptCompositionService>();
+                services.AddSingleton<ReceiptDocumentFactory>();
+                services.AddSingleton<NetworkPrinterTransport>();
+                services.AddSingleton<ISaleReceiptPrinter, SaleReceiptPrinter>();
+                services.AddSingleton<IDteNumberingService, DteNumberingService>();
+                services.AddSingleton<IDteJsonBuilder, DteJsonBuilder>();
+                services.AddSingleton<IDteSigningService, FirmadorHttpClient>();
+                services.AddSingleton<IMhApiClient, MhApiClient>();
+                services.AddSingleton<IDteService, DteService>();
                 services.AddSingleton<PinAuthService>();
 
                 services.AddTransient<PinWindow>();
                 services.AddTransient<InicioWindow>();
                 services.AddTransient<MainShellWindow>();
                 services.AddTransient<FacturacionView>();
+                services.AddTransient<CorteCajaView>();
+                services.AddTransient<ImpresorasView>();
                 services.AddTransient<HistorialFacturasView>();
                 services.AddTransient<ConsultarStockView>();
                 services.AddTransient<ProductosView>();

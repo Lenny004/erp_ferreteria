@@ -1,16 +1,47 @@
-using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Win32;
+using Ferreteria.PuntoVenta.Services.Domain;
 
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
 /// <summary>
-/// Implementación ESC/POS de <see cref="IReceiptPrintService"/>. Envía tickets DTE
-/// y reportes a impresoras térmicas por spooler de Windows (USB) o por red (TCP 9100).
+/// Implementación ESC/POS de <see cref="IReceiptPrintService"/>. Envía tickets
+/// (DTE o comprobante interno) y reportes a impresoras térmicas por spooler de
+/// Windows (USB) o por red (TCP 9100, con timeout configurable).
 /// </summary>
 public sealed class ReceiptPrintService : IReceiptPrintService
 {
     private const int DefaultNetworkPort = 9100;
-    private const string NetworkConnection = "RED";
+
+    private readonly PrintingOptions _options;
+    private readonly ILogger<ReceiptPrintService> _logger;
+    private readonly IAuditService _auditService;
+    private readonly ICurrentSessionService _currentSession;
+    private readonly NetworkPrinterTransport _networkTransport;
+
+    /// <summary>
+    /// Inicializa el servicio de envío con timeout de red, transporte TCP y auditoría.
+    /// </summary>
+    /// <param name="options">Opciones de impresión (sección <c>Printing</c>).</param>
+    /// <param name="logger">Registro técnico; los detalles de error solo van aquí.</param>
+    /// <param name="auditService">Bitácora donde se registra cada impresión de ticket.</param>
+    /// <param name="currentSession">Sesión del cajero, para atribuir la impresión.</param>
+    /// <param name="networkTransport">Transporte TCP desacoplado de WPF y del registro de Windows.</param>
+    public ReceiptPrintService(
+        IOptions<PrintingOptions> options,
+        ILogger<ReceiptPrintService> logger,
+        IAuditService auditService,
+        ICurrentSessionService currentSession,
+        NetworkPrinterTransport networkTransport)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        _options = options.Value;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
+        _networkTransport = networkTransport ?? throw new ArgumentNullException(nameof(networkTransport));
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<string> GetInstalledWindowsPrinters()
@@ -33,9 +64,10 @@ public sealed class ReceiptPrintService : IReceiptPrintService
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // El acceso al registro puede fallar por permisos; se ignora esta fuente.
+            _logger.LogDebug(ex, "No se pudo leer la lista de impresoras del usuario.");
         }
 
         // Impresoras de la máquina: subclaves de Print\Printers.
@@ -54,9 +86,10 @@ public sealed class ReceiptPrintService : IReceiptPrintService
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Igual que arriba: se ignora si no hay acceso.
+            _logger.LogDebug(ex, "No se pudo leer la lista de impresoras del equipo.");
         }
 
         var ordered = names.ToList();
@@ -65,13 +98,18 @@ public sealed class ReceiptPrintService : IReceiptPrintService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Si el documento trae <see cref="ReceiptDocument.OrderId"/>, tras un envío correcto se
+    /// registra el código <c>IMPRIMIR</c> y el evento lógico <c>IMPRESION_TICKET</c> en la bitácora. Un fallo de impresión no
+    /// modifica la venta: solo se propaga como <see cref="PrinterException"/>.
+    /// </remarks>
     public Task PrintReceiptAsync(ReceiptDocument document, PrinterConfig printer, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(printer);
 
         byte[] payload = TicketReceiptRenderer.Render(document, printer.PaperWidthMm);
-        return SendAsync(payload, printer, cancellationToken);
+        return SendAndAuditAsync(payload, printer, document.OrderId, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -124,16 +162,60 @@ public sealed class ReceiptPrintService : IReceiptPrintService
         return SendAsync(builder.Build(), printer, cancellationToken);
     }
 
-    private static Task SendAsync(byte[] payload, PrinterConfig printer, CancellationToken cancellationToken)
+    private async Task SendAndAuditAsync(
+        byte[] payload,
+        PrinterConfig printer,
+        Guid? orderId,
+        CancellationToken cancellationToken)
+    {
+        await SendAsync(payload, printer, cancellationToken);
+
+        if (orderId is Guid id)
+        {
+            // Solo datos no sensibles: nombre y tipo de conexión de la impresora.
+            await _auditService.RecordChangeAsync(
+                SalesDomainConstants.PrintingAuditActions.TicketPrint,
+                SalesDomainConstants.PrintingAuditActions.OrdersTableName,
+                id.ToString(),
+                null,
+                new
+                {
+                    Evento = SalesDomainConstants.PrintingAuditActions.TicketPrintEvent,
+                    printer.Name,
+                    printer.ConnectionType
+                },
+                _currentSession.CurrentEmployee?.Id,
+                cancellationToken);
+        }
+    }
+
+    private async Task SendAsync(byte[] payload, PrinterConfig printer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        bool isNetwork = string.Equals(printer.ConnectionType, NetworkConnection, StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(printer.IpAddress);
+        string? host = printer.IpAddress;
+        bool isNetworkConnection = string.Equals(
+            printer.ConnectionType,
+            PrinterConfigurationRules.Network,
+            StringComparison.OrdinalIgnoreCase);
 
-        if (isNetwork)
+        if (isNetworkConnection && !string.IsNullOrWhiteSpace(host))
         {
-            return Task.Run(() => SendOverNetwork(payload, printer, cancellationToken), cancellationToken);
+            int port = printer.NetworkPort ?? DefaultNetworkPort;
+            var timeout = TimeSpan.FromSeconds(Math.Max(1, _options.NetworkTimeoutSeconds));
+
+            try
+            {
+                await _networkTransport.SendAsync(host, port, payload, timeout, cancellationToken);
+            }
+            catch (PrinterException ex)
+            {
+                // El detalle técnico (IP, puerto, causa) solo va al log; al cajero le llega el mensaje en español.
+                _logger.LogError(ex, "Fallo de impresión de red en {PrinterAddress}:{Port}", printer.IpAddress, port);
+                throw;
+            }
+
+            return;
         }
 
         // USB / spooler de Windows (o cualquier conexión que no sea red directa).
@@ -144,46 +226,11 @@ public sealed class ReceiptPrintService : IReceiptPrintService
                 nameof(printer));
         }
 
-        return Task.Run(() =>
+        await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             RawPrinterHelper.SendBytesToPrinter(printer.Name, payload);
         }, cancellationToken);
-    }
-
-    private static void SendOverNetwork(byte[] payload, PrinterConfig printer, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(printer.IpAddress))
-        {
-            throw new ArgumentException(
-                "La dirección IP es obligatoria para conexiones de red.",
-                nameof(printer));
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        int port = printer.NetworkPort ?? DefaultNetworkPort;
-
-        try
-        {
-            using var client = new TcpClient();
-            client.Connect(printer.IpAddress, port);
-
-            using NetworkStream stream = client.GetStream();
-            cancellationToken.ThrowIfCancellationRequested();
-            stream.Write(payload, 0, payload.Length);
-            stream.Flush();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new PrinterException(
-                $"No se pudo imprimir por red en {printer.IpAddress}:{port}.",
-                ex);
-        }
     }
 
     private static string BuildColumnRuler(int columns)

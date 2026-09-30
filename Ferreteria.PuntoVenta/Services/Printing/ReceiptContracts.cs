@@ -1,5 +1,19 @@
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
+/// <summary>Tipos de documento usados por la impresión de comprobantes.</summary>
+public static class ReceiptDocumentTypes
+{
+    /// <summary>Código del comprobante interno sin DTE.</summary>
+    public const string InternalReceipt = "INTERNO";
+
+    /// <summary>Título impreso en el comprobante interno (sin DTE).</summary>
+    public const string InternalReceiptTitle = "COMPROBANTE INTERNO";
+
+    /// <summary>Leyenda de reimpresión, pendiente de verificar con contador y normativa MH.</summary>
+    // A VERIFICAR con contador / normativa MH: texto y obligatoriedad de esta leyenda.
+    public const string ReprintLegend = "REIMPRESIÓN";
+}
+
 /// <summary>
 /// Representa una línea de detalle del ticket (un producto o servicio vendido).
 /// </summary>
@@ -45,6 +59,7 @@ public sealed record TicketLineItem(
 /// <param name="ConsultaUrl">Contenido del QR (enlace de consulta pública del MH).</param>
 /// <param name="IsContingency">Indica si el DTE fue emitido en contingencia.</param>
 /// <param name="FooterNote">Nota adicional para el pie del ticket (opcional).</param>
+/// <param name="IsReprint">Indica que el comprobante es una reimpresión.</param>
 public sealed record ReceiptDocument(
     string BusinessName,
     string? BusinessTradeName,
@@ -72,7 +87,12 @@ public sealed record ReceiptDocument(
     decimal Change,
     string ConsultaUrl,
     bool IsContingency,
-    string? FooterNote);
+    string? FooterNote,
+    bool IsReprint = false)
+{
+    /// <summary>Orden asociada para auditoría de impresión, si aplica.</summary>
+    public Guid? OrderId { get; init; }
+}
 
 /// <summary>
 /// Configuración de la impresora térmica destino.
@@ -88,3 +108,20 @@ public sealed record PrinterConfig(
     string? IpAddress,
     int? NetworkPort,
     int PaperWidthMm);
+
+/// <summary>Opciones de impresión configurables en la sección <c>Printing</c>.</summary>
+public sealed class PrintingOptions
+{
+    /// <summary>Nombre de la sección de configuración.</summary>
+    public const string SectionName = "Printing";
+
+    /// <summary>Indica si se imprime automáticamente después de guardar una venta.</summary>
+    public bool AutoPrintOnSale { get; set; } = true;
+
+    /// <summary>Tiempo máximo de conexión y escritura de una impresora de red.</summary>
+    public int NetworkTimeoutSeconds { get; set; } = 5;
+
+    /// <summary>Leyenda del comprobante interno, pendiente de validación fiscal.</summary>
+    // A VERIFICAR con contador / normativa MH: la leyenda aplicable al comprobante interno.
+    public string InternalReceiptFooter { get; set; } = "COMPROBANTE INTERNO - SIN VALOR FISCAL";
+}

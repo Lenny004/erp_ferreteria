@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <!-- Se enlaza únicamente la capa pura de impresión; la herramienta no referencia WPF, EF ni la BD. -->
+  <ItemGroup>
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptContracts.cs" Link="Printing/ReceiptContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosCommands.cs" Link="Printing/EscPosCommands.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosDocumentBuilder.cs" Link="Printing/EscPosDocumentBuilder.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/TicketReceiptRenderer.cs" Link="Printing/TicketReceiptRenderer.cs" />
+  </ItemGroup>
+</Project>

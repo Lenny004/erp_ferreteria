@@ -1,0 +1,85 @@
+<Window
+    x:Class="Ferreteria.PuntoVenta.Views.Caja.CashOpeningDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers"
+    xmlns:local="clr-namespace:Ferreteria.PuntoVenta.Views.Caja"
+    Title="Abrir caja"
+    Width="620"
+    SizeToContent="Height"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterOwner"
+    KeyDown="OnKeyDown">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="/Resources/Styles/AppStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid
+        Margin="24"
+        Background="{StaticResource AppAzulOscuro}">
+        <Grid.RowDefinitions>
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock
+            Text="Abrir caja"
+            Foreground="{StaticResource AppBlanco}"
+            FontSize="{StaticResource AppFontSize_XL}"
+            FontWeight="Bold" />
+        <TextBlock
+            Grid.Row="1"
+            Margin="0,8,0,16"
+            Text="Ingrese el fondo inicial en efectivo"
+            Foreground="{StaticResource AppBlanco}"
+            FontSize="{StaticResource AppFontSize_LG}" />
+        <local:NumericKeypad
+            x:Name="OpeningKeypad"
+            Grid.Row="2"
+            TextChanged="OnAmountChanged"
+            Margin="0,0,0,12" />
+        <StackPanel
+            Grid.Row="3">
+            <TextBox
+                x:Name="NotesTextBox"
+                Height="64"
+                FontSize="16"
+                TextWrapping="Wrap"
+                AcceptsReturn="True"
+                Margin="0,0,0,8"
+                helpers:WatermarkService.Watermark="Observación de apertura (opcional)" />
+            <TextBlock
+                x:Name="ErrorText"
+                Foreground="{StaticResource AppError}"
+                FontSize="16"
+                TextWrapping="Wrap"
+                Margin="0,0,0,8" />
+            <StackPanel
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+                <Button
+                    Width="180"
+                    Height="90"
+                    Margin="0,0,12,0"
+                    IsCancel="True"
+                    Click="OnCancelClick"
+                    Content="CANCELAR" />
+                <Button
+                    Width="220"
+                    Height="90"
+                    IsDefault="True"
+                    Click="OnConfirmClick"
+                    Content="ABRIR CAJA" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

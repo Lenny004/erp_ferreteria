@@ -2,7 +2,12 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Printing;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using System.Windows;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -15,6 +20,11 @@ public partial class FacturacionView : UserControl
     private readonly IInventoryService _inventoryService;
     private readonly IOrderService _orderService;
     private readonly ICurrentSessionService _currentSession;
+    private readonly ISaleReceiptPrinter _saleReceiptPrinter;
+    private readonly PrintingOptions _printingOptions;
+    private readonly ILogger<FacturacionView> _logger;
+    private readonly CashSessionOpeningFlow _cashSessionOpeningFlow;
+    private Guid? _lastOrderId;
     private readonly ObservableCollection<CartLineItem> _cartLineItems = new();
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
 
@@ -22,11 +32,19 @@ public partial class FacturacionView : UserControl
     public FacturacionView(
         IInventoryService inventoryService,
         IOrderService orderService,
-        ICurrentSessionService currentSession)
+        ICurrentSessionService currentSession,
+        ISaleReceiptPrinter saleReceiptPrinter,
+        IOptions<PrintingOptions> printingOptions,
+        ILogger<FacturacionView> logger,
+        CashSessionOpeningFlow cashSessionOpeningFlow)
     {
         _inventoryService = inventoryService;
         _orderService = orderService;
         _currentSession = currentSession;
+        _saleReceiptPrinter = saleReceiptPrinter;
+        _printingOptions = printingOptions.Value;
+        _logger = logger;
+        _cashSessionOpeningFlow = cashSessionOpeningFlow ?? throw new ArgumentNullException(nameof(cashSessionOpeningFlow));
 
         InitializeComponent();
         CartItemsControl.ItemsSource = _cartLineItems;
@@ -71,7 +89,8 @@ public partial class FacturacionView : UserControl
         }
         catch (Exception ex)
         {
-            SetStatusMessage($"No se pudo buscar productos: {ex.Message}", isError: true);
+            _logger.LogError(ex, "No se pudo buscar productos en la vista de facturación");
+            SetStatusMessage("No se pudo buscar productos. Intente nuevamente.", isError: true);
         }
     }
 
@@ -135,6 +154,28 @@ public partial class FacturacionView : UserControl
             return;
         }
 
+        if (_currentSession.ActiveCashSessionId is not Guid cashSessionId)
+        {
+            SetStatusMessage("Abra la caja antes de cobrar una venta.", isError: true);
+            if (MessageBox.Show(
+                    Window.GetWindow(this),
+                    "No hay una caja abierta. ¿Desea abrirla ahora?",
+                    "Abrir caja",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes
+                || !await _cashSessionOpeningFlow.EnsureOpenAsync(Window.GetWindow(this)))
+            {
+                return;
+            }
+
+            if (_currentSession.ActiveCashSessionId is not Guid openedCashSessionId)
+            {
+                return;
+            }
+
+            cashSessionId = openedCashSessionId;
+        }
+
         if (_cartLineItems.Count == 0)
         {
             SetStatusMessage("Agregue al menos un producto.", isError: true);
@@ -149,21 +190,64 @@ public partial class FacturacionView : UserControl
         {
             var saleResult = await _orderService.CreateCashSaleAsync(new CreateCashSaleRequest(
                 _currentSession.CurrentEmployee.Id,
-                CashSessionId: null,
+                CashSessionId: cashSessionId,
                 CustomerId: null,
                 ClientRequestId: Guid.NewGuid(),
                 Lines: _cartLineItems.Select(line => new CashSaleLineRequest(line.ProductId, line.Quantity)).ToList(),
                 Payments: new[] { new CashSalePaymentRequest(paymentMethod, grandTotal) },
                 Notes: "Venta registrada desde WPF"));
 
+            _lastOrderId = saleResult.OrderId;
             _cartLineItems.Clear();
             RenderSaleTotals();
             await SearchProductsAsync();
-            SetStatusMessage($"Venta registrada: {saleResult.OrderId}. DTE pendiente de Fase 4.");
+            SetStatusMessage($"Venta registrada: {saleResult.OrderId}.");
+            if (_printingOptions.AutoPrintOnSale)
+            {
+                await TryPrintOrderAsync(saleResult.OrderId);
+            }
         }
-        catch (Exception ex)
+        catch (InvalidOrderException exception)
         {
-            SetStatusMessage($"No se pudo registrar la venta: {ex.Message}", isError: true);
+            _logger.LogWarning(exception, "Venta rechazada por una regla de caja u orden");
+            SetStatusMessage(exception.Message, isError: true);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Error técnico al registrar una venta");
+            SetStatusMessage("No se pudo registrar la venta. Revise la caja e intente nuevamente.", isError: true);
+        }
+    }
+
+    /// <summary>Imprime nuevamente el último comprobante guardado.</summary>
+    private async void OnPrintLastClick(object sender, RoutedEventArgs e)
+    {
+        if (_lastOrderId is not Guid orderId)
+        {
+            SetStatusMessage("Aún no hay una venta para imprimir.", isError: true);
+            return;
+        }
+
+        await TryPrintOrderAsync(orderId);
+    }
+
+    private async Task TryPrintOrderAsync(Guid orderId)
+    {
+        var result = await _saleReceiptPrinter.PrintSaleAsync(orderId);
+        if (result.Status == SaleReceiptPrintStatus.Printed)
+        {
+            SetStatusMessage(result.UserMessage);
+            return;
+        }
+
+        SetStatusMessage($"La venta se guardó, pero no se pudo imprimir: {result.UserMessage}", isError: true);
+        var dialog = new PrintFailureDialog(result.UserMessage)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            await TryPrintOrderAsync(orderId);
         }
     }
 

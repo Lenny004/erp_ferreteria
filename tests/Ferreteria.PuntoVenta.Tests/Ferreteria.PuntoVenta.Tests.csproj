@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2"><PrivateAssets>all</PrivateAssets></PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+  <!--
+    Decisión: net10.0 + archivos enlazados (Compile Include/Link) en lugar de referenciar el proyecto WPF.
+    - Solo se enlaza la lógica pura de impresión (formato, ESC/POS, fábrica de comprobantes, validación y transporte TCP),
+      sin dependencias de WPF, EF Core, PostgreSQL ni del registro de Windows.
+    - Así los tests corren en Windows (CI windows-latest) y también en Linux/macOS, y no requieren impresora ni BD.
+    - Para las pruebas de integración se enlazan el contexto, los modelos y el servicio de historial con Testcontainers; las interfaces puras de impresión se enlazan para pruebas unitarias sin WPF, EF ni registro de Windows.
+    - Se enlazan CashRegisterContracts, SalesDomainConstants y AuditService para que la guarda cubra todas las clases *AuditActions y reutilice la serialización de auditoría.
+    - Se enlazan OrderService y sus contratos/excepciones/reglas puras para ejecutar contra el mismo fixture PostgreSQL las ventas y facturaciones de confección con transacciones reales.
+  -->
+  <ItemGroup>
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptContracts.cs" Link="Printing/ReceiptContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosCommands.cs" Link="Printing/EscPosCommands.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosDocumentBuilder.cs" Link="Printing/EscPosDocumentBuilder.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/TicketReceiptRenderer.cs" Link="Printing/TicketReceiptRenderer.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/NetworkPrinterTransport.cs" Link="Printing/NetworkPrinterTransport.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/PrinterException.cs" Link="Printing/PrinterException.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptDocumentFactory.cs" Link="Printing/ReceiptDocumentFactory.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/SpanishNumberToWords.cs" Link="Dte/SpanishNumberToWords.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PrinterConfigurationContracts.cs" Link="Printing/PrinterConfigurationContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IPrinterConfigService.cs" Link="Services/IPrinterConfigService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/ICurrentSessionService.cs" Link="Services/ICurrentSessionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/OperationalModule.cs" Link="Services/OperationalModule.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/NavSections.cs" Link="Services/NavSections.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IAuditService.cs" Link="Services/IAuditService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/AuditService.cs" Link="Services/AuditService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/IReceiptCompositionService.cs" Link="Printing/IReceiptCompositionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/IReceiptPrintService.cs" Link="Printing/IReceiptPrintService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/SaleReceiptPrinter.cs" Link="Printing/SaleReceiptPrinter.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteConstants.cs" Link="Dte/DteConstants.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryFilter.cs" Link="SalesHistory/SalesHistoryFilter.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryContracts.cs" Link="SalesHistory/SalesHistoryContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryService.cs" Link="SalesHistory/SalesHistoryService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SalesDomainConstants.cs" Link="Domain/SalesDomainConstants.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterContracts.cs" Link="CashRegister/CashRegisterContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashSessionService.cs" Link="CashRegister/ICashSessionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashSessionService.cs" Link="CashRegister/CashSessionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterCalculator.cs" Link="CashRegister/CashRegisterCalculator.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterInputRules.cs" Link="CashRegister/CashRegisterInputRules.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterReportComposer.cs" Link="CashRegister/CashRegisterReportComposer.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/OrderNotesFormatter.cs" Link="Domain/OrderNotesFormatter.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/TaxAmountCalculator.cs" Link="Domain/TaxAmountCalculator.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/InventoryQuantityValidator.cs" Link="Domain/InventoryQuantityValidator.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/OrderQueryFilters.cs" Link="Domain/OrderQueryFilters.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/InventoryExceptions.cs" Link="Services/InventoryExceptions.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IOrderService.cs" Link="Services/IOrderService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderContracts.cs" Link="Services/OrderContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderExceptions.cs" Link="Services/OrderExceptions.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderService.cs" Link="Services/OrderService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAuthService.cs" Link="Services/PinAuthService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Data/FerreteriaDbContext.cs" Link="Data/FerreteriaDbContext.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />
+    <None Include="../../Ferreteria.PuntoVenta/Squema.sql" Link="Data/Squema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -106,7 +106,7 @@ La caja **no** implementa módulos de planilla, RRHH ni inventario administrativ
 
 | Repositorio | Tecnología | Responsabilidad |
 |---|---|---|
-| `erp_ferreteria` / `Ferreteria.PuntoVenta` | C# WPF, EF Core | Caja, confección, DTE, impresión, PIN |
+| `erp_ferreteria` / `Ferreteria.PuntoVenta` | C# WPF, EF Core | Caja, historial de ventas y reimpresión, confección, DTE, impresión, PIN |
 | [`ferreteria_backend`](../ferreteria_backend/README.md) | Node.js, Express, Prisma | API REST: empleados, planilla, compras, libros IVA, BI, Excel/PDF |
 | [`ferreteria_adminweb`](../ferreteria_adminweb/README.md) | Next.js | UI administrativa; consume **solo** la API Node |
 
@@ -210,6 +210,10 @@ El módulo de Confección es de acceso directo sin PIN, pues los técnicos de ta
 
 > **Nota de implementación:** `PinWindow` valida el PIN según el módulo elegido: `can_cashier` para VENTAS, `can_sell` para CONFECCION. Tras el ingreso, `MainShellWindow` oculta las secciones del otro módulo vía `NavSections` y `ICurrentSessionService.ActiveModule`.
 
+### Alcance del historial de ventas
+
+Por defecto, `Config/appsettings.json` permite el historial completo al puesto `Administrador`, que es el puesto sembrado en `Squema.sql`. Los demás cajeros ven únicamente sus ventas asociadas a sesiones ABIERTAS de su turno; sin sesión abierta no ven ventas. En el esquema no existe `Supervisor`: si el dueño crea ese puesto, puede agregar su nombre exacto a `SalesHistory:FullHistoryPositionNames` como **decisión pendiente**, sin interpretar `CanSell` como permiso de encargado.
+
 ---
 
 ### Módulo Caja
@@ -267,7 +271,7 @@ Panel de Caja (requiere PIN para entrar)
 | Historial de Facturas | `Views/Caja/HistorialFacturasView.xaml` | Consulta y reimpresión de DTEs | UI shell |
 | Consultar Stock | `Views/Caja/ConsultarStockView.xaml` | Vista rápida de inventario | Conectado a `InventoryService` |
 | Nota de Crédito | `Views/Caja/DevolucionesView.xaml` | Devoluciones DTE-05 | UI shell |
-| Corte de Caja | `Views/Caja/CorteCajaView.xaml` | Cierre de turno | UI shell |
+| Corte de Caja | `Views/Caja/CorteCajaView.xaml` | Apertura, resumen, conciliación y cierre | Operativo; impresión física pendiente de probar |
 | Impresoras | `Views/Caja/ImpresorasView.xaml` | Configuración de impresión | UI shell |
 | PIN | `Views/PIN/PinWindow.xaml` | Modal de autenticación cajero | ✅ `PinAuthService` + bcrypt |
 
@@ -601,8 +605,8 @@ Ferreteria/
 | Inventario (consulta + descuento) | `InventoryService` | ✅ Implementado | 2 |
 | Órdenes y ventas | `OrderService` | ✅ Implementado | 3 |
 | DTE | `DTEService` | 🔲 Vacío | 4 |
-| Impresión | `ImpresionService` | 🔲 Vacío | 5 |
-| Corte de caja | — | 🔲 Pendiente | 6 |
+| Impresión | `ReceiptPrintService`, `SaleReceiptPrinter` | Implementado (sin prueba con impresora física) | 5 |
+| Corte de caja | `CashSessionService`, `CorteCajaView` | Implementado con pruebas unitarias y de integración (Testcontainers); impresión física pendiente de probar | 6 |
 | Configuración | `ConfigService` | Parcial | — |
 
 **Modelos WPF (`Models/`):** dominio de caja — `Sales`, `Dte`, `Public` (catálogo/stock), `Hr.Employee` (PIN y permisos). **No** incluir `WebUser`, planilla ni CRUD RRHH en WPF.
@@ -711,7 +715,7 @@ Resumen alineado al plan v3.0 (`docs/FERRETERIA_PLAN_FINALIZACION_APP.md`):
 | Caja | `FacturacionView` | UI ✅ — integración DTE pendiente |
 | Caja | `HistorialFacturasView` | UI shell |
 | Caja | `ConsultarStockView` | ✅ conectado a inventario |
-| Caja | `CorteCajaView` | UI shell |
+| Caja | `CorteCajaView` | Apertura, resumen, conciliación y cierre; impresión física pendiente de probar |
 | Caja | `DevolucionesView` | UI shell |
 | Caja | `ImpresorasView` | UI shell |
 | Confección | `HistorialVentasView` | UI + servicios parciales |
@@ -757,7 +761,7 @@ Roadmap completo según `FERRETERIA_PLAN_FINALIZACION_APP.md`. Las fases WPF (0�
 | **3** | Órdenes, ventas, pagos, confección | 🟡 `OrderService` listo |
 | **4** | DTE 01/03/05, firma, MH, contingencia | 🔲 Pendiente |
 | **5** | Impresión tickets con QR | 🔲 Pendiente |
-| **6** | Corte de caja y turnos | 🔲 Pendiente |
+| **6** | Corte de caja y turnos | Implementado con pruebas unitarias y de integración (Testcontainers); impresión física pendiente de probar |
 | **7** | Devoluciones y nota de crédito DTE-05 | 🔲 Pendiente |
 
 ### Administración web
