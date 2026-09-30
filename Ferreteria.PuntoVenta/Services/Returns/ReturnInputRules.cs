@@ -16,9 +16,9 @@ public static class ReturnInputRules
             throw new InvalidReturnException("La devolución no tiene identificadores válidos.");
         }
 
-        if (request.EmployeeId == Guid.Empty || request.AuthorizedByEmployeeId == Guid.Empty)
+        if (request.EmployeeId == Guid.Empty)
         {
-            throw new InvalidReturnException("La devolución debe indicar quién la ejecuta y quién la autoriza.");
+            throw new InvalidReturnException("La devolución debe indicar quién la ejecuta.");
         }
 
         if (request.Lines is null || request.Lines.Count == 0)
@@ -103,12 +103,7 @@ public static class ReturnInputRules
             }
         }
 
-        if (!allowUnspecifiedRefundAmount
-            && !string.Equals(request.RefundMethod, ReturnDomainConstants.RefundMethods.None, StringComparison.OrdinalIgnoreCase)
-            && request.RefundAmount <= 0m)
-        {
-            throw new InvalidReturnException("El monto de reintegro debe coincidir con el crédito calculado.");
-        }
+        _ = allowUnspecifiedRefundAmount;
     }
 
     /// <summary>Valida una cantidad con hasta tres decimales y valor positivo.</summary>

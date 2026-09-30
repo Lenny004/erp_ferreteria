@@ -129,15 +129,15 @@ public sealed class ReturnCalculatorTests
 
     /// <summary>Rechaza total cero y un reintegro distinto del crédito.</summary>
     [Fact]
-    public void Calculate_EnforcesPositiveTotalAndExactRefund()
+    public void Calculate_EnforcesPositiveTotalAndRefundUpperBound()
     {
         var line = CreateLine(1m, 0m);
         var zeroSale = CreateSale() with { Subtotal = 0m, TaxAmount = 0m, Total = 0m };
         var zeroRequest = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.None);
         Assert.Contains("mayor que cero", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(zeroRequest, zeroSale, new[] { line }, null, ReturnOptions.CreateDefault())).Message, StringComparison.OrdinalIgnoreCase);
 
-        var paidRequest = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.Card) with { RefundAmount = 1m };
-        Assert.Contains("igual al total", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(paidRequest, CreateSale(), new[] { line with { Subtotal = 100m, UnitPrice = 100m } }, null, ReturnOptions.CreateDefault())).Message, StringComparison.OrdinalIgnoreCase);
+        var paidRequest = CreateRequest(line.OrderDetailId, 1m, ReturnDomainConstants.RefundMethods.Card) with { RefundAmount = 200m };
+        Assert.Contains("superar", Assert.Throws<InvalidReturnException>(() => ReturnCalculator.Calculate(paidRequest, CreateSale(), new[] { line with { Subtotal = 100m, UnitPrice = 100m } }, null, ReturnOptions.CreateDefault())).Message, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Verifica la política fiscal predeterminada para CCF, factura y venta sin DTE.</summary>

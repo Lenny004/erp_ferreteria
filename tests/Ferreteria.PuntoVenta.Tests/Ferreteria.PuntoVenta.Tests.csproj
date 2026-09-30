@@ -70,6 +70,8 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderExceptions.cs" Link="Services/OrderExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderService.cs" Link="Services/OrderService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAuthService.cs" Link="Services/PinAuthService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IPinAttemptService.cs" Link="Services/IPinAttemptService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAttemptService.cs" Link="Services/PinAttemptService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Returns/*.cs" LinkBase="Returns" />
     <Compile Include="../../Ferreteria.PuntoVenta/Data/FerreteriaDbContext.cs" Link="Data/FerreteriaDbContext.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />

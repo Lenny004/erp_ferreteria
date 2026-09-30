@@ -4,21 +4,15 @@ Este documento describe el contrato operativo implementado en la aplicación WPF
 
 ## Regla de una sesión por caja
 
-Solo puede existir una sesión ABIERTA por CashRegisterCode, aunque los cajeros sean distintos. El servicio aplica esta regla con una transacción Serializable, mensajes diferenciados por empleado y traducción controlada de la violación 23505. La migración de Botti en ferreteria_backend, rama bd-devoluciones, agregará IdxCashSessionOpenByRegister como respaldo; todavía no está en desarrollo.
+Solo puede existir una sesión ABIERTA por `CashRegisterCode`, aunque los cajeros sean distintos. El servicio aplica esta regla con una transacción `Serializable`, y el esquema la respalda con el índice único parcial `IdxCashSessionOpenByRegister`. La violación `23505` se traduce a un mensaje operativo claro.
 
-## sales.CashSessions
+## Efectivo de devoluciones
 
-El cierre suma pagos EFECTIVO de órdenes COMPLETADA, resta devoluciones en efectivo leídas por ICashMovementReader y conserva cash_refunds = 0 mientras la migración no exista. Las ventas PENDIENTE y CANCELADA no forman parte del efectivo esperado.
+`sales."CashMovements"` registra egresos que no caben como pagos negativos. Un movimiento `DEVOLUCION_EFECTIVO` tiene `ReturnId`, monto positivo, sesión, ejecutor, autorizador, clave de idempotencia y razón de hasta 300 caracteres. La devolución está ligada a la sesión en la que sale el efectivo, no a la orden original.
 
-## sales."CashMovements" pendiente
+El cierre suma pagos `EFECTIVO` de órdenes COMPLETADA y resta el total de movimientos `DEVOLUCION_EFECTIVO` de la misma sesión. El valor se usa tanto en `GetSummaryAsync` como en `CloseAsync`, por lo que `ClosingExpectedAmount` conserva la resta.
 
-La definición real de Botti usa las columnas "amount" y "reason" en minúscula, MovementType, CashSessionId, EmployeeId, AuthorizedByEmployeeId, ClientRequestId y ReturnId. Un movimiento DEVOLUCION_EFECTIVO debe tener ReturnId y no la orden; la CHECK exige la equivalencia DEVOLUCION_EFECTIVO ⇔ ReturnId IS NOT NULL. amount debe ser mayor que cero, hay un único DEVOLUCION_EFECTIVO por devolución y reason admite hasta 300 caracteres.
-
-La migración está en ferreteria_backend, rama bd-devoluciones, y todavía no está aplicada en desarrollo. El POS usa PendingMigrationCashMovementReader, que devuelve cero hasta que exista el esquema.
-
-## Consulta SQL de control
-
-La consulta actual no lee tablas nuevas y deja cash_refunds explícitamente en cero:
+## Consulta SQL de control vigente
 
 ~~~sql
 WITH session_orders AS (
@@ -33,30 +27,29 @@ WITH session_orders AS (
     JOIN completed o ON o."id" = p."OrderId"
     WHERE p."CashSessionId" = @sessionId
     GROUP BY p."method"
+), cash_refunds AS (
+    SELECT COALESCE(SUM(m."amount"), 0) AS amount
+    FROM sales."CashMovements" m
+    WHERE m."CashSessionId" = @sessionId
+      AND m."MovementType" = 'DEVOLUCION_EFECTIVO'
 )
 SELECT
     s."OpeningAmount",
     COALESCE((SELECT amount FROM payment_totals WHERE "method" = 'EFECTIVO'), 0) AS cash_sales,
     COALESCE((SELECT SUM("total") FROM completed), 0) AS total_sold,
-    CAST(0 AS numeric) AS cash_refunds,
-    s."OpeningAmount" + COALESCE((SELECT amount FROM payment_totals WHERE "method" = 'EFECTIVO'), 0) AS expected_cash
+    (SELECT amount FROM cash_refunds) AS cash_refunds,
+    s."OpeningAmount"
+        + COALESCE((SELECT amount FROM payment_totals WHERE "method" = 'EFECTIVO'), 0)
+        - (SELECT amount FROM cash_refunds) AS expected_cash
 FROM sales."CashSessions" s
 WHERE s."id" = @sessionId;
 ~~~
 
-~~~sql
--- Tras la migración de ferreteria_backend, sustituir el cero por:
--- COALESCE((SELECT SUM(m."amount")
---           FROM sales."CashMovements" m
---           WHERE m."CashSessionId" = s."id"
---             AND m."MovementType" = 'DEVOLUCION_EFECTIVO'), 0) AS cash_refunds
-~~~
-
-@sessionId debe enviarse como NpgsqlParameter UUID; nunca se concatenan valores.
+`@sessionId` debe enviarse como parámetro UUID; nunca se concatenan valores.
 
 ## Permisos y auditoría
 
-El servidor vuelve a comprobar IsActive y autorización en apertura, resumen y cierre. El dueño necesita CanCashier; los puestos de SalesHistory:FullHistoryPositionNames pueden consultar o cerrar sesiones ajenas. Las transiciones se auditan en system."AuditLog".
+El servicio vuelve a comprobar `IsActive` y autorización en apertura, resumen y cierre. El dueño necesita `CanCashier`; los puestos de `SalesHistory:FullHistoryPositionNames` pueden consultar o cerrar sesiones ajenas. Las transiciones se auditan en `system."AuditLog"`.
 
 ## A verificar con contador / normativa MH
 

@@ -1,4 +1,6 @@
 using Ferreteria.PuntoVenta.Data;
+using Ferreteria.PuntoVenta.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ferreteria.PuntoVenta.Services.Returns;
 
@@ -117,7 +119,7 @@ public sealed record ReturnPersistenceRecord(
     IReadOnlyList<InventoryMovementRecord> InventoryMovements,
     CashMovementRecord? CashMovement);
 
-/// <summary>Persistencia transaccional desacoplada de las tablas que aún no existen en desarrollo.</summary>
+/// <summary>Persistencia transaccional de devoluciones, inventario, caja y auditoría.</summary>
 public interface IReturnWriter
 {
     /// <summary>Indica si la implementación puede escribir las tablas de devoluciones.</summary>
@@ -135,29 +137,176 @@ public interface IReturnWriter
     /// <param name="record">Valores preparados para insertar.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
     /// <returns>Identificador generado para la devolución.</returns>
-    /// <exception cref="ReturnsUnavailableException">Si la migración aún no está disponible.</exception>
-    /// <remarks>La implementación futura debe conservar la misma transacción y ligar CashMovement a ReturnId, nunca a OrderId.</remarks>
+    /// <exception cref="ReturnsUnavailableException">Si la persistencia configurada no está disponible.</exception>
+    /// <remarks>La implementación conserva la misma transacción y liga CashMovement a ReturnId, nunca a OrderId.</remarks>
     Task<Guid> PersistAsync(FerreteriaDbContext db, ReturnPersistenceRecord record, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Writer inerte hasta que la migración de devoluciones llegue al entorno.</summary>
-public sealed class PendingMigrationReturnWriter : IReturnWriter
+/// <summary>Writer EF Core para la persistencia atómica de una devolución.</summary>
+public sealed class EfReturnWriter : IReturnWriter
 {
     /// <inheritdoc />
-    public bool IsAvailable => false;
+    public bool IsAvailable => true;
 
     /// <inheritdoc />
-    public Task<ReturnResult?> FindByClientRequestIdAsync(FerreteriaDbContext db, Guid clientRequestId, CancellationToken cancellationToken = default)
+    public async Task<ReturnResult?> FindByClientRequestIdAsync(FerreteriaDbContext db, Guid clientRequestId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(db);
-        return Task.FromResult<ReturnResult?>(null);
+        var saleReturn = await db.Returns.AsNoTracking()
+            .Include(item => item.ReturnDetails)
+            .SingleOrDefaultAsync(item => item.ClientRequestId == clientRequestId, cancellationToken);
+        return saleReturn is null ? null : ToResult(saleReturn);
     }
 
     /// <inheritdoc />
-    public Task<Guid> PersistAsync(FerreteriaDbContext db, ReturnPersistenceRecord record, CancellationToken cancellationToken = default)
+    public async Task<Guid> PersistAsync(FerreteriaDbContext db, ReturnPersistenceRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(db);
-        // TODO: persistir Returns, ReturnDetails, kardex, stock, CashMovements y AuditLog (depende de ferreteria_backend).
-        throw new ReturnsUnavailableException("La persistencia de devoluciones todavía no está disponible.");
+        ArgumentNullException.ThrowIfNull(record);
+        var returnId = Guid.NewGuid();
+        var saleReturn = new SaleReturn
+        {
+            Id = returnId,
+            OrderId = record.Header.OrderId,
+            CashSessionId = record.Header.CashSessionId,
+            EmployeeId = record.Header.EmployeeId,
+            AuthorizedByEmployeeId = record.Header.AuthorizedByEmployeeId,
+            ClientRequestId = record.Header.ClientRequestId,
+            ReturnType = record.Header.ReturnType,
+            Status = record.Header.Status,
+            FiscalStatus = record.Header.FiscalStatus,
+            CreditNoteDteId = record.Header.CreditNoteDteId,
+            ReasonCode = record.Header.ReasonCode,
+            Notes = record.Header.Notes,
+            Subtotal = record.Header.Subtotal,
+            DiscountAmount = record.Header.DiscountAmount,
+            TaxAmount = record.Header.TaxAmount,
+            Total = record.Header.Total,
+            RefundMethod = record.Header.RefundMethod,
+            RefundAmount = record.Header.RefundAmount,
+            CreatedAt = record.Header.CreatedAt,
+            UpdatedAt = record.Header.UpdatedAt
+        };
+
+        foreach (var movement in record.InventoryMovements)
+        {
+            var product = await db.Products.FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = {movement.ProductId} FOR UPDATE").SingleAsync(cancellationToken);
+            var stockBefore = product.CurrentStock;
+            product.CurrentStock += movement.Quantity;
+            var inventoryMovement = new InventoryMovement
+            {
+                Id = movement.Id,
+                ProductId = movement.ProductId,
+                MovementType = movement.MovementType,
+                OrderId = movement.OrderId,
+                EmployeeId = movement.EmployeeId,
+                Quantity = movement.Quantity,
+                UnitCost = movement.UnitCost,
+                TotalCost = Math.Round(movement.Quantity * movement.UnitCost, 4, MidpointRounding.AwayFromZero),
+                StockBefore = stockBefore,
+                StockAfter = product.CurrentStock,
+                Reason = movement.Reason,
+                CreatedAt = movement.CreatedAt
+            };
+            db.InventoryMovements.Add(inventoryMovement);
+        }
+
+        foreach (var detail in record.Details)
+        {
+            saleReturn.ReturnDetails.Add(new SaleReturnDetail
+            {
+                Id = Guid.NewGuid(),
+                ReturnId = returnId,
+                OrderDetailId = detail.OrderDetailId,
+                ProductId = detail.ProductId,
+                Quantity = detail.Quantity,
+                UnitsPerPackage = detail.UnitsPerPackage,
+                UnitPrice = detail.UnitPrice,
+                UnitCost = detail.UnitCost,
+                DiscountAmount = detail.DiscountAmount,
+                Subtotal = detail.Subtotal,
+                TaxAmount = detail.TaxAmount,
+                Restocked = detail.Restocked,
+                RestockQuantity = detail.RestockQuantity,
+                InventoryMovementId = detail.InventoryMovementId,
+                CreatedAt = detail.CreatedAt
+            });
+        }
+
+        db.Returns.Add(saleReturn);
+        if (record.CashMovement is not null)
+        {
+            var cash = record.CashMovement;
+            db.CashMovements.Add(new CashMovement
+            {
+                Id = Guid.NewGuid(),
+                CashSessionId = cash.CashSessionId,
+                MovementType = cash.MovementType,
+                Amount = cash.Amount,
+                ReturnId = returnId,
+                EmployeeId = cash.EmployeeId,
+                AuthorizedByEmployeeId = cash.AuthorizedByEmployeeId,
+                ClientRequestId = cash.ClientRequestId,
+                Reason = cash.Reason,
+                CreatedAt = cash.CreatedAt
+            });
+        }
+
+        db.AuditLogs.Add(AuditService.CreateChangeEntry(
+            ReturnAuditActions.Return,
+            ReturnAuditActions.ReturnsTableName,
+            returnId.ToString(),
+            null,
+            new
+            {
+                Evento = ReturnAuditActions.ReturnEvent,
+                saleReturn.EmployeeId,
+                saleReturn.AuthorizedByEmployeeId,
+                saleReturn.Total,
+                saleReturn.RefundMethod,
+                Lineas = record.Details.Select(detail => new { detail.OrderDetailId, detail.Quantity, Total = detail.Subtotal - detail.DiscountAmount + detail.TaxAmount }).ToArray()
+            },
+            saleReturn.EmployeeId));
+
+        if (record.CashMovement is not null)
+        {
+            db.AuditLogs.Add(AuditService.CreateChangeEntry(
+                ReturnAuditActions.Refund,
+                ReturnAuditActions.CashMovementsTableName,
+                returnId.ToString(),
+                null,
+                new
+                {
+                    Evento = ReturnAuditActions.RefundEvent,
+                    saleReturn.EmployeeId,
+                    saleReturn.AuthorizedByEmployeeId,
+                    Amount = record.CashMovement.Amount,
+                    ReturnId = returnId
+                },
+                saleReturn.EmployeeId));
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return returnId;
+    }
+
+    private static ReturnResult ToResult(SaleReturn saleReturn)
+    {
+        var lines = saleReturn.ReturnDetails.Select(detail => new ReturnCreditLine(
+            detail.OrderDetailId,
+            detail.Quantity,
+            detail.Subtotal,
+            detail.DiscountAmount,
+            detail.TaxAmount,
+            detail.Subtotal - detail.DiscountAmount + detail.TaxAmount,
+            detail.Restocked ? Math.Round(detail.UnitCost * detail.RestockQuantity, 4, MidpointRounding.AwayFromZero) : 0m,
+            detail.RestockQuantity,
+            detail.UnitPrice,
+            detail.UnitsPerPackage,
+            detail.UnitCost,
+            detail.Restocked)).ToArray();
+        var calculation = new ReturnCalculationResult(lines, saleReturn.Subtotal, saleReturn.DiscountAmount, saleReturn.TaxAmount, saleReturn.Total, lines.Sum(line => line.RestockCost), saleReturn.ReturnType);
+        var fiscal = new ReturnFiscalDecision(saleReturn.FiscalStatus, null, "Devolución recuperada desde la base de datos.");
+        return new ReturnResult(saleReturn.ClientRequestId, saleReturn.OrderId, calculation, fiscal, saleReturn.Id, saleReturn.AuthorizedByEmployeeId);
     }
 }

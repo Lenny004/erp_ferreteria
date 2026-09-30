@@ -63,6 +63,12 @@ public class FerreteriaDbContext : DbContext
     public DbSet<CashSession> CashSessions => Set<CashSession>();
     /// <summary>Pagos aplicados a órdenes de venta.</summary>
     public DbSet<Payment> Payments => Set<Payment>();
+    /// <summary>Cabeceras persistidas de devoluciones POS.</summary>
+    public DbSet<SaleReturn> Returns => Set<SaleReturn>();
+    /// <summary>Líneas persistidas de devoluciones POS.</summary>
+    public DbSet<SaleReturnDetail> ReturnDetails => Set<SaleReturnDetail>();
+    /// <summary>Movimientos de efectivo de sesiones de caja.</summary>
+    public DbSet<CashMovement> CashMovements => Set<CashMovement>();
 
     // ========================================================================
     //  ESQUEMA "dte" — Documento Tributario Electrónico (Hacienda SV)
@@ -469,8 +475,94 @@ public class FerreteriaDbContext : DbContext
                 .IsUnique()
                 .HasDatabaseName("IdxCashSessionOpen")
                 .HasFilter("\"status\" = 'ABIERTA'");
+            entity.HasIndex(c => c.CashRegisterCode)
+                .IsUnique()
+                .HasDatabaseName("IdxCashSessionOpenByRegister")
+                .HasFilter("\"status\" = 'ABIERTA'");
             entity.HasIndex(c => c.Status).HasDatabaseName("IdxCashSessionStatus");
             entity.HasIndex(c => c.OpenedAt).HasDatabaseName("IdxCashSessionOpened");
+        });
+
+        // --- SaleReturn ---
+        // Las devoluciones son registros aditivos: no modifican Orders ni OrderDetails.
+        modelBuilder.Entity<SaleReturn>(entity =>
+        {
+            entity.ToTable("Returns", "sales");
+            entity.Property(r => r.Id).HasColumnName("id");
+            entity.Property(r => r.Status).HasColumnName("status");
+            entity.Property(r => r.Notes).HasColumnName("notes");
+            entity.Property(r => r.Subtotal).HasColumnName("subtotal").HasPrecision(12, 2);
+            entity.Property(r => r.Total).HasColumnName("total").HasPrecision(12, 2);
+            entity.Property(r => r.DiscountAmount).HasPrecision(12, 2);
+            entity.Property(r => r.TaxAmount).HasPrecision(12, 2);
+            entity.Property(r => r.RefundAmount).HasPrecision(12, 2);
+            entity.Property(r => r.ReturnType).HasMaxLength(10);
+            entity.Property(r => r.Status).HasMaxLength(20);
+            entity.Property(r => r.FiscalStatus).HasMaxLength(20);
+            entity.Property(r => r.ReasonCode).HasMaxLength(30);
+            entity.Property(r => r.RefundMethod).HasMaxLength(20);
+            entity.Property(r => r.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(r => r.UpdatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(r => r.Order).WithMany().HasForeignKey(r => r.OrderId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.CashSession).WithMany().HasForeignKey(r => r.CashSessionId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.Employee).WithMany().HasForeignKey(r => r.EmployeeId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.AuthorizedByEmployee).WithMany().HasForeignKey(r => r.AuthorizedByEmployeeId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.CreditNoteDte).WithMany().HasForeignKey(r => r.CreditNoteDteId).OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(r => r.ClientRequestId).IsUnique().HasDatabaseName("UqReturnsClientRequest");
+            entity.HasIndex(r => r.CreditNoteDteId).IsUnique().HasDatabaseName("UqReturnsCreditNote").HasFilter("\"CreditNoteDteId\" IS NOT NULL");
+            entity.HasIndex(r => r.OrderId).HasDatabaseName("IdxReturnsOrder");
+            entity.HasIndex(r => r.CashSessionId).HasDatabaseName("IdxReturnsCashSession");
+            entity.HasIndex(r => r.CreatedAt).HasDatabaseName("IdxReturnsCreatedAt");
+            entity.HasIndex(r => r.FiscalStatus).HasDatabaseName("IdxReturnsFiscalStatus");
+        });
+
+        // --- SaleReturnDetail ---
+        modelBuilder.Entity<SaleReturnDetail>(entity =>
+        {
+            entity.ToTable("ReturnDetails", "sales");
+            entity.Property(r => r.Id).HasColumnName("id");
+            entity.Property(r => r.Quantity).HasColumnName("quantity").HasPrecision(12, 3);
+            entity.Property(r => r.Subtotal).HasColumnName("subtotal").HasPrecision(12, 2);
+            entity.Property(r => r.UnitsPerPackage).HasPrecision(12, 3);
+            entity.Property(r => r.UnitPrice).HasPrecision(12, 2);
+            entity.Property(r => r.UnitCost).HasPrecision(12, 4);
+            entity.Property(r => r.DiscountAmount).HasPrecision(12, 2);
+            entity.Property(r => r.TaxAmount).HasPrecision(12, 2);
+            entity.Property(r => r.RestockQuantity).HasPrecision(12, 3);
+            entity.Property(r => r.CreatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(r => r.Return).WithMany(r => r.ReturnDetails).HasForeignKey(r => r.ReturnId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.OrderDetail).WithMany().HasForeignKey(r => r.OrderDetailId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.Product).WithMany().HasForeignKey(r => r.ProductId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(r => r.InventoryMovement).WithMany().HasForeignKey(r => r.InventoryMovementId).OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(r => new { r.ReturnId, r.OrderDetailId }).IsUnique().HasDatabaseName("UqReturnDetailsReturnLine");
+            entity.HasIndex(r => r.InventoryMovementId).IsUnique().HasDatabaseName("UqReturnDetailsMovement").HasFilter("\"InventoryMovementId\" IS NOT NULL");
+            entity.HasIndex(r => r.OrderDetailId).HasDatabaseName("IdxReturnDetailsOrderDetail");
+            entity.HasIndex(r => r.ProductId).HasDatabaseName("IdxReturnDetailsProduct");
+        });
+
+        // --- CashMovement ---
+        modelBuilder.Entity<CashMovement>(entity =>
+        {
+            entity.ToTable("CashMovements", "sales");
+            entity.Property(m => m.Id).HasColumnName("id");
+            entity.Property(m => m.Amount).HasColumnName("amount").HasPrecision(12, 2);
+            entity.Property(m => m.Reason).HasColumnName("reason").HasMaxLength(300);
+            entity.Property(m => m.MovementType).HasMaxLength(30);
+            entity.Property(m => m.CreatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(m => m.CashSession).WithMany().HasForeignKey(m => m.CashSessionId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(m => m.Return).WithMany(r => r.CashMovements).HasForeignKey(m => m.ReturnId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(m => m.Employee).WithMany().HasForeignKey(m => m.EmployeeId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(m => m.AuthorizedByEmployee).WithMany().HasForeignKey(m => m.AuthorizedByEmployeeId).OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(m => m.ClientRequestId).IsUnique().HasDatabaseName("UqCashMovementsClientRequest");
+            entity.HasIndex(m => m.ReturnId).IsUnique().HasDatabaseName("UqCashMovementsReturnRefund").HasFilter("\"MovementType\" = 'DEVOLUCION_EFECTIVO'");
+            entity.HasIndex(m => m.CashSessionId).HasDatabaseName("IdxCashMovementsSession");
+            entity.HasIndex(m => m.MovementType).HasDatabaseName("IdxCashMovementsType");
         });
 
         // --- Payment ---

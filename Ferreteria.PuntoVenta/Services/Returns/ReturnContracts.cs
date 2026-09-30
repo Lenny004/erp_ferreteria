@@ -1,5 +1,6 @@
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ferreteria.PuntoVenta.Services.Returns;
 
@@ -58,7 +59,7 @@ public static class ReturnDomainConstants
         public const string None = "NINGUNO";
     }
 
-    /// <summary>Tipos de movimientos de efectivo previstos por la migración.</summary>
+    /// <summary>Tipos de movimientos de efectivo del esquema persistido.</summary>
     public static class CashMovementTypes
     {
         /// <summary>Egreso de efectivo por una devolución.</summary>
@@ -87,10 +88,10 @@ public static class ReturnAuditActions
     /// <summary>Nombre lógico del evento de reintegro.</summary>
     public const string RefundEvent = "REINTEGRO";
 
-    /// <summary>Nombre de la tabla futura de devoluciones.</summary>
+    /// <summary>Nombre de la tabla persistida de devoluciones.</summary>
     public const string ReturnsTableName = "sales.Returns";
 
-    /// <summary>Nombre de la tabla futura de movimientos de caja.</summary>
+    /// <summary>Nombre de la tabla persistida de movimientos de caja.</summary>
     public const string CashMovementsTableName = "sales.CashMovements";
 }
 
@@ -222,7 +223,9 @@ public sealed record ReturnFiscalDecision(string FiscalStatus, string? RequiredD
 /// <param name="OrderId">Orden original.</param>
 /// <param name="Calculation">Crédito calculado.</param>
 /// <param name="FiscalDecision">Estado fiscal previsto.</param>
-public sealed record ReturnResult(Guid ClientRequestId, Guid OrderId, ReturnCalculationResult Calculation, ReturnFiscalDecision FiscalDecision);
+/// <param name="ReturnId">Identificador persistido de la devolución.</param>
+/// <param name="AuthorizedByEmployeeId">Identificador persistido del empleado autorizador.</param>
+public sealed record ReturnResult(Guid ClientRequestId, Guid OrderId, ReturnCalculationResult Calculation, ReturnFiscalDecision FiscalDecision, Guid ReturnId = default, Guid AuthorizedByEmployeeId = default);
 
 /// <summary>Capacidades habilitadas del servicio de devoluciones.</summary>
 /// <param name="CanConfirmReturns">Indica si existe persistencia autoritativa para confirmar.</param>
@@ -357,7 +360,7 @@ public sealed class DefaultReturnFiscalPolicy : IReturnFiscalPolicy
     }
 }
 
-/// <summary>Abstracción para leer devoluciones persistidas cuando exista la migración.</summary>
+/// <summary>Abstracción para leer devoluciones persistidas desde la base de datos.</summary>
 public interface IReturnedQuantityReader
 {
     /// <summary>Indica si la fuente refleja todas las devoluciones confirmadas.</summary>
@@ -371,18 +374,32 @@ public interface IReturnedQuantityReader
     Task<ReturnedQuantityReadResult> GetAsync(FerreteriaDbContext dbContext, Guid orderId, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Fuente temporal que bloquea confirmaciones mientras no existan las tablas nuevas.</summary>
-public sealed class PendingMigrationReturnedQuantityReader : IReturnedQuantityReader
+/// <summary>Lee devoluciones confirmadas desde sales.ReturnDetails.</summary>
+public sealed class ReturnDetailsReturnedQuantityReader : IReturnedQuantityReader
 {
     /// <inheritdoc />
-    public bool IsAuthoritative => false;
+    public bool IsAuthoritative => true;
 
     /// <inheritdoc />
-    public Task<ReturnedQuantityReadResult> GetAsync(FerreteriaDbContext dbContext, Guid orderId, CancellationToken cancellationToken = default)
+    public async Task<ReturnedQuantityReadResult> GetAsync(FerreteriaDbContext dbContext, Guid orderId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
-        // TODO: leer sales."ReturnDetails" cuando exista la migración de devoluciones (depende de ferreteria_backend).
-        return Task.FromResult(new ReturnedQuantityReadResult(new Dictionary<Guid, ReturnedLineCredit>(), false));
+        var rows = await dbContext.ReturnDetails
+            .Where(detail => detail.Return != null && detail.Return.OrderId == orderId && detail.Return.Status == ReturnDomainConstants.Statuses.Completed)
+            .GroupBy(detail => detail.OrderDetailId)
+            .Select(group => new
+            {
+                OrderDetailId = group.Key,
+                Quantity = group.Sum(detail => detail.Quantity),
+                Subtotal = group.Sum(detail => detail.Subtotal),
+                DiscountAmount = group.Sum(detail => detail.DiscountAmount),
+                TaxAmount = group.Sum(detail => detail.TaxAmount)
+            })
+            .ToListAsync(cancellationToken);
+        var result = rows.ToDictionary(
+            row => row.OrderDetailId,
+            row => new ReturnedLineCredit(row.Quantity, row.Subtotal, row.DiscountAmount, row.TaxAmount, row.Subtotal - row.DiscountAmount + row.TaxAmount));
+        return new ReturnedQuantityReadResult(result, true);
     }
 }
 
@@ -424,10 +441,11 @@ public interface IReturnService
 
     /// <summary>Valida y registra una devolución dentro de una transacción protegida.</summary>
     /// <param name="request">Solicitud de devolución.</param>
+    /// <param name="authorizerPin">PIN del empleado que autoriza, solo en memoria durante la validación.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
     /// <returns>Resultado registrado o recuperado por idempotencia.</returns>
     /// <exception cref="InvalidReturnException">Si la solicitud no cumple las reglas.</exception>
-    /// <exception cref="ReturnsUnavailableException">Mientras no exista persistencia autoritativa.</exception>
+    /// <exception cref="ReturnsUnavailableException">Si la persistencia autoritativa no está disponible.</exception>
     /// <remarks>Usa Serializable, bloquea la orden con FOR UPDATE y lee las devoluciones después del bloqueo; la orden conserva COMPLETADA.</remarks>
-    Task<ReturnResult> CreateReturnAsync(ReturnRequest request, CancellationToken cancellationToken = default);
+    Task<ReturnResult> CreateReturnAsync(ReturnRequest request, string authorizerPin, CancellationToken cancellationToken = default);
 }

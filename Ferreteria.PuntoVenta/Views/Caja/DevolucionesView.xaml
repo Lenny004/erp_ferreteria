@@ -16,7 +16,7 @@
             <TextBlock Text="Revise la venta original y prepare el cálculo de la devolución" Style="{StaticResource AppPanelSubtitleStyle}" />
             <Border Style="{StaticResource AppStatCardStyle}" Margin="0,12,0,12">
                 <StackPanel>
-                    <TextBlock Text="Confirmación deshabilitada" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AppWarning}" />
+                    <TextBlock Text="Estado de confirmación" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AppWarning}" />
                     <TextBlock x:Name="AvailabilityText" TextWrapping="Wrap" Margin="0,8,0,0" />
                 </StackPanel>
             </Border>

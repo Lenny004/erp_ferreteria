@@ -68,7 +68,7 @@ public sealed record CashRegisterSaleSnapshot(
 /// <param name="Sales">Ventas y pagos asociados.</param>
 /// <param name="CashRefunds">Devoluciones en efectivo registradas.</param>
 /// <remarks>
-/// El lector de movimientos devuelve cero hasta que exista la migración de devoluciones.
+/// El lector de movimientos suma los reintegros persistidos en CashMovements.
 /// </remarks>
 public sealed record CashRegisterSnapshot(
     Guid SessionId,

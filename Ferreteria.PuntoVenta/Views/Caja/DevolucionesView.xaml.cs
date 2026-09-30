@@ -2,45 +2,52 @@ using System.Windows;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Returns;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
-/// <summary>Vista guiada para revisar devoluciones sin confirmar mientras falta la migración.</summary>
+/// <summary>Vista guiada para buscar, calcular y confirmar devoluciones POS.</summary>
 public partial class DevolucionesView : UserControl
 {
     private readonly IReturnService _returnService;
     private readonly ICurrentSessionService _currentSession;
     private readonly IReturnFiscalPolicy _fiscalPolicy;
     private readonly ReturnOptions _options;
+    private readonly ILogger<DevolucionesView> _logger;
     private readonly Dictionary<Guid, ReturnableLine> _lines = new();
     private readonly Dictionary<Guid, decimal> _quantities = new();
     private readonly Dictionary<Guid, bool> _restock = new();
     private ReturnableSaleSummary? _selectedSale;
+    private Guid? _pendingClientRequestId;
 
     /// <summary>Inicializa la vista y carga catálogos configurables.</summary>
     /// <param name="returnService">Servicio real de búsqueda y validación.</param>
     /// <param name="currentSession">Sesión del empleado autenticado.</param>
     /// <param name="fiscalPolicy">Política fiscal de vista previa.</param>
     /// <param name="options">Catálogo de motivos y reintegros.</param>
+    /// <param name="logger">Logger para registrar fallos inesperados sin exponer detalles tecnicos.</param>
     public DevolucionesView(
         IReturnService returnService,
         ICurrentSessionService currentSession,
         IReturnFiscalPolicy fiscalPolicy,
-        IOptions<ReturnOptions> options)
+        IOptions<ReturnOptions> options,
+        ILogger<DevolucionesView> logger)
     {
         _returnService = returnService ?? throw new ArgumentNullException(nameof(returnService));
         _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
         _fiscalPolicy = fiscalPolicy ?? throw new ArgumentNullException(nameof(fiscalPolicy));
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         InitializeComponent();
         ReasonCombo.ItemsSource = _options.Motivos;
         ReasonCombo.SelectedIndex = 0;
         RefundCombo.ItemsSource = _options.MetodosReintegroPermitidos;
         RefundCombo.SelectedIndex = 0;
-        AvailabilityText.Text = _returnService.Capabilities.Message
-            + " Puede revisar la venta y el cálculo, pero todavía no se registra nada.";
+        AvailabilityText.Text = _returnService.Capabilities.CanConfirmReturns
+            ? "La persistencia está disponible. La confirmación requiere PIN de autorización."
+            : _returnService.Capabilities.Message;
         UpdateSummary();
     }
 
@@ -112,7 +119,7 @@ public partial class DevolucionesView : UserControl
         UpdateSummary();
     }
 
-    /// <summary>Mantiene bloqueada la confirmación en esta fase.</summary>
+    /// <summary>Solicita autorización, persiste la devolución y muestra el comprobante interno.</summary>
     private async void OnConfirmClick(object sender, RoutedEventArgs e)
     {
         if (_selectedSale is null || _currentSession.CurrentEmployee is null || !ConfirmButton.IsEnabled)
@@ -124,16 +131,54 @@ public partial class DevolucionesView : UserControl
         {
             var requestLines = _quantities.Where(item => item.Value > 0m).Select(item => new ReturnLineRequest(item.Key, item.Value, _restock.GetValueOrDefault(item.Key, true))).ToArray();
             var method = RefundCombo.SelectedItem?.ToString() ?? ReturnDomainConstants.RefundMethods.None;
-            var previewRequest = new ReturnRequest(Guid.NewGuid(), _selectedSale.OrderId, _currentSession.CurrentEmployee.Id, _currentSession.CurrentEmployee.Id, ReasonCombo.SelectedValue?.ToString() ?? string.Empty, NotesBox.Text, ReturnDomainConstants.RefundMethods.None, requestLines, 0m);
+            var authorizationDialog = new ReturnAuthorizationDialog { Owner = Window.GetWindow(this) };
+            if (authorizationDialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            _pendingClientRequestId ??= Guid.NewGuid();
+            var previewRequest = new ReturnRequest(_pendingClientRequestId.Value, _selectedSale.OrderId, _currentSession.CurrentEmployee.Id, Guid.Empty, ReasonCombo.SelectedValue?.ToString() ?? string.Empty, NotesBox.Text, ReturnDomainConstants.RefundMethods.None, requestLines, 0m);
             var preview = ReturnCalculator.Calculate(previewRequest, _selectedSale, _lines.Values.ToArray(), null, _options);
             var request = previewRequest with { RefundMethod = method, RefundAmount = method.Equals(ReturnDomainConstants.RefundMethods.None, StringComparison.OrdinalIgnoreCase) ? 0m : preview.Total };
-            await _returnService.CreateReturnAsync(request);
-            TechnicalMessageText.Text = "Devolución registrada correctamente.";
-            ConfirmButton.IsEnabled = false;
+            var result = await _returnService.CreateReturnAsync(request, authorizationDialog.AuthorizerPin);
+            var receipt = ReturnReceiptComposer.Compose(
+                new ReturnReceiptData(
+                    result.OrderId,
+                    _selectedSale.ControlNumber,
+                    _selectedSale.CreatedAtUtc,
+                    result.Calculation.Lines.Select(line => new ReturnReceiptLine(
+                        _lines.TryGetValue(line.OrderDetailId, out var source) ? source.ProductDescription : line.OrderDetailId.ToString("N"),
+                        line.Quantity,
+                        line.Total)).ToArray(),
+                    result.Calculation.Subtotal,
+                    result.Calculation.DiscountAmount,
+                    result.Calculation.TaxAmount,
+                    result.Calculation.Total,
+                    request.RefundMethod,
+                    request.ReasonCode,
+                    $"{_currentSession.CurrentEmployee.FirstName} {_currentSession.CurrentEmployee.LastName}",
+                    result.AuthorizedByEmployeeId == Guid.Empty ? "Autorizador validado" : result.AuthorizedByEmployeeId.ToString("N")[..8],
+                    result.FiscalDecision.FiscalStatus,
+                    _options.LeyendaComprobante),
+                _options.AnchoComprobante);
+            var previewWindow = new ReturnReceiptPreviewWindow(receipt) { Owner = Window.GetWindow(this) };
+            previewWindow.ShowDialog();
+            TechnicalMessageText.Text = $"Devolución registrada correctamente: {result.ReturnId}.";
+            ResetAssistant();
+        }
+        catch (InvalidReturnException exception)
+        {
+            TechnicalMessageText.Text = exception.Message;
+        }
+        catch (ReturnsUnavailableException exception)
+        {
+            TechnicalMessageText.Text = exception.Message;
         }
         catch (Exception exception)
         {
-            TechnicalMessageText.Text = exception.Message;
+            _logger.LogError(exception, "Error no controlado al confirmar devolución");
+            TechnicalMessageText.Text = "No se pudo confirmar la devolución. Revise la conexión e intente de nuevo.";
         }
     }
 
@@ -281,4 +326,17 @@ public partial class DevolucionesView : UserControl
     }
 
     private string QuantityText(Guid lineId) => _quantities.TryGetValue(lineId, out var quantity) ? quantity.ToString("0.###") : "0";
+
+    private void ResetAssistant()
+    {
+        _pendingClientRequestId = null;
+        _selectedSale = null;
+        _lines.Clear();
+        _quantities.Clear();
+        _restock.Clear();
+        SalesList.SelectedItem = null;
+        LinesPanel.Children.Clear();
+        SelectedSaleText.Text = "Seleccione una venta para ver sus líneas";
+        UpdateSummary();
+    }
 }

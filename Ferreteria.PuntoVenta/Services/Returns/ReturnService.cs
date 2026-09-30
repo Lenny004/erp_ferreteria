@@ -30,6 +30,8 @@ public sealed class ReturnService : IReturnService
     private readonly IReadOnlyList<string> _fullHistoryPositionNames;
     private readonly TimeProvider _clock;
     private readonly ILogger<ReturnService> _logger;
+    private readonly PinAuthService _pinAuthService;
+    private readonly IPinAttemptService _pinAttemptService;
 
     /// <summary>Inicializa el servicio de devoluciones.</summary>
     /// <param name="scopeFactory">Fábrica de contextos EF por operación.</param>
@@ -41,6 +43,8 @@ public sealed class ReturnService : IReturnService
     /// <param name="salesHistoryOptions">Puestos con acceso completo al historial.</param>
     /// <param name="clock">Reloj inyectado para búsquedas deterministas.</param>
     /// <param name="logger">Logger de fallos técnicos sin datos sensibles.</param>
+    /// <param name="pinAuthService">Servicio que valida el PIN del autorizador.</param>
+    /// <param name="pinAttemptService">Servicio que aplica el limite de intentos del PIN.</param>
     public ReturnService(
         IServiceScopeFactory scopeFactory,
         IReturnedQuantityReader returnedQuantityReader,
@@ -50,7 +54,9 @@ public sealed class ReturnService : IReturnService
         IOptions<CashRegisterOptions> cashRegisterOptions,
         IOptions<SalesHistory.SalesHistoryOptions> salesHistoryOptions,
         TimeProvider clock,
-        ILogger<ReturnService> logger)
+        ILogger<ReturnService> logger,
+        PinAuthService pinAuthService,
+        IPinAttemptService pinAttemptService)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _returnedQuantityReader = returnedQuantityReader ?? throw new ArgumentNullException(nameof(returnedQuantityReader));
@@ -64,12 +70,14 @@ public sealed class ReturnService : IReturnService
         _fullHistoryPositionNames = salesHistoryOptions.Value.FullHistoryPositionNames.ToArray();
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _pinAuthService = pinAuthService ?? throw new ArgumentNullException(nameof(pinAuthService));
+        _pinAttemptService = pinAttemptService ?? throw new ArgumentNullException(nameof(pinAttemptService));
     }
 
     /// <inheritdoc />
     public ReturnCapabilities Capabilities => new(
         _returnWriter.IsAvailable && _returnedQuantityReader.IsAuthoritative,
-        ConfirmationUnavailableMessage);
+        _returnWriter.IsAvailable && _returnedQuantityReader.IsAuthoritative ? string.Empty : ConfirmationUnavailableMessage);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ReturnableSaleSummary>> SearchReturnableSalesAsync(ReturnableSalesFilter filter, Guid requestedByEmployeeId, CancellationToken cancellationToken = default)
@@ -141,20 +149,31 @@ public sealed class ReturnService : IReturnService
     }
 
     /// <inheritdoc />
-    public async Task<ReturnResult> CreateReturnAsync(ReturnRequest request, CancellationToken cancellationToken = default)
+    public async Task<ReturnResult> CreateReturnAsync(ReturnRequest request, string authorizerPin, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(authorizerPin))
+        {
+            throw new InvalidReturnException("Ingrese el PIN del autorizador.");
+        }
         ReturnInputRules.ValidateShape(request, _options);
         if (!Capabilities.CanConfirmReturns)
         {
             throw new ReturnsUnavailableException(ConfirmationUnavailableMessage);
         }
 
+        var authorizer = await ValidateAuthorizerPinAsync(authorizerPin, cancellationToken);
+        if (request.AuthorizedByEmployeeId != Guid.Empty && request.AuthorizedByEmployeeId != authorizer.Id)
+        {
+            throw new InvalidReturnException("El empleado indicado como autorizador no coincide con el PIN validado.");
+        }
+        var authorizedRequest = request with { AuthorizedByEmployeeId = authorizer.Id };
+
         for (var attempt = 0; ; attempt++)
         {
             try
             {
-                return await CreateReturnOnceAsync(request, cancellationToken);
+                return await CreateReturnOnceAsync(authorizedRequest, cancellationToken);
             }
             catch (Exception exception) when (IsSerializationFailure(exception))
             {
@@ -166,6 +185,16 @@ public sealed class ReturnService : IReturnService
 
                 _logger.LogError(exception, "Se agotaron los reintentos serializables al crear devolución para {OrderId}", request.OrderId);
                 throw new ReturnsUnavailableException("No se pudo confirmar la devolución por concurrencia. Intente de nuevo.");
+            }
+            catch (Exception exception) when (IsClientRequestUniqueViolation(exception))
+            {
+                var existing = await FindByClientRequestIdInNewScopeAsync(authorizedRequest.ClientRequestId, cancellationToken);
+                if (existing is not null)
+                {
+                    return existing;
+                }
+
+                throw new ReturnsUnavailableException("No se pudo confirmar la devolución. Intente de nuevo.");
             }
         }
     }
@@ -210,9 +239,9 @@ public sealed class ReturnService : IReturnService
 
         var fiscal = _fiscalPolicy.Decide(sale.DteType, calculation.ReturnType);
         var persistence = BuildPersistenceRecord(request, sale, calculation, fiscal, returnableLines, openSession, employee, authorized);
-        await _returnWriter.PersistAsync(db, persistence, cancellationToken);
+        var returnId = await _returnWriter.PersistAsync(db, persistence, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return new ReturnResult(request.ClientRequestId, request.OrderId, calculation, fiscal);
+        return new ReturnResult(request.ClientRequestId, request.OrderId, calculation, fiscal, returnId, authorized.Id);
     }
 
     private ReturnPersistenceRecord BuildPersistenceRecord(ReturnRequest request, ReturnableSaleSummary sale, ReturnCalculationResult calculation, ReturnFiscalDecision fiscal, IReadOnlyList<ReturnableLine> lines, CashSession? openSession, Employee employee, Employee authorized)
@@ -226,7 +255,7 @@ public sealed class ReturnService : IReturnService
             var movementId = line.Restocked ? Guid.NewGuid() : Guid.Empty;
             if (line.Restocked)
             {
-                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, "ENTRADA_DEVOLUCION", request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, "ENTRADA_DEVOLUCION", now));
+                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, SalesDomainConstants.InventoryMovementTypes.ReturnInflow, request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, "Devolución POS", now));
             }
 
             return new ReturnDetailRecord(source.OrderDetailId, source.ProductId, line.Quantity, line.UnitsPerPackage, line.UnitPrice, line.UnitCost, line.DiscountAmount, line.Subtotal, line.TaxAmount, line.Restocked, line.RestockQuantity, line.Restocked ? movementId : null, now);
@@ -290,6 +319,37 @@ public sealed class ReturnService : IReturnService
 
     private bool IsFullHistoryPosition(string? positionName) => _fullHistoryPositionNames.Any(name => string.Equals(name?.Trim(), positionName?.Trim(), StringComparison.OrdinalIgnoreCase));
 
+    private async Task<Employee> ValidateAuthorizerPinAsync(string authorizerPin, CancellationToken cancellationToken)
+    {
+        var status = _pinAttemptService.GetStatus();
+        if (status.IsLocked)
+        {
+            throw new InvalidReturnException("Demasiados intentos de PIN. Espere antes de volver a intentar.");
+        }
+
+        var employee = await _pinAuthService.ValidateActiveEmployeePinAsync(authorizerPin, cancellationToken);
+        if (employee is null)
+        {
+            _pinAttemptService.RegisterFailedAttempt();
+            throw new InvalidReturnException("PIN incorrecto o sin permiso para autorizar devoluciones.");
+        }
+
+        if (!IsFullHistoryPosition(employee.Position?.Name))
+        {
+            throw new InvalidReturnException("El autorizador debe tener un puesto de historial completo.");
+        }
+
+        _pinAttemptService.Reset();
+        return employee;
+    }
+
+    private async Task<ReturnResult?> FindByClientRequestIdInNewScopeAsync(Guid clientRequestId, CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return await _returnWriter.FindByClientRequestIdAsync(db, clientRequestId, cancellationToken);
+    }
+
     private static IQueryable<Order> ApplySearch(IQueryable<Order> query, string? searchText)
     {
         if (string.IsNullOrWhiteSpace(searchText))
@@ -313,6 +373,13 @@ public sealed class ReturnService : IReturnService
     private static string TruncateReason(string reason) => reason.Length <= 300 ? reason : reason[..300];
 
     private static bool IsSerializationFailure(Exception exception) => FindPostgresException(exception)?.SqlState == PostgresErrorCodes.SerializationFailure;
+
+    private static bool IsClientRequestUniqueViolation(Exception exception)
+    {
+        var postgres = FindPostgresException(exception);
+        return postgres?.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(postgres.ConstraintName, "UqReturnsClientRequest", StringComparison.Ordinal);
+    }
 
     private static PostgresException? FindPostgresException(Exception exception)
     {

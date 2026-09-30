@@ -21,6 +21,34 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
         ValidatePinAsync(pin, OperationalModule.Caja, cancellationToken);
 
     /// <summary>
+    /// Valida el PIN de cualquier empleado activo para flujos que aplican su propia regla de autorizaciÃ³n.
+    /// </summary>
+    /// <param name="pin">PIN de 4 dÃ­gitos en claro, solo durante la validaciÃ³n.</param>
+    /// <param name="cancellationToken">Token de cancelaciÃ³n.</param>
+    /// <returns>Empleado autenticado o null si el PIN no coincide.</returns>
+    public async Task<Employee?> ValidateActiveEmployeePinAsync(string pin, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
+            return null;
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        var candidates = await db.Employees
+            .AsNoTracking()
+            .Include(employee => employee.Position)
+            .Where(employee => employee.IsActive && employee.PinHash != null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var employee in candidates)
+        {
+            if (employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
+                return employee;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Valida el PIN filtrando candidatos activos con permiso del módulo (caja o inventario).
     /// </summary>
     /// <param name="pin">PIN de 4 dígitos; cualquier otro formato se rechaza sin consultar BD.</param>
@@ -32,7 +60,7 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
         OperationalModule module,
         CancellationToken cancellationToken = default)
     {
-        if (pin.Length != 4 || !pin.All(char.IsDigit))
+        if (string.IsNullOrEmpty(pin) || pin.Length != 4 || !pin.All(char.IsDigit))
             return null;
 
         using var scope = scopeFactory.CreateScope();
@@ -40,6 +68,7 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
 
         var candidatesQuery = db.Employees
             .AsNoTracking()
+            .Include(e => e.Position)
             .Where(e => e.IsActive && e.PinHash != null);
 
         candidatesQuery = module switch
@@ -53,7 +82,7 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
 
         foreach (var employee in candidates)
         {
-            if (BCrypt.Net.BCrypt.Verify(pin, employee.PinHash!))
+            if (employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
                 return employee;
         }
 

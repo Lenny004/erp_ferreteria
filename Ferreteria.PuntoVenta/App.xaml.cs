@@ -74,9 +74,9 @@ public partial class App : Application
                 services.AddSingleton<IReportService, ReportService>();
                 services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
                 services.AddSingleton<ICashSessionService, CashSessionService>();
-                services.AddSingleton<ICashMovementReader, PendingMigrationCashMovementReader>();
-                services.AddSingleton<IReturnedQuantityReader, PendingMigrationReturnedQuantityReader>();
-                services.AddSingleton<IReturnWriter, PendingMigrationReturnWriter>();
+                services.AddSingleton<ICashMovementReader, CashMovementsCashMovementReader>();
+                services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
+                services.AddSingleton<IReturnWriter, EfReturnWriter>();
                 services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
                 services.AddSingleton<IReturnService, ReturnService>();
                 services.AddSingleton<CashSessionOpeningFlow>();

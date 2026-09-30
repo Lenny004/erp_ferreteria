@@ -12,7 +12,7 @@ public interface ICashSessionService
         CancellationToken cancellationToken = default);
 
     /// <summary>Abre un turno si el empleado puede operar caja y no hay otro turno en la caja.</summary>
-    /// <remarks>La regla es una sola sesión ABIERTA por caja, sin importar el cajero; Botti agregará el índice de respaldo en su migración pendiente.</remarks>
+    /// <remarks>La regla es una sola sesión ABIERTA por caja, sin importar el cajero; el índice parcial de la base de datos la respalda.</remarks>
     /// <param name="employeeId">Empleado autenticado que abre el turno.</param>
     /// <param name="cashRegisterCode">Código de la caja física.</param>
     /// <param name="openingAmount">Fondo inicial en efectivo.</param>
