@@ -2,39 +2,31 @@
 
 ## Diseño
 
-La aplicación registra `IAuthorizationGuard` como singleton junto con la sesión local. Cada operación sensible lo invoca al comienzo del servicio, antes de abrir una transacción o modificar datos. El guard toma el `Id` de `ICurrentSessionService`, rechaza una sesión ausente o un `actingEmployeeId` diferente, y recarga con `AsNoTracking()` el empleado y su `Position` desde PostgreSQL. La decisión se ejecuta en `PosAuthorizationPolicy`, una política pura y testeable.
+La aplicación registra `IAuthorizationGuard` como singleton junto con la sesión local. Cada operación sensible lo invoca al comienzo del servicio. El guard rechaza una sesión ausente, un empleado inactivo o un `actingEmployeeId` distinto al autenticado y recarga el empleado con su puesto desde PostgreSQL. La decisión se ejecuta en `PosAuthorizationPolicy`, una política pura y testeable.
 
-Un empleado inactivo no recibe ningún permiso. Los puestos se comparan con `Trim()` y `OrdinalIgnoreCase`. La configuración es:
-
-```json
-"Autorizacion": {
-  "PuestosAdministracion": [ "Administrador" ]
-}
-```
-
-Si la lista está vacía, la política falla cerrada y ningún puesto recibe permisos administrativos. El nombre `Administrador` se conserva porque es el único puesto administrativo existente en el repositorio y coincide con `SalesHistory:FullHistoryPositionNames`.
+Los servicios protegidos reciben el guard como dependencia obligatoria; si la composición no lo proporciona, el constructor lanza `ArgumentNullException`. No existe un modo legacy que otorgue autorización por ausencia del guard. Los dobles de autorización están únicamente en el proyecto de tests y conceden o deniegan permisos explícitamente.
 
 ## Matriz de operaciones
 
-| Operación | Permiso | Aplicación | Cobertura automatizada |
+| Operación | Permiso | Servicio | Cobertura automatizada actual |
 |---|---|---|---|
-| Crear, editar, cambiar PIN y desactivar empleado; listar RRHH | `AdministrarUsuarios` | `EmployeeService` | `SensitiveServiceAuthorizationIntegrationTests.EmployeeService_Create_SinAdministracion_Rechaza`, `PosAuthorizationPolicyTests` |
-| Crear, editar, activar y desactivar producto, incluyendo precio y costo | `AdministrarCatalogo` | `ProductCatalogService` | `SensitiveServiceAuthorizationIntegrationTests.ProductCatalogService_Create_SinAdministracion_Rechaza`, `PosAuthorizationPolicyTests` |
-| Guardar y establecer impresora predeterminada | `AdministrarConfiguracion` | `PrinterConfigService` | `SensitiveServiceAuthorizationIntegrationTests.PrinterConfigService_Save_SinAdministracion_Rechaza`, `PosAuthorizationPolicyTests` |
-| Entradas, ajustes y salida directa de inventario | `OperarInventario` | `InventoryService` | `SensitiveServiceAuthorizationIntegrationTests.InventoryService_RegisterEntry_Cajero_Rechaza`, `PosAuthorizationPolicyTests` |
-| Altas, cambios y bajas de proveedores | `OperarInventario` | `SupplierService` | `SensitiveServiceAuthorizationIntegrationTests.SupplierService_Create_Cajero_Rechaza`, `PosAuthorizationPolicyTests` |
-| Altas, cambios y bajas de clientes | `OperarCaja` | `CustomerService` | `SensitiveServiceAuthorizationIntegrationTests.CustomerService_Create_Vendedor_Rechaza`, `PosAuthorizationPolicyTests` |
-| Venta de mostrador y facturación de confección | `OperarCaja` | `OrderService` | `SensitiveServiceAuthorizationIntegrationTests.OrderService_CreateCashSale_Vendedor_Rechaza`, `PosAuthorizationPolicyTests` |
-| Creación de orden de confección | `OperarInventario` | `OrderService` | Política pura; cobertura de servicio queda ligada al flujo de inventario |
+| Crear empleado | `AdministrarUsuarios` | `EmployeeService.CreateAsync` | `SensitiveServiceAuthorizationIntegrationTests.EmployeeService_Create_SinAdministracion_Rechaza`; `PinUniquenessIntegrationTests.CreateAsync_PinRepetido_RechazaSinRevelarPropietario` |
+| Editar empleado, incluido cambio de puesto | `AdministrarUsuarios` | `EmployeeService.UpdateAsync` | guard común; protección de último administrador en servicio |
+| Cambiar PIN | `AdministrarUsuarios` | `EmployeeService.SetPinAsync` | `PinUniquenessIntegrationTests.SetPinAsync_PinRepetido_RechazaSinRevelarPropietario`; prueba concurrente del mismo PIN |
+| Desactivar empleado | `AdministrarUsuarios` | `EmployeeService.DeactivateAsync` | guard común; protección transaccional de último administrador |
+| Lecturas de empleados, departamentos y puestos | `AdministrarUsuarios` | `EmployeeService.Get*Async` | guard común y política pura |
+| Crear, editar, activar y desactivar producto, precio y costo | `AdministrarCatalogo` | `ProductCatalogService` | `SensitiveServiceAuthorizationIntegrationTests.ProductCatalogService_Create_SinAdministracion_Rechaza` |
+| Guardar y establecer impresora predeterminada | `AdministrarConfiguracion` | `PrinterConfigService` | `SensitiveServiceAuthorizationIntegrationTests.PrinterConfigService_Save_SinAdministracion_Rechaza` |
+| Entradas, ajustes y salida directa de inventario | `OperarInventario` | `InventoryService` | `SensitiveServiceAuthorizationIntegrationTests.InventoryService_RegisterEntry_Cajero_Rechaza` |
+| Altas, cambios y bajas de proveedores | `OperarInventario` | `SupplierService` | `SensitiveServiceAuthorizationIntegrationTests.SupplierService_Create_Cajero_Rechaza` |
+| Altas, cambios y bajas de clientes | `OperarCaja` | `CustomerService` | `SensitiveServiceAuthorizationIntegrationTests.CustomerService_Create_Vendedor_Rechaza` |
+| Venta de mostrador y facturación de confección | `OperarCaja` | `OrderService` | `SensitiveServiceAuthorizationIntegrationTests.OrderService_CreateCashSale_Vendedor_Rechaza` |
+| Creación de orden de confección | `OperarInventario` | `OrderService` | política del servicio y guard común |
 
-Las lecturas del catálogo, stock, proveedores y clientes permanecen libres porque alimentan pantallas operativas. Las lecturas de empleados (`GetEmployeesAsync`, `GetByIdAsync`, departamentos y puestos) quedan protegidas por `AdministrarUsuarios` porque en este repositorio solo son usadas por `UsuariosView`.
+Las lecturas de catálogo, stock, proveedores y clientes también pasan por el guard del módulo operativo. No existe una ruta anónima. `CashSessionService`, `ReturnService` y `SalesHistoryService` conservan sus validaciones transaccionales y de empleado activo. `DteService.RestoreInventory` no fue modificado.
 
-`CashSessionService`, `ReturnService` y `SalesHistoryService` conservan sus validaciones transaccionales existentes, incluyendo la comprobación de empleado activo. `ConfigService` sigue siendo un marcador sin escritura de configuración de negocio; no se añadió una operación ficticia. `DteService.RestoreInventory` no fue modificado.
+## Último administrador activo
 
-## Decisiones y riesgos
+`EmployeeService.UpdateAsync` y `DeactivateAsync` toman un advisory lock transaccional con nombre, cuentan administradores activos y rechazan dejar cero. Con dos administradores, la baja de uno sí puede completarse; con uno, se rechaza con un mensaje claro.
 
-- La auditoría usa el identificador que devuelve el guard, nunca un `userId` no verificado. El PIN se audita dentro del mismo `DbContext` y transacción que el cambio de hash.
-- No se implementó todavía una regla especial de auto-desactivación o de conservación de un administrador activo. Es un riesgo operativo: un administrador podría quitarse permisos o desactivarse y dejar el sistema sin otro administrador; la siguiente fase debe resolverlo con una operación transaccional y una prueba de concurrencia.
-- Los servicios conservan parámetros opcionales de guard únicamente para los harnesses legacy enlazados del proyecto de tests; la composición de producción en `App.xaml.cs` siempre registra `IAuthorizationGuard`.
-- La UI filtra `NavSections` con permisos efectivos. `ProductosView` permanece en solo lectura sin `AdministrarCatalogo`; `UsuariosView` e `ImpresorasView` muestran el mensaje seguro de `UnauthorizedOperationException` si se abren por una ruta no prevista.
-- La validez legal o fiscal de los datos de empleados y clientes queda a verificar con contador/MH; esta capa solo aplica autorización técnica.
+La validez legal o fiscal de empleados, clientes y permisos operativos queda a verificar con contador/MH cuando corresponda; esta capa aplica autorización técnica.

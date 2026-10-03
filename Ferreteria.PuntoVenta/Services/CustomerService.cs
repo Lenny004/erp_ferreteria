@@ -7,11 +7,16 @@ using Ferreteria.PuntoVenta.Services.Security;
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>CRUD de clientes (esquema <c>public.Customers</c>) con validación y auditoría.</summary>
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 public sealed class CustomerService(
     IServiceScopeFactory scopeFactory,
     IAuditService auditService,
-    IAuthorizationGuard? authorizationGuard = null) : ICustomerService
+    IAuthorizationGuard authorizationGuard) : ICustomerService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "public.Customers";
 
     /// <inheritdoc />
@@ -20,6 +25,7 @@ public sealed class CustomerService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireCashOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -45,6 +51,7 @@ public sealed class CustomerService(
     /// <inheritdoc />
     public async Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireCashOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
@@ -168,16 +175,11 @@ public sealed class CustomerService(
             throw new ValidationException("El correo electrónico no es válido.");
     }
 
-    private async Task<Guid> RequireCashOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    private async Task<Guid> RequireCashOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)
     {
-        if (authorizationGuard is null)
-        {
-            return actingEmployeeId;
-        }
-
-        return (await authorizationGuard.RequireAsync(
+        return (await _authorizationGuard.RequireAsync(
             PosPermission.OperarCaja,
-            actingEmployeeId,
+            allowMissingActingEmployee ? null : actingEmployeeId,
             cancellationToken)).Id;
     }
 }

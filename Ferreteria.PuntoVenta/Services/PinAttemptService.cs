@@ -6,7 +6,6 @@ using Ferreteria.PuntoVenta.Services.CashRegister;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Services;
@@ -16,19 +15,10 @@ namespace Ferreteria.PuntoVenta.Services;
 /// </summary>
 public sealed class PinAttemptService : IPinAttemptService
 {
-    private readonly IServiceScopeFactory? _scopeFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _clock;
     private readonly string _cashRegisterCode;
     private readonly ILogger<PinAttemptService> _logger;
-    private readonly object _legacySync = new();
-    private readonly List<PinLockoutEvent> _legacyEvents = [];
-
-    /// <summary>Construye el adaptador de compatibilidad para pruebas sin BD.</summary>
-    public PinAttemptService()
-        : this(null, TimeProvider.System, "CAJA-01", NullLogger<PinAttemptService>.Instance)
-    {
-    }
-
     /// <summary>Construye el lockout persistente del terminal configurado.</summary>
     /// <param name="scopeFactory">Fábrica de contextos EF.</param>
     /// <param name="cashRegisterOptions">Configuración de la caja.</param>
@@ -38,38 +28,18 @@ public sealed class PinAttemptService : IPinAttemptService
         IServiceScopeFactory scopeFactory,
         IOptions<CashRegisterOptions> cashRegisterOptions,
         TimeProvider clock,
-        ILogger<PinAttemptService>? logger = null)
-        : this(
-            scopeFactory,
-            clock,
-            CashRegisterInputRules.ValidateCashRegisterCode(cashRegisterOptions?.Value.Codigo ?? "CAJA-01"),
-            logger ?? NullLogger<PinAttemptService>.Instance)
-    {
-    }
-
-    private PinAttemptService(
-        IServiceScopeFactory? scopeFactory,
-        TimeProvider clock,
-        string cashRegisterCode,
         ILogger<PinAttemptService> logger)
     {
-        _scopeFactory = scopeFactory;
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentNullException.ThrowIfNull(cashRegisterOptions);
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-        _cashRegisterCode = cashRegisterCode;
+        _cashRegisterCode = CashRegisterInputRules.ValidateCashRegisterCode(cashRegisterOptions.Value.Codigo);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
     public async Task<PinAttemptStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        if (_scopeFactory is null)
-        {
-            lock (_legacySync)
-            {
-                return PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-            }
-        }
-
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -93,63 +63,20 @@ public sealed class PinAttemptService : IPinAttemptService
         await AppendEventAsync(SalesDomainConstants.PinAuditActions.PinOk, cancellationToken);
     }
 
-    /// <summary>Compatibilidad síncrona de pruebas que no tienen una base de datos configurada.</summary>
-    public PinAttemptStatus GetStatus()
-    {
-        lock (_legacySync)
-        {
-            return PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-        }
-    }
-
-    /// <summary>Compatibilidad síncrona de pruebas que no tienen una base de datos configurada.</summary>
-    public PinAttemptStatus RegisterFailedAttempt()
-    {
-        lock (_legacySync)
-        {
-            var status = PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-            if (status.IsLocked)
-            {
-                return status;
-            }
-
-            _legacyEvents.Add(new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, _clock.GetUtcNow()));
-            return PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-        }
-    }
-
-    /// <summary>Compatibilidad síncrona de pruebas que no tienen una base de datos configurada.</summary>
-    public void Reset()
-    {
-        lock (_legacySync)
-        {
-            _legacyEvents.Add(new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinOk, _clock.GetUtcNow()));
-        }
-    }
-
+    /// <summary>Agrega un evento persistente de éxito o fallo al historial de la caja.</summary>
+    /// <param name="action">Acción de PIN que se debe registrar.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Estado actualizado del lockout.</returns>
     private async Task<PinAttemptStatus> AppendEventAsync(string action, CancellationToken cancellationToken)
     {
-        if (_scopeFactory is null)
-        {
-            lock (_legacySync)
-            {
-                var status = PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-                if (action == SalesDomainConstants.PinAuditActions.PinFail && status.IsLocked)
-                {
-                    return status;
-                }
-
-                _legacyEvents.Add(new PinLockoutEvent(action, _clock.GetUtcNow()));
-                return PinLockoutPolicy.Evaluate(_legacyEvents, _clock.GetUtcNow());
-            }
-        }
-
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(4815162342)", cancellationToken);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({SalesDomainConstants.PinAttemptAdvisoryLockKey})",
+                cancellationToken);
 
             var events = await LoadEventsAsync(db, cancellationToken);
             var current = PinLockoutPolicy.Evaluate(events, _clock.GetUtcNow());

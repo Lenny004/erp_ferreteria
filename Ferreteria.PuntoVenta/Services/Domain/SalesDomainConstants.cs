@@ -6,6 +6,15 @@ namespace Ferreteria.PuntoVenta.Services.Domain;
 /// </summary>
 public static class SalesDomainConstants
 {
+    /// <summary>Clave que serializa la unicidad global de PIN en una transacción PostgreSQL.</summary>
+    public const long PinUniquenessAdvisoryLockKey = 735928559L;
+
+    /// <summary>Clave que serializa los eventos persistentes de lockout de PIN.</summary>
+    public const long PinAttemptAdvisoryLockKey = 4815162342L;
+
+    /// <summary>Clave que serializa cambios que podrían dejar al POS sin administrador activo.</summary>
+    public const long ActiveAdministratorAdvisoryLockKey = 918273645L;
+
     /// <summary>
     /// IVA general de El Salvador (13%). Referencia fiscal: Ley de IVA y plan Ferreteria (Fase 3 / DTE).
     /// Usar vía <see cref="TaxAmountCalculator"/> al calcular <c>Order.TaxAmount</c>.

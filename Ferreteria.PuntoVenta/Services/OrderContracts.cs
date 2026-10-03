@@ -64,7 +64,7 @@ public sealed record ConfectionOrderSummary(
     public string OrderNumber => $"#{OrderId.ToString()[..8].ToUpperInvariant()}";
 
     /// <summary>Fecha/hora local de creación.</summary>
-    public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+    public string DateText => Time.TimeZoneSupport.ToLocalTime(CreatedAt).ToString("dd/MM HH:mm");
 
     /// <summary>Total formateado como moneda.</summary>
     public string TotalText => Total.ToString("C2");
@@ -81,7 +81,7 @@ public sealed record SalesOrderSummary(
     decimal Total)
 {
     /// <summary>Fecha/hora local de la venta.</summary>
-    public string DateText => CreatedAt.ToLocalTime().ToString("dd/MM HH:mm");
+    public string DateText => Time.TimeZoneSupport.ToLocalTime(CreatedAt).ToString("dd/MM HH:mm");
 
     /// <summary>Control corto derivado del Id de orden.</summary>
     public string ControlNumberText => $"ORD-{OrderId.ToString()[..8].ToUpperInvariant()}";

@@ -42,6 +42,15 @@ El resumen y cierre de caja suman `DEVOLUCION_EFECTIVO` desde `sales."CashMoveme
 
 ## Pendientes y riesgos
 
+## Endurecimientos QA de esta fase
+
+1. Un PIN correcto de un empleado que no tiene puesto de historial completo se trata igual que un PIN incorrecto: se muestra el mensaje genérico y se registra `PIN_FAIL` en el lockout persistente.
+2. `ClientRequestId` es idempotente solo cuando coinciden orden, empleado, líneas, cantidades, reingreso, método y monto. Una repetición con otro contenido se rechaza, incluso al resolver la carrera de `UqReturnsClientRequest` (`23505`).
+3. Los reintentos cubren `40001` y `40P01`, con contextos/transacciones nuevos. Los productos a reingresar se bloquean en una sola consulta parametrizada, ordenada por `ProductId`, para evitar deadlocks entre devoluciones concurrentes.
+4. El `UpdatedAt` del producto y del movimiento usa el mismo instante UTC inyectado que la operación; no se consulta `DateTime.UtcNow` dentro del flujo.
+5. La razón del kardex es `Devolución POS (costo a verificar)` y se trunca de forma segura al límite de 300 caracteres. El costo se toma del detalle original y queda a verificar con contador/MH.
+6. Un reintegro `EFECTIVO` de monto cero se rechaza antes de abrir transacción o escribir la BD, con instrucciones para elegir `NINGUNO` o corregir las cantidades.
+
 - Nota de crédito 05 / DTE e integración de `DteService.EmitCreditNoteAsync`: hoy ese método cancela la orden y restaura todo el inventario, por lo que debe adaptarse antes de conectarlo a este flujo. Todo el tratamiento fiscal es a verificar con contador / normativa MH.
 - La impresión física del comprobante interno queda pendiente de probar en hardware; la vista previa ya usa `ReturnReceiptComposer` y el ancho configurado.
 - La anulación de devoluciones, con estado `ANULADA`, todavía no tiene flujo.

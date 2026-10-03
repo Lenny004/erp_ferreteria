@@ -225,7 +225,19 @@ public sealed record ReturnFiscalDecision(string FiscalStatus, string? RequiredD
 /// <param name="FiscalDecision">Estado fiscal previsto.</param>
 /// <param name="ReturnId">Identificador persistido de la devolución.</param>
 /// <param name="AuthorizedByEmployeeId">Identificador persistido del empleado autorizador.</param>
-public sealed record ReturnResult(Guid ClientRequestId, Guid OrderId, ReturnCalculationResult Calculation, ReturnFiscalDecision FiscalDecision, Guid ReturnId = default, Guid AuthorizedByEmployeeId = default);
+/// <param name="RefundMethod">Método de reintegro persistido.</param>
+/// <param name="RefundAmount">Monto de reintegro persistido.</param>
+/// <param name="EmployeeId">Empleado que ejecutó la operación.</param>
+public sealed record ReturnResult(
+    Guid ClientRequestId,
+    Guid OrderId,
+    ReturnCalculationResult Calculation,
+    ReturnFiscalDecision FiscalDecision,
+    Guid ReturnId = default,
+    Guid AuthorizedByEmployeeId = default,
+    string? RefundMethod = null,
+    decimal RefundAmount = 0m,
+    Guid EmployeeId = default);
 
 /// <summary>Capacidades habilitadas del servicio de devoluciones.</summary>
 /// <param name="CanConfirmReturns">Indica si existe persistencia autoritativa para confirmar.</param>

@@ -50,7 +50,9 @@ public partial class App : Application
                     .AddJsonFile(
                         Path.Combine("Config", "appsettings.json"),
                         optional: false,
-                        reloadOnChange: true);
+                        reloadOnChange: true)
+                    .AddUserSecrets(typeof(App).Assembly, optional: true)
+                    .AddEnvironmentVariables();
             })
             .ConfigureServices((context, services) =>
             {
@@ -147,7 +149,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"Error critico al iniciar la aplicacion:\n{ex.Message}",
+                $"No se pudo iniciar el POS de forma segura:\n{ex.Message}",
                 "Error de Arranque",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

@@ -9,12 +9,17 @@ namespace Ferreteria.PuntoVenta.Services;
 /// <summary>
 /// CRUD del catálogo de productos de ferretería. Valida entradas y registra auditoría
 /// en cada operación que modifica datos (CREATE/UPDATE/DELETE lógico).
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 /// </summary>
 public sealed class ProductCatalogService(
     IServiceScopeFactory scopeFactory,
     IAuditService auditService,
-    IAuthorizationGuard? authorizationGuard = null) : IProductCatalogService
+    IAuthorizationGuard authorizationGuard) : IProductCatalogService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "public.Products";
 
     /// <inheritdoc />
@@ -23,6 +28,7 @@ public sealed class ProductCatalogService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -58,6 +64,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -183,6 +190,7 @@ public sealed class ProductCatalogService(
 
     private async Task SetActiveAsync(Guid id, bool isActive, Guid userId, CancellationToken cancellationToken)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -207,6 +215,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<Family>> GetFamiliesAsync(CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Families.AsNoTracking()
@@ -218,6 +227,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<Subfamily>> GetSubfamiliesAsync(Guid familyId, CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Subfamilies.AsNoTracking()
@@ -229,6 +239,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<MeasurementType>> GetMeasurementTypesAsync(CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.MeasurementTypes.AsNoTracking()
@@ -283,15 +294,17 @@ public sealed class ProductCatalogService(
 
     private async Task<Guid> RequireCatalogAdministrationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
     {
-        if (authorizationGuard is null)
-        {
-            return actingEmployeeId;
-        }
-
-        var actor = await authorizationGuard.RequireAsync(
+        var actor = await _authorizationGuard.RequireAsync(
             PosPermission.AdministrarCatalogo,
             actingEmployeeId,
             cancellationToken);
         return actor.Id;
+    }
+
+    private async Task RequireCatalogAdministrationAsync(CancellationToken cancellationToken)
+    {
+        await _authorizationGuard.RequireAsync(
+            PosPermission.AdministrarCatalogo,
+            cancellationToken: cancellationToken);
     }
 }

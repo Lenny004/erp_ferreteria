@@ -68,6 +68,8 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/TaxAmountCalculator.cs" Link="Domain/TaxAmountCalculator.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/InventoryQuantityValidator.cs" Link="Domain/InventoryQuantityValidator.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/OrderQueryFilters.cs" Link="Domain/OrderQueryFilters.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/PostgresTransientRetry.cs" Link="Domain/PostgresTransientRetry.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SaleAttemptTracker.cs" Link="Domain/SaleAttemptTracker.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/InventoryExceptions.cs" Link="Services/InventoryExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/IOrderService.cs" Link="Services/IOrderService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderContracts.cs" Link="Services/OrderContracts.cs" />
@@ -92,6 +94,7 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PrinterConfigService.cs" Link="Services/PrinterConfigService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Returns/*.cs" LinkBase="Returns" />
     <Compile Include="../../Ferreteria.PuntoVenta/Data/FerreteriaDbContext.cs" Link="Data/FerreteriaDbContext.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Data/DatabaseConnectionResolver.cs" Link="Data/DatabaseConnectionResolver.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />
     <None Include="../../Ferreteria.PuntoVenta/Squema.sql" Link="Data/Squema.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -12,11 +13,15 @@ public partial class ConsultarStockView : UserControl
 {
     private readonly IInventoryService _inventoryService;
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
+    private readonly BusinessCalendar _calendar;
 
     /// <summary>Inicializa la consulta de stock con el servicio de inventario.</summary>
-    public ConsultarStockView(IInventoryService inventoryService)
+    /// <param name="inventoryService">Servicio de lectura de existencias.</param>
+    /// <param name="calendar">Calendario de negocio para la hora visible.</param>
+    public ConsultarStockView(IInventoryService inventoryService, BusinessCalendar calendar)
     {
         _inventoryService = inventoryService;
+        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -78,7 +83,7 @@ public partial class ConsultarStockView : UserControl
             ActiveProductsText.Text = products.Count.ToString();
             StockLowText.Text = products.Count(product => product.Status == SalesDomainConstants.StockFilters.Low).ToString();
             OutOfStockText.Text = products.Count(product => product.Status == SalesDomainConstants.StockFilters.Depleted).ToString();
-            LastUpdatedText.Text = DateTime.Now.ToString("HH:mm:ss");
+            LastUpdatedText.Text = _calendar.ToLocal(_calendar.UtcNow()).ToString("HH:mm:ss");
             EmptyStateText.Visibility = products.Count == 0
                 ? System.Windows.Visibility.Visible
                 : System.Windows.Visibility.Collapsed;

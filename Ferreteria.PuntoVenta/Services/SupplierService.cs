@@ -7,11 +7,16 @@ using Ferreteria.PuntoVenta.Services.Security;
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>CRUD de proveedores (esquema <c>purchasing.Suppliers</c>) con validación y auditoría.</summary>
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 public sealed class SupplierService(
     IServiceScopeFactory scopeFactory,
     IAuditService auditService,
-    IAuthorizationGuard? authorizationGuard = null) : ISupplierService
+    IAuthorizationGuard authorizationGuard) : ISupplierService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "purchasing.Suppliers";
 
     /// <inheritdoc />
@@ -20,6 +25,7 @@ public sealed class SupplierService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -46,6 +52,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task<Supplier?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
@@ -174,16 +181,11 @@ public sealed class SupplierService(
             throw new ValidationException("El correo electrónico no es válido.");
     }
 
-    private async Task<Guid> RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    private async Task<Guid> RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)
     {
-        if (authorizationGuard is null)
-        {
-            return actingEmployeeId;
-        }
-
-        return (await authorizationGuard.RequireAsync(
+        return (await _authorizationGuard.RequireAsync(
             PosPermission.OperarInventario,
-            actingEmployeeId,
+            allowMissingActingEmployee ? null : actingEmployeeId,
             cancellationToken)).Id;
     }
 }

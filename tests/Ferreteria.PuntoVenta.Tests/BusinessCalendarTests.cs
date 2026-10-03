@@ -1,4 +1,5 @@
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -55,6 +56,25 @@ public sealed class BusinessCalendarTests
         var calendar = Calendar(new DateTimeOffset(2026, 9, 30, 5, 30, 0, TimeSpan.Zero));
 
         Assert.Equal(new DateOnly(2026, 9, 29), calendar.Today());
+    }
+
+    /// <summary>Recibo e historial muestran la hora de El Salvador aunque la PC esté en otra zona.</summary>
+    [Fact]
+    public void ReceiptAndSaleText_UseBusinessTimeZone()
+    {
+        var utc = new DateTime(2026, 9, 30, 5, 30, 0, DateTimeKind.Utc);
+        TimeZoneSupport.Initialize(ElSalvadorZone());
+
+        var summary = new SalesOrderSummary(
+            Guid.NewGuid(),
+            utc,
+            "Cliente",
+            "VENTA_CAJA",
+            "EFECTIVO",
+            "COMPLETADA",
+            1m);
+
+        Assert.Equal("29/09 23:30", summary.DateText);
     }
 
     /// <summary>Verifica el rango de varios días y el rechazo de fechas invertidas.</summary>

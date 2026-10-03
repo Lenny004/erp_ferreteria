@@ -10,12 +10,17 @@ namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
 /// Consulta de catálogo y movimientos de inventario sobre <c>public.Products</c>.
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 /// </summary>
 public sealed class InventoryService(
     IServiceScopeFactory scopeFactory,
     IAuditService auditService,
-    IAuthorizationGuard? authorizationGuard = null) : IInventoryService
+    IAuthorizationGuard authorizationGuard) : IInventoryService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private static readonly string[] ValidEntryTypes =
     [
         SalesDomainConstants.InventoryMovementTypes.PurchaseInflow,
@@ -29,6 +34,7 @@ public sealed class InventoryService(
         int take = 100,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         take = Math.Clamp(take, 1, 500);
 
         using var scope = scopeFactory.CreateScope();
@@ -297,6 +303,7 @@ public sealed class InventoryService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<StockAlertResult>> GetActiveAlertsAsync(CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -326,6 +333,7 @@ public sealed class InventoryService(
         int take = 100,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         take = Math.Clamp(take, 1, 500);
 
         using var scope = scopeFactory.CreateScope();
@@ -391,14 +399,11 @@ public sealed class InventoryService(
         });
     }
 
-    private async Task RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    private async Task RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)
     {
-        if (authorizationGuard is not null)
-        {
-            await authorizationGuard.RequireAsync(
-                PosPermission.OperarInventario,
-                actingEmployeeId,
-                cancellationToken);
-        }
+        await _authorizationGuard.RequireAsync(
+            PosPermission.OperarInventario,
+            allowMissingActingEmployee ? null : actingEmployeeId,
+            cancellationToken);
     }
 }

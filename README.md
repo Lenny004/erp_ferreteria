@@ -661,6 +661,16 @@ La sección `Negocio:ZonaHoraria` define la zona horaria usada para el día de n
 | `5678` | Técnico confección |
 | `0000` | Caja demo |
 
+### Cadena de conexión del POS
+
+`Config/appsettings.json` conserva únicamente valores no sensibles. La cadena completa se configura con la variable de entorno `ConnectionStrings__FerreteriaDB` o, en desarrollo, con User Secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:FerreteriaDB" "Host=localhost;Port=55432;Database=ferreteria;Username=pos_app;Password=...;SSL Mode=Require"
+```
+
+En una caja instalada, configure `ConnectionStrings__FerreteriaDB` en el ámbito del proceso con una credencial de `pos_app`; no coloque secretos en `appsettings.json`. Si falta la cadena o sus credenciales, el POS muestra qué configurar y termina de forma ordenada. Consulte [`docs/pos/POS_ROL_BD.md`](docs/pos/POS_ROL_BD.md) para el rol y sus permisos. La credencial que estuvo versionada debe considerarse expuesta y ROTARSE donde se haya usado; no se reproduce aquí.
+
 ### 2. App de Escritorio (WPF)
 
 ```bash

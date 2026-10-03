@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.Printing;
 
@@ -19,6 +20,7 @@ public sealed class ReceiptPrintService : IReceiptPrintService
     private readonly IAuditService _auditService;
     private readonly ICurrentSessionService _currentSession;
     private readonly NetworkPrinterTransport _networkTransport;
+    private readonly BusinessCalendar _calendar;
 
     /// <summary>
     /// Inicializa el servicio de envío con timeout de red, transporte TCP y auditoría.
@@ -28,12 +30,14 @@ public sealed class ReceiptPrintService : IReceiptPrintService
     /// <param name="auditService">Bitácora donde se registra cada impresión de ticket.</param>
     /// <param name="currentSession">Sesión del cajero, para atribuir la impresión.</param>
     /// <param name="networkTransport">Transporte TCP desacoplado de WPF y del registro de Windows.</param>
+    /// <param name="calendar">Calendario de negocio para textos visibles de fecha y hora.</param>
     public ReceiptPrintService(
         IOptions<PrintingOptions> options,
         ILogger<ReceiptPrintService> logger,
         IAuditService auditService,
         ICurrentSessionService currentSession,
-        NetworkPrinterTransport networkTransport)
+        NetworkPrinterTransport networkTransport,
+        BusinessCalendar calendar)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
@@ -41,6 +45,7 @@ public sealed class ReceiptPrintService : IReceiptPrintService
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
         _networkTransport = networkTransport ?? throw new ArgumentNullException(nameof(networkTransport));
+        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
     }
 
     /// <inheritdoc />
@@ -124,7 +129,7 @@ public sealed class ReceiptPrintService : IReceiptPrintService
         builder.AppendLeft($"Impresora: {printer.Name}");
         builder.AppendLeft($"Conexion: {printer.ConnectionType}");
         builder.AppendLeft($"Ancho: {printer.PaperWidthMm} mm ({builder.Columns} columnas)");
-        builder.AppendLeft($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+        builder.AppendLeft($"Fecha: {_calendar.ToLocal(_calendar.UtcNow()):dd/MM/yyyy HH:mm:ss}");
         builder.AppendSeparator();
 
         // Patrón de prueba: regla de columnas y muestra de acentos y símbolo de moneda.

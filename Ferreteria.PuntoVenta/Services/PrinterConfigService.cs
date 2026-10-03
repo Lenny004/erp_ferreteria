@@ -14,24 +14,29 @@ public sealed class PrinterConfigService : IPrinterConfigService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IAuditService _auditService;
     private readonly ICurrentSessionService _currentSession;
-    private readonly IAuthorizationGuard? _authorizationGuard;
+    private readonly IAuthorizationGuard _authorizationGuard;
 
     /// <summary>Crea el servicio de impresoras.</summary>
+    /// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+    /// <param name="auditService">Servicio de auditoría.</param>
+    /// <param name="currentSession">Sesión vigente del POS.</param>
+    /// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
     public PrinterConfigService(
         IServiceScopeFactory scopeFactory,
         IAuditService auditService,
         ICurrentSessionService currentSession,
-        IAuthorizationGuard? authorizationGuard = null)
+        IAuthorizationGuard authorizationGuard)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _currentSession = currentSession ?? throw new ArgumentNullException(nameof(currentSession));
-        _authorizationGuard = authorizationGuard;
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Printer>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        await RequireConfigurationAdministrationAsync(cancellationToken);
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -46,6 +51,7 @@ public sealed class PrinterConfigService : IPrinterConfigService
     /// <inheritdoc />
     public async Task<Printer?> GetDefaultAsync(CancellationToken cancellationToken = default)
     {
+        await RequireConfigurationAdministrationAsync(cancellationToken);
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -182,11 +188,6 @@ public sealed class PrinterConfigService : IPrinterConfigService
 
     private async Task<Guid?> RequireConfigurationAdministrationAsync(CancellationToken cancellationToken)
     {
-        if (_authorizationGuard is null)
-        {
-            return _currentSession.CurrentEmployee?.Id;
-        }
-
         var actor = await _authorizationGuard.RequireAsync(
             PosPermission.AdministrarConfiguracion,
             cancellationToken: cancellationToken);

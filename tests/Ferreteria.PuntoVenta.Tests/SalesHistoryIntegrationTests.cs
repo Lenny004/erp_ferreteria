@@ -8,6 +8,7 @@ using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,6 +100,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<IReturnWriter, EfReturnWriter>();
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
         services.AddSingleton<IReturnService, ReturnService>();
+        services.AddSingleton<ILogger<PinAttemptService>>(_ => NullLogger<PinAttemptService>.Instance);
         services.AddSingleton<IPinAttemptService, PinAttemptService>();
         services.AddSingleton<PinAuthService>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
@@ -107,6 +109,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<ILogger<AuditService>>(_ => NullLogger<AuditService>.Instance);
         services.AddSingleton<ILogger<CashSessionService>>(_ => NullLogger<CashSessionService>.Instance);
         services.AddSingleton<ILogger<OrderService>>(_ => NullLogger<OrderService>.Instance);
+        services.AddSingleton<IAuthorizationGuard, TestAuthorizationGuard>();
         services.AddSingleton<ILogger<ReturnService>>(_ => NullLogger<ReturnService>.Instance);
         _services = services.BuildServiceProvider();
         TimeZoneSupport.Initialize(_services.GetRequiredService<BusinessTimeZone>());

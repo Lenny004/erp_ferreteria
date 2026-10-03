@@ -1,7 +1,9 @@
 ﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
+using Ferreteria.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
@@ -9,12 +11,20 @@ namespace Ferreteria.PuntoVenta.Services;
 /// <summary>
 /// Gestión básica de empleados / usuarios (nombre, cargo, PIN, permisos) sobre <c>hr.Employees</c>.
 /// El PIN se guarda como hash bcrypt (12 rounds) y nunca en texto plano.
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
+/// <param name="authorizationOptions">Configuración de puestos administrativos.</param>
 /// </summary>
 public sealed class EmployeeService(
     IServiceScopeFactory scopeFactory,
     IAuditService auditService,
-    IAuthorizationGuard? authorizationGuard = null) : IEmployeeService
+    IAuthorizationGuard authorizationGuard,
+    IOptions<AuthorizationOptions> authorizationOptions) : IEmployeeService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
+    private readonly HashSet<string> _administrationPositions = CreateAdministrationPositions(authorizationOptions);
     private const string TableName = "hr.Employees";
     private static readonly string[] ValidContractTypes = ["PLAZO_FIJO", "TIEMPO_PARCIAL", "HONORARIOS", "PASANTE"];
     private static readonly string[] ValidSalaryTypes = ["MENSUAL", "QUINCENAL", "SEMANAL"];
@@ -130,6 +140,8 @@ public sealed class EmployeeService(
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAdministratorStateAsync(db, cancellationToken);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException("empleado", id);
@@ -141,6 +153,7 @@ public sealed class EmployeeService(
         }
 
         var before = new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell };
+        var currentPositionId = employee.PositionId;
 
         employee.FirstName = input.FirstName.Trim();
         employee.LastName = input.LastName.Trim();
@@ -157,10 +170,22 @@ public sealed class EmployeeService(
         employee.CanSell = input.CanSell;
         employee.UpdatedAt = DateTime.UtcNow;
 
+        if (await WouldRemoveLastActiveAdministratorAsync(
+                db,
+                currentPositionId,
+                input.PositionId,
+                employee.IsActive,
+                deactivating: false,
+                cancellationToken: cancellationToken))
+        {
+            throw new ValidationException("No se puede quitar el último administrador activo del POS.");
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("UPDATE", TableName, employee.Id.ToString(),
             before, new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, actor.Id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -194,13 +219,27 @@ public sealed class EmployeeService(
         var actor = await RequireAdministrationAsync(cancellationToken, userId);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAdministratorStateAsync(db, cancellationToken);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException("empleado", id);
 
         if (!employee.IsActive)
         {
+            await transaction.CommitAsync(cancellationToken);
             return;
+        }
+
+        if (await WouldRemoveLastActiveAdministratorAsync(
+                db,
+                employee.PositionId,
+                employee.PositionId,
+                employee.IsActive,
+                deactivating: true,
+                cancellationToken: cancellationToken))
+        {
+            throw new ValidationException("No se puede desactivar el último administrador activo del POS.");
         }
 
         employee.IsActive = false;
@@ -209,6 +248,7 @@ public sealed class EmployeeService(
 
         await auditService.RecordChangeAsync("DELETE", TableName, employee.Id.ToString(),
             new { employee.FirstName, employee.LastName, IsActive = true }, new { IsActive = false }, actor.Id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -268,12 +308,7 @@ public sealed class EmployeeService(
         CancellationToken cancellationToken,
         Guid? actingEmployeeId = null)
     {
-        if (authorizationGuard is null)
-        {
-            return new AuthorizedEmployee(actingEmployeeId ?? Guid.Empty, true, false, false, "");
-        }
-
-        return await authorizationGuard.RequireAsync(
+        return await _authorizationGuard.RequireAsync(
             PosPermission.AdministrarUsuarios,
             actingEmployeeId,
             cancellationToken);
@@ -286,7 +321,9 @@ public sealed class EmployeeService(
         CancellationToken cancellationToken)
     {
         // El lock de transacción serializa altas y cambios de PIN entre procesos POS concurrentes.
-        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(735928559)", cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({SalesDomainConstants.PinUniquenessAdvisoryLockKey})",
+            cancellationToken);
         var hashes = await db.Employees.AsNoTracking()
             .Where(employee => employee.PinHash != null && (employeeId == null || employee.Id != employeeId.Value))
             .Select(employee => employee.PinHash!)
@@ -296,5 +333,63 @@ public sealed class EmployeeService(
         {
             throw new ValidationException("Ese PIN no está disponible. Elija otro.");
         }
+    }
+
+    private static HashSet<string> CreateAdministrationPositions(IOptions<AuthorizationOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.Value.PuestosAdministracion
+            .Where(position => !string.IsNullOrWhiteSpace(position))
+            .Select(position => position.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool IsAdministrationPosition(string? positionName) =>
+        positionName is not null && _administrationPositions.Contains(positionName.Trim());
+
+    private async Task LockAdministratorStateAsync(FerreteriaDbContext db, CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({SalesDomainConstants.ActiveAdministratorAdvisoryLockKey})",
+            cancellationToken);
+    }
+
+    private async Task<bool> WouldRemoveLastActiveAdministratorAsync(
+        FerreteriaDbContext db,
+        Guid? currentPositionId,
+        Guid? resultingPositionId,
+        bool employeeIsActive,
+        bool deactivating,
+        CancellationToken cancellationToken)
+    {
+        if (!employeeIsActive)
+        {
+            return false;
+        }
+
+        if (currentPositionId is not Guid currentPosition || resultingPositionId is not Guid resultingPosition)
+        {
+            return false;
+        }
+
+        var currentPositionName = await db.Positions
+            .Where(position => position.Id == currentPosition)
+            .Select(position => position.Name)
+            .SingleAsync(cancellationToken);
+        var resultingPositionName = await db.Positions
+            .Where(position => position.Id == resultingPosition)
+            .Select(position => position.Name)
+            .SingleAsync(cancellationToken);
+        if (!IsAdministrationPosition(currentPositionName)
+            || (!deactivating && IsAdministrationPosition(resultingPositionName)))
+        {
+            return false;
+        }
+
+        var activeAdministrators = await db.Employees
+            .Where(item => item.IsActive)
+            .Join(db.Positions, item => item.PositionId, position => position.Id, (item, position) => position.Name)
+            .CountAsync(name => _administrationPositions.Contains(name), cancellationToken);
+        return activeAdministrators <= 1;
     }
 }

@@ -16,6 +16,47 @@ namespace Ferreteria.PuntoVenta.Tests;
 [Trait("Category", "Integration")]
 public sealed class PinUniquenessIntegrationTests(PostgreSqlFixture fixture)
 {
+    /// <summary>Crear un empleado con un PIN ya usado rechaza sin revelar al propietario.</summary>
+    [Fact]
+    public async Task CreateAsync_PinRepetido_RechazaSinRevelarPropietario()
+    {
+        var existingId = await CreateEmployeeAsync();
+        const string pin = "6814";
+        try
+        {
+            await using var provider = BuildEmployeeProvider(fixture.ManagerId);
+            var service = provider.GetRequiredService<EmployeeService>();
+            await service.SetPinAsync(existingId, pin, fixture.ManagerId);
+
+            await using var scope = fixture.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            var manager = await db.Employees.AsNoTracking().SingleAsync(employee => employee.Id == fixture.ManagerId);
+            var input = new EmployeeInput(
+                "Nuevo",
+                $"Empleado-{Guid.NewGuid():N}",
+                null,
+                manager.PositionId,
+                manager.DepartmentId,
+                DateTime.UtcNow.Date,
+                0m,
+                "PLAZO_FIJO",
+                "MENSUAL",
+                null,
+                null,
+                false,
+                false);
+
+            var exception = await Assert.ThrowsAsync<ValidationException>(() =>
+                service.CreateAsync(input, pin, fixture.ManagerId));
+
+            Assert.Equal("Ese PIN no está disponible. Elija otro.", exception.Message);
+        }
+        finally
+        {
+            await DeleteEmployeesAsync(existingId);
+        }
+    }
+
     /// <summary>Un cambio a un PIN ya usado rechaza la operación sin revelar al propietario.</summary>
     [Fact]
     public async Task SetPinAsync_PinRepetido_RechazaSinRevelarPropietario()

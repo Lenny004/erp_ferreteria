@@ -319,20 +319,21 @@ public sealed class ReturnServiceIntegrationTests
         var sale = await CreateRealCashSaleAsync(code, 2m);
         try
         {
-            var attempts = new PinAttemptService();
+            var attempts = new TestPinAttemptService(TimeProvider.System);
             using var provider = BuildProvider(new EfReturnWriter(), attempts);
             var service = provider.GetRequiredService<IReturnService>();
             var before = await LoadReturnStateSnapshotAsync(sale);
 
             var cashierPin = CreateRequest(sale.OrderId, sale.LineIds[0], _fixture.CashierId, 1m);
             var cashierException = await Assert.ThrowsAsync<InvalidReturnException>(() => service.CreateReturnAsync(cashierPin, "0000"));
-            Assert.Contains("historial", cashierException.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("PIN", cashierException.Message, StringComparison.OrdinalIgnoreCase);
             await AssertUnchangedAsync(sale, before);
 
             var badPin = cashierPin with { ClientRequestId = Guid.NewGuid() };
             var badPinException = await Assert.ThrowsAsync<InvalidReturnException>(() => service.CreateReturnAsync(badPin, "9999"));
             Assert.Contains("PIN", badPinException.Message, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(1, attempts.GetStatus().FailedAttempts);
+            Assert.Equal(cashierException.Message, badPinException.Message);
+            Assert.Equal(2, attempts.GetCurrentStatus().FailedAttempts);
             await AssertUnchangedAsync(sale, before);
 
             var maria = cashierPin with { ClientRequestId = Guid.NewGuid(), EmployeeId = _fixture.NonCashierId };
@@ -414,6 +415,13 @@ public sealed class ReturnServiceIntegrationTests
             var exception = await Assert.ThrowsAsync<InvalidReturnException>(() => BuildService().CreateReturnAsync(request, "1234"));
             Assert.Contains(code, exception.Message, StringComparison.OrdinalIgnoreCase);
             await AssertUnchangedAsync(sale, before);
+
+            await using var scope = _fixture.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            Assert.Equal(1, await db.AuditLogs.CountAsync(item =>
+                item.TableName == SalesDomainConstants.PinAuditActions.TableName
+                && item.RecordId == $"Caja:{code}"
+                && item.Action == SalesDomainConstants.PinAuditActions.PinOk));
         }
         finally
         {
@@ -494,7 +502,7 @@ public sealed class ReturnServiceIntegrationTests
         services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
         services.AddSingleton(writer);
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
-        services.AddSingleton<IPinAttemptService>(pinAttempts ?? new PinAttemptService());
+        services.AddSingleton<IPinAttemptService>(pinAttempts ?? new TestPinAttemptService(TimeProvider.System));
         services.AddSingleton<PinAuthService>();
         services.AddSingleton<IReturnService, ReturnService>();
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<ReturnService>>(NullLogger<ReturnService>.Instance);
@@ -616,7 +624,7 @@ public sealed class ReturnServiceIntegrationTests
             await db.Returns.CountAsync(item => item.OrderId == sale.OrderId),
             await db.ReturnDetails.CountAsync(item => item.OrderDetailId == sale.LineIds[0]),
             await db.CashMovements.CountAsync(item => item.CashSessionId == sale.SessionId),
-            await db.AuditLogs.CountAsync(),
+            await db.AuditLogs.CountAsync(item => item.TableName != SalesDomainConstants.PinAuditActions.TableName),
             await db.InventoryMovements.CountAsync(item => item.OrderId == sale.OrderId && item.MovementType == SalesDomainConstants.InventoryMovementTypes.ReturnInflow),
             await db.Products.Where(item => item.Id == sale.ProductIds[0]).Select(item => item.CurrentStock).SingleAsync());
     }

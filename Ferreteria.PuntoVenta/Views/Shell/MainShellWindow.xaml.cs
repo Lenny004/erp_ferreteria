@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Security;
+using Ferreteria.PuntoVenta.Services.Time;
 using Ferreteria.PuntoVenta.Views.Caja;
 using InventarioViews = Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -280,7 +281,9 @@ public partial class MainShellWindow : Window
         }
 
         var employee = _currentSession.CurrentEmployee;
-        var startedAt = _currentSession.StartedAtUtc?.ToLocalTime().ToString("HH:mm") ?? "--:--";
+        var startedAt = _currentSession.StartedAtUtc is { } startedAtUtc
+            ? TimeZoneSupport.ToLocalTime(startedAtUtc).ToString("HH:mm")
+            : "--:--";
         var roleLabel = _currentSession.ActiveModule switch
         {
             OperationalModule.Caja => "Cajero",
