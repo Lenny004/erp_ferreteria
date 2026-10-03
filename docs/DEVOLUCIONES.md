@@ -15,7 +15,7 @@ La aplicación busca ventas COMPLETADA, calcula devoluciones parciales o totales
 | Caja | `IdxCashSessionOpenByRegister` impide dos sesiones abiertas en una misma caja. |
 | Fiscal | No se emite documento en este flujo; estado y tratamiento quedan a verificar con contador / normativa MH. |
 
-El DDL de las tres tablas y del índice proviene literalmente del backend, PR #11, squash `8fdac39`, archivo `docs/pos/2_pos_devoluciones_squema.sql`. `Ferreteria.PuntoVenta/Squema.sql` es la fuente de verdad que aplica el fixture.
+El DDL de las tres tablas y del índice proviene literalmente del backend, PR #11, squash `8fdac39`, archivo `docs/pos/2_pos_devoluciones_squema.sql`. `Ferreteria.PuntoVenta/Squema.sql` es la referencia parcial que aplica el fixture; la fuente de verdad del esquema son las migraciones de Prisma del backend (ver `docs/pos/POS_SQUEMA_REFERENCIA.md`).
 
 ## Flujo transaccional
 

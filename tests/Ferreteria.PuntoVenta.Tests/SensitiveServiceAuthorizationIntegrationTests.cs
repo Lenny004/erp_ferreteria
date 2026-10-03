@@ -116,7 +116,7 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
 
     private Guid ResolveInsufficientEmployee(string operation) => operation switch
     {
-        "OrderCashSale" or "CustomerCreate" or "CustomerUpdate" or "CustomerDeactivate" => fixture.NonCashierId,
+        "OrderCashSale" or "OrderCompleteConfection" or "CustomerCreate" or "CustomerUpdate" or "CustomerDeactivate" => fixture.NonCashierId,
         _ => fixture.CashierId
     };
 
@@ -257,7 +257,7 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
 
     private async Task<AuthorizationProbe> PrepareCashSaleAsync(Guid employeeId)
     {
-        var productId = await CreateProductAsync(10m); var product = await LoadProductAsync(productId); var code = UniqueCashRegisterCode(); fixture.SetCashRegisterCode(code); var session = await fixture.CashSessions.OpenAsync(employeeId, code, 0m, "QA");
+        var productId = await CreateProductAsync(10m); var product = await LoadProductAsync(productId); var code = UniqueCashRegisterCode(); fixture.SetCashRegisterCode(code); var session = await fixture.CashSessions.OpenAsync(ResolveSessionOpener(employeeId), code, 0m, "QA");
         var request = new CreateCashSaleRequest(employeeId, session.Id, null, Guid.NewGuid(), new[] { new CashSaleLineRequest(productId, 1m) }, new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, TaxAmountCalculator.CalculateGrandTotal(product.SalePrice)) }, "QA");
         return new(typeof(OrderService), p => p.GetRequiredService<OrderService>().CreateCashSaleAsync(request), () => CaptureAsync("order", request.ClientRequestId!.Value, productId), async () => { await CloseSessionDirectlyAsync(session.Id); await DeleteOrderByClientRequestAsync(request.ClientRequestId!.Value); await DeleteProductsAsync(product.Code); });
     }
@@ -265,16 +265,19 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
     private async Task<AuthorizationProbe> PrepareConfectionOrderAsync(Guid employeeId)
     {
         var productId = await CreateProductAsync(10m); var product = await LoadProductAsync(productId); var request = new CreateConfectionOrderRequest(employeeId, null, Guid.NewGuid(), "QA", null, new[] { new CashSaleLineRequest(productId, 1m) }, "QA");
-        return new(typeof(OrderService), p => p.GetRequiredService<OrderService>().CreateConfectionOrderAsync(request), () => CaptureAsync("order", request.ClientRequestId!.Value, productId), () => DeleteProductsAsync(product.Code));
+        return new(typeof(OrderService), p => p.GetRequiredService<OrderService>().CreateConfectionOrderAsync(request), () => CaptureAsync("order", request.ClientRequestId!.Value, productId), async () => { await DeleteOrderByClientRequestAsync(request.ClientRequestId!.Value); await DeleteProductsAsync(product.Code); });
     }
 
     private async Task<AuthorizationProbe> PrepareCompleteConfectionOrderAsync(Guid employeeId)
     {
-        var productId = await CreateProductAsync(10m); var product = await LoadProductAsync(productId); var workOrder = await fixture.Orders.CreateConfectionOrderAsync(new CreateConfectionOrderRequest(employeeId, null, Guid.NewGuid(), "QA", null, new[] { new CashSaleLineRequest(productId, 1m) }, "QA"));
-        var code = UniqueCashRegisterCode(); fixture.SetCashRegisterCode(code); var session = await fixture.CashSessions.OpenAsync(employeeId, code, 0m, "QA");
+        var productId = await CreateProductAsync(10m); var product = await LoadProductAsync(productId); var workOrder = await fixture.Orders.CreateConfectionOrderAsync(new CreateConfectionOrderRequest(fixture.ManagerId, null, Guid.NewGuid(), "QA", null, new[] { new CashSaleLineRequest(productId, 1m) }, "QA"));
+        var code = UniqueCashRegisterCode(); fixture.SetCashRegisterCode(code); var session = await fixture.CashSessions.OpenAsync(ResolveSessionOpener(employeeId), code, 0m, "QA");
         var request = new CompleteConfectionOrderRequest(workOrder.OrderId, employeeId, session.Id, new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, workOrder.Total) });
         return new(typeof(OrderService), p => p.GetRequiredService<OrderService>().CompleteConfectionOrderAsync(request), () => CaptureAsync("order-existing", workOrder.OrderId, productId), async () => { await CloseSessionDirectlyAsync(session.Id); await DeleteOrdersAsync(workOrder.OrderId); await DeleteProductsAsync(product.Code); });
     }
+
+    /// <summary>La caja se abre con un empleado que puede operarla: el permiso bajo prueba es el del actuante en la venta, no el de la apertura.</summary>
+    private Guid ResolveSessionOpener(Guid actingEmployeeId) => actingEmployeeId == fixture.NonCashierId ? fixture.CashierId : actingEmployeeId;
 
     private ServiceProvider BuildProvider(Guid sessionEmployeeId, Type serviceType)
     {

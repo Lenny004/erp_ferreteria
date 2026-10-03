@@ -41,3 +41,7 @@ El cierre toma `FOR UPDATE` sobre la fila padre de la sesión; la venta toma `FO
 La fecha de emisión DTE, el tratamiento fiscal de devoluciones, la nota de crédito, el costo de reingreso y el redondeo deben validarse con contador y Ministerio de Hacienda antes de producción. El hardware de impresión y el certificado TLS de PostgreSQL también requieren una prueba de despliegue.
 
 La fecha de contratación mostrada en `UsuariosView` es un dato laboral, no fiscal; puede continuar usando la fecha de la PC y queda fuera del criterio de hora del negocio.
+
+## Esquema
+
+`Squema.sql` es solo una referencia parcial para el fixture; la fuente de verdad son las migraciones de Prisma del backend. Las migraciones 4 a 8 reflejadas y las sentencias omitidas están en `docs/pos/POS_SQUEMA_REFERENCIA.md`.
