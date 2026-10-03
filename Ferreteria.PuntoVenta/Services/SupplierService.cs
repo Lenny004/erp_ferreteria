@@ -2,13 +2,15 @@
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>CRUD de proveedores (esquema <c>purchasing.Suppliers</c>) con validación y auditoría.</summary>
 public sealed class SupplierService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : ISupplierService
+    IAuditService auditService,
+    IAuthorizationGuard? authorizationGuard = null) : ISupplierService
 {
     private const string TableName = "purchasing.Suppliers";
 
@@ -52,6 +54,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task<Guid> CreateAsync(SupplierInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -88,7 +91,7 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("INSERT", TableName, supplier.Id.ToString(),
-            null, new { supplier.Name, supplier.Nit }, userId, cancellationToken);
+            null, new { supplier.Name, supplier.Nit }, actor, cancellationToken);
 
         return supplier.Id;
     }
@@ -96,6 +99,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task UpdateAsync(Guid id, SupplierInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -129,12 +133,13 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("UPDATE", TableName, supplier.Id.ToString(),
-            before, new { supplier.Name, supplier.Nit, supplier.Phone }, userId, cancellationToken);
+            before, new { supplier.Name, supplier.Nit, supplier.Phone }, actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -151,7 +156,7 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("DELETE", TableName, supplier.Id.ToString(),
-            new { supplier.Name, IsActive = true }, new { IsActive = false }, userId, cancellationToken);
+            new { supplier.Name, IsActive = true }, new { IsActive = false }, actor, cancellationToken);
     }
 
     private static string? Normalize(string? value) =>
@@ -167,5 +172,18 @@ public sealed class SupplierService(
             throw new ValidationException("Los días de crédito no pueden ser negativos.");
         if (!string.IsNullOrWhiteSpace(input.Email) && !input.Email.Contains('@'))
             throw new ValidationException("El correo electrónico no es válido.");
+    }
+
+    private async Task<Guid> RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    {
+        if (authorizationGuard is null)
+        {
+            return actingEmployeeId;
+        }
+
+        return (await authorizationGuard.RequireAsync(
+            PosPermission.OperarInventario,
+            actingEmployeeId,
+            cancellationToken)).Id;
     }
 }

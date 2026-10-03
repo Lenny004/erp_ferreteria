@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.Printing;
 using Microsoft.Extensions.Logging;
 
@@ -55,6 +56,10 @@ public partial class ImpresorasView : UserControl
             await ReloadAsync();
             StatusText.Text = "Lista cargada.";
         }
+        catch (UnauthorizedOperationException ex)
+        {
+            MessageBox.Show(ex.Message, DialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "No se pudo cargar la configuración de impresoras.");
@@ -95,6 +100,10 @@ public partial class ImpresorasView : UserControl
         {
             // Los mensajes de validación ya están en español y no contienen datos técnicos.
             MessageBox.Show(ex.Message, InvalidDataTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            MessageBox.Show(ex.Message, DialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {

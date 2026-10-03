@@ -194,6 +194,19 @@ public static class SalesDomainConstants
         public const string PrintersTableName = "system.Printers";
     }
 
+    /// <summary>Códigos cortos de auditoría usados por el lockout persistente de PIN.</summary>
+    public static class PinAuditActions
+    {
+        /// <summary>Tabla lógica que agrupa los eventos del terminal.</summary>
+        public const string TableName = "pos.PinAttempts";
+
+        /// <summary>Fallo de validación de PIN.</summary>
+        public const string PinFail = "PIN_FAIL";
+
+        /// <summary>PIN correcto que reinicia la racha de fallos.</summary>
+        public const string PinOk = "PIN_OK";
+    }
+
     /// <summary>Códigos de unidades de venta usados por el dominio.</summary>
     public static class SalesUnitCodes
     {

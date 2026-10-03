@@ -321,7 +321,7 @@ public sealed class ReturnService : IReturnService
 
     private async Task<Employee> ValidateAuthorizerPinAsync(string authorizerPin, CancellationToken cancellationToken)
     {
-        var status = _pinAttemptService.GetStatus();
+        var status = await _pinAttemptService.GetStatusAsync(cancellationToken);
         if (status.IsLocked)
         {
             throw new InvalidReturnException("Demasiados intentos de PIN. Espere antes de volver a intentar.");
@@ -330,7 +330,7 @@ public sealed class ReturnService : IReturnService
         var employee = await _pinAuthService.ValidateActiveEmployeePinAsync(authorizerPin, cancellationToken);
         if (employee is null)
         {
-            _pinAttemptService.RegisterFailedAttempt();
+            await _pinAttemptService.RegisterFailedAttemptAsync(cancellationToken);
             throw new InvalidReturnException("PIN incorrecto o sin permiso para autorizar devoluciones.");
         }
 
@@ -339,7 +339,7 @@ public sealed class ReturnService : IReturnService
             throw new InvalidReturnException("El autorizador debe tener un puesto de historial completo.");
         }
 
-        _pinAttemptService.Reset();
+        await _pinAttemptService.ResetAsync(cancellationToken);
         return employee;
     }
 

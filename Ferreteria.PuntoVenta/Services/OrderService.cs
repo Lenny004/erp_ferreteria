@@ -6,6 +6,7 @@ using Ferreteria.PuntoVenta.Services.CashRegister;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -17,17 +18,21 @@ public sealed class OrderService : IOrderService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly CashRegisterOptions _cashRegisterOptions;
+    private readonly IAuthorizationGuard? _authorizationGuard;
 
     /// <summary>Inicializa el servicio de órdenes con el alcance de datos y la caja configurada.</summary>
     /// <param name="scopeFactory">Fábrica de ámbitos para crear contextos EF por operación.</param>
     /// <param name="cashRegisterOptions">Configuración del código de caja activa.</param>
+    /// <param name="authorizationGuard">Guard que valida el permiso vigente del empleado.</param>
     public OrderService(
         IServiceScopeFactory scopeFactory,
-        IOptions<CashRegisterOptions> cashRegisterOptions)
+        IOptions<CashRegisterOptions> cashRegisterOptions,
+        IAuthorizationGuard? authorizationGuard = null)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         ArgumentNullException.ThrowIfNull(cashRegisterOptions);
         _cashRegisterOptions = cashRegisterOptions.Value;
+        _authorizationGuard = authorizationGuard;
     }
 
     /// <inheritdoc />
@@ -41,6 +46,7 @@ public sealed class OrderService : IOrderService
         CreateCashSaleRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarCaja, request.EmployeeId, cancellationToken);
         ValidateCashSaleRequest(request);
 
         using var scope = _scopeFactory.CreateScope();
@@ -104,6 +110,7 @@ public sealed class OrderService : IOrderService
         CreateConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarInventario, request.EmployeeId, cancellationToken);
         ValidateConfectionOrderRequest(request);
 
         using var scope = _scopeFactory.CreateScope();
@@ -208,6 +215,7 @@ public sealed class OrderService : IOrderService
         CompleteConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarCaja, request.EmployeeId, cancellationToken);
         if (request.EmployeeId == Guid.Empty)
         {
             throw new InvalidOrderException("La facturacion requiere empleado autenticado.");
@@ -582,6 +590,17 @@ public sealed class OrderService : IOrderService
         if (Math.Round(paidTotal, 2, MidpointRounding.AwayFromZero) != expectedTotal)
         {
             throw new InvalidOrderException("La suma de pagos debe coincidir con el total de la venta.");
+        }
+    }
+
+    private async Task RequirePermissionAsync(
+        PosPermission permission,
+        Guid actingEmployeeId,
+        CancellationToken cancellationToken)
+    {
+        if (_authorizationGuard is not null)
+        {
+            await _authorizationGuard.RequireAsync(permission, actingEmployeeId, cancellationToken);
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Printing;
@@ -210,6 +211,10 @@ public partial class FacturacionView : UserControl
         catch (InvalidOrderException exception)
         {
             _logger.LogWarning(exception, "Venta rechazada por una regla de caja u orden");
+            SetStatusMessage(exception.Message, isError: true);
+        }
+        catch (UnauthorizedOperationException exception)
+        {
             SetStatusMessage(exception.Message, isError: true);
         }
         catch (Exception exception)

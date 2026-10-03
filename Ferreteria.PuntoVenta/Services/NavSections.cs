@@ -1,3 +1,5 @@
+using Ferreteria.PuntoVenta.Services.Security;
+
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
@@ -68,6 +70,38 @@ public static class NavSections
             OperationalModule.Caja => CajaSections,
             OperationalModule.Inventario => InventarioSections,
             _ => []
+        };
+
+    /// <summary>
+    /// Filtra las secciones del módulo según permisos efectivos del empleado.
+    /// </summary>
+    /// <param name="module">Módulo operativo.</param>
+    /// <param name="permissions">Permisos concedidos por el guard.</param>
+    /// <returns>Secciones visibles y autorizadas.</returns>
+    public static IReadOnlyList<string> ForModule(
+        OperationalModule module,
+        IReadOnlySet<PosPermission> permissions)
+    {
+        ArgumentNullException.ThrowIfNull(permissions);
+        return ForModule(module)
+            .Where(section => IsAllowed(section, permissions))
+            .ToArray();
+    }
+
+    /// <summary>Indica si una sección requiere un permiso presente en el conjunto.</summary>
+    /// <param name="sectionKey">Clave de sección.</param>
+    /// <param name="permissions">Permisos efectivos.</param>
+    /// <returns>True si la sección puede mostrarse.</returns>
+    public static bool IsAllowed(string sectionKey, IReadOnlySet<PosPermission> permissions) =>
+        sectionKey switch
+        {
+            Impresoras => permissions.Contains(PosPermission.AdministrarConfiguracion),
+            Usuarios => permissions.Contains(PosPermission.AdministrarUsuarios),
+            Productos => permissions.Contains(PosPermission.OperarInventario),
+            Proveedores or Movimientos or Alertas => permissions.Contains(PosPermission.OperarInventario),
+            Stock => permissions.Contains(PosPermission.OperarCaja) || permissions.Contains(PosPermission.OperarInventario),
+            Facturacion or HistorialFacturas or Devoluciones or CorteCaja => permissions.Contains(PosPermission.OperarCaja),
+            _ => false
         };
 
     /// <summary>Sección por defecto al entrar al módulo.</summary>

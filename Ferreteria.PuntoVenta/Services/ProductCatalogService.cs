@@ -2,6 +2,7 @@
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -11,7 +12,8 @@ namespace Ferreteria.PuntoVenta.Services;
 /// </summary>
 public sealed class ProductCatalogService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : IProductCatalogService
+    IAuditService auditService,
+    IAuthorizationGuard? authorizationGuard = null) : IProductCatalogService
 {
     private const string TableName = "public.Products";
 
@@ -71,6 +73,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<Guid> CreateProductAsync(ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -113,7 +116,7 @@ public sealed class ProductCatalogService(
         await auditService.RecordChangeAsync("INSERT", TableName, product.Id.ToString(),
             oldData: null,
             newData: new { product.Code, product.Description, product.SalePrice, product.CurrentStock },
-            userId, cancellationToken);
+            actor, cancellationToken);
 
         return product.Id;
     }
@@ -121,6 +124,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task UpdateProductAsync(Guid id, ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -160,19 +164,21 @@ public sealed class ProductCatalogService(
         await auditService.RecordChangeAsync("UPDATE", TableName, product.Id.ToString(),
             oldData: before,
             newData: new { product.Code, product.Description, product.SalePrice, product.CostPrice, product.MinStock },
-            userId, cancellationToken);
+            actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
-        await SetActiveAsync(id, false, userId, cancellationToken);
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
+        await SetActiveAsync(id, false, actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task ReactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
-        await SetActiveAsync(id, true, userId, cancellationToken);
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
+        await SetActiveAsync(id, true, actor, cancellationToken);
     }
 
     private async Task SetActiveAsync(Guid id, bool isActive, Guid userId, CancellationToken cancellationToken)
@@ -273,5 +279,19 @@ public sealed class ProductCatalogService(
         if (input.SupplierId is { } supId
             && !await db.Suppliers.AnyAsync(s => s.Id == supId, cancellationToken))
             throw new ValidationException("El proveedor seleccionado no existe.");
+    }
+
+    private async Task<Guid> RequireCatalogAdministrationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    {
+        if (authorizationGuard is null)
+        {
+            return actingEmployeeId;
+        }
+
+        var actor = await authorizationGuard.RequireAsync(
+            PosPermission.AdministrarCatalogo,
+            actingEmployeeId,
+            cancellationToken);
+        return actor.Id;
     }
 }

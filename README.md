@@ -647,7 +647,7 @@ npm run db:push
 npm run db:seed
 ```
 
-`Ferreteria.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto).
+`Ferreteria.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto). La sección `Autorizacion:PuestosAdministracion` define los puestos que pueden administrar usuarios, catálogo y configuración.
 
 La sección `Negocio:ZonaHoraria` define la zona horaria usada para el día de negocio y los rangos de reportes del POS.
 

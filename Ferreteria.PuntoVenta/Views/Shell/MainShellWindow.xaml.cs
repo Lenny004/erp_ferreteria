@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Views.Caja;
 using InventarioViews = Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -22,6 +23,8 @@ public partial class MainShellWindow : Window
     private readonly IAuditService _auditService;
     private readonly IServiceProvider _serviceProvider;
     private readonly CashSessionOpeningFlow _cashSessionOpeningFlow;
+    private readonly IAuthorizationGuard _authorizationGuard;
+    private IReadOnlySet<PosPermission> _grantedPermissions = new HashSet<PosPermission>();
     private readonly DispatcherTimer _connectivityTimer;
 
     /// <summary>
@@ -32,13 +35,15 @@ public partial class MainShellWindow : Window
         ICurrentSessionService currentSession,
         IAuditService auditService,
         IServiceProvider serviceProvider,
-        CashSessionOpeningFlow cashSessionOpeningFlow)
+        CashSessionOpeningFlow cashSessionOpeningFlow,
+        IAuthorizationGuard authorizationGuard)
     {
         _connectivityService = connectivityService;
         _currentSession = currentSession;
         _auditService = auditService;
         _serviceProvider = serviceProvider;
         _cashSessionOpeningFlow = cashSessionOpeningFlow ?? throw new ArgumentNullException(nameof(cashSessionOpeningFlow));
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
 
         InitializeComponent();
 
@@ -58,7 +63,6 @@ public partial class MainShellWindow : Window
         };
 
         ApplyModuleNavigation();
-        ShowSection(_currentSession.ResolveInitialSection());
         RenderCurrentSession();
 
         _connectivityTimer = new DispatcherTimer
@@ -90,7 +94,7 @@ public partial class MainShellWindow : Window
             return;
         }
 
-        var allowedSections = NavSections.ForModule(activeModule);
+        var allowedSections = NavSections.ForModule(activeModule, _grantedPermissions);
         var allowedSet = allowedSections.ToHashSet(StringComparer.Ordinal);
 
         var cajaVisible = false;
@@ -127,6 +131,22 @@ public partial class MainShellWindow : Window
     /// <summary>Al cargar, consulta el estado de conectividad con la base de datos.</summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _grantedPermissions = await _authorizationGuard.GetGrantedPermissionsAsync();
+        ApplyModuleNavigation();
+        if (_currentSession.ActiveModule is OperationalModule module)
+        {
+            var initialSection = _currentSession.ResolveInitialSection();
+            if (!NavSections.IsAllowed(initialSection, _grantedPermissions))
+            {
+                initialSection = NavSections.ForModule(module, _grantedPermissions).FirstOrDefault() ?? string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(initialSection))
+            {
+                ShowSection(initialSection);
+            }
+        }
+
         await RefreshConnectivityStatusAsync();
         await EnsureCashSessionAsync();
     }
@@ -185,6 +205,11 @@ public partial class MainShellWindow : Window
     {
         if (_currentSession.ActiveModule is OperationalModule activeModule
             && !NavSections.BelongsToModule(sectionKey, activeModule))
+        {
+            return;
+        }
+
+        if (!NavSections.IsAllowed(sectionKey, _grantedPermissions))
         {
             return;
         }

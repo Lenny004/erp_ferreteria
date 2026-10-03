@@ -4,6 +4,7 @@ using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -12,7 +13,8 @@ namespace Ferreteria.PuntoVenta.Services;
 /// </summary>
 public sealed class InventoryService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : IInventoryService
+    IAuditService auditService,
+    IAuthorizationGuard? authorizationGuard = null) : IInventoryService
 {
     private static readonly string[] ValidEntryTypes =
     [
@@ -91,6 +93,7 @@ public sealed class InventoryService(
         string reason,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(employeeId, cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -154,6 +157,7 @@ public sealed class InventoryService(
         string reason,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(employeeId, cancellationToken);
         if (!ValidEntryTypes.Contains(movementType))
         {
             throw new ValidationException("El tipo de entrada debe ser una compra o una devolución.");
@@ -220,6 +224,7 @@ public sealed class InventoryService(
         string reason,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(employeeId, cancellationToken);
         if (newStock < 0)
         {
             throw new ValidationException("El stock ajustado no puede ser negativo.");
@@ -384,5 +389,16 @@ public sealed class InventoryService(
             IsResolved = false,
             CreatedAt = DateTime.UtcNow
         });
+    }
+
+    private async Task RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    {
+        if (authorizationGuard is not null)
+        {
+            await authorizationGuard.RequireAsync(
+                PosPermission.OperarInventario,
+                actingEmployeeId,
+                cancellationToken);
+        }
     }
 }
