@@ -38,4 +38,25 @@ public sealed class PostgresTransientRetryTests
 
         Assert.Equal(1, attempts);
     }
+
+    /// <summary>Simula un 40001 y comprueba que el reintento conserva la misma clave de venta.</summary>
+    [Fact]
+    public async Task SerializationRetry_ReusesSameClientRequestId()
+    {
+        var clientRequestId = Guid.NewGuid();
+        var observed = new List<Guid>();
+        var attempts = 0;
+
+        var result = await PostgresTransientRetry.ExecuteAsync(_ =>
+        {
+            observed.Add(clientRequestId);
+            attempts++;
+            return attempts == 1
+                ? Task.FromException<Guid>(new PostgresException("transient", "ERROR", "ERROR", "40001"))
+                : Task.FromResult(clientRequestId);
+        });
+
+        Assert.Equal(clientRequestId, result);
+        Assert.Equal(new[] { clientRequestId, clientRequestId }, observed);
+    }
 }

@@ -70,3 +70,7 @@ TO pos_app;
 -- No hay DELETE en los flujos POS actuales. Si aparece un borrado legítimo,
 -- debe agregarse aquí de forma explícita y documentarse por servicio.
 REVOKE DELETE ON ALL TABLES IN SCHEMA public, purchasing, sales, dte, hr, system FROM pos_app;
+
+-- Los servicios POS usan este lock transaccional para PIN, administradores y
+-- serialización de apertura. Se concede solo la función concreta requerida.
+GRANT EXECUTE ON FUNCTION pg_catalog.pg_advisory_xact_lock(bigint) TO pos_app;

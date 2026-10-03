@@ -25,9 +25,12 @@ El rol queda sin superusuario, `CREATEDB`, `CREATEROLE`, replicación, bypass de
 
 El código no ejecuta borrados de negocio en estos flujos; por eso no se concede `DELETE`. Tampoco usa secuencias de estas tablas: las claves son UUID. Las funciones necesarias para el lock transaccional de PostgreSQL conservan el `EXECUTE` público predeterminado; si la instalación lo revoca, debe concederse únicamente la función requerida por el DBA.
 
+## Flujo de aceptación del rol
+
+La prueba `DatabaseRoleIntegrationTests.PosAppRole_ExecutesCompletePosFlowAndPersistsPinAudit` abre una caja, registra una venta de contado, registra una devolución sin reintegro, cierra la caja y ejecuta el lockout persistente (`PIN_FAIL` hasta bloquear, seguido de `PIN_OK`) usando una conexión autenticada como `pos_app`. El script concede explícitamente solo `pg_advisory_xact_lock(bigint)` además de las tablas POS requeridas; no concede `GRANT ALL`.
+
 ## Cadena de conexión y rotación
 
 La prioridad de configuración es la de `Host.CreateDefaultBuilder`: variable de entorno `ConnectionStrings__FerreteriaDB` y, en desarrollo, User Secrets (`ConnectionStrings:FerreteriaDB`). `Config/appsettings.json` conserva solo valores no sensibles y no debe recibir contraseñas. Si falta usuario o contraseña, el POS muestra un mensaje operativo y termina ordenadamente.
 
 La credencial que estuvo versionada debe considerarse expuesta y ROTARSE en todos los lugares donde se haya reutilizado. No se reproduce aquí. DPAPI para almacenamiento local de cajas queda como siguiente paso si la política de despliegue requiere guardar un secreto local; esta fase no agrega paquetes ni persiste credenciales nuevas.
-
