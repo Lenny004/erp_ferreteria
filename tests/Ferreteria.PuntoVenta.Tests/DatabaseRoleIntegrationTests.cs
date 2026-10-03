@@ -12,9 +12,8 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
     [Fact]
     public async Task PosAppRole_AllowsPosReadAndRejectsWebUsersAndDdl()
     {
-        var scriptPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..", "docs", "pos", "pos_app_rol_minimo.sql"));
+        // El script de docs/pos se enlaza en el csproj y se copia a Data/, igual que Squema.sql.
+        var scriptPath = Path.Combine(AppContext.BaseDirectory, "Data", "pos_app_rol_minimo.sql");
         var script = await File.ReadAllTextAsync(scriptPath);
         var adminBuilder = new NpgsqlConnectionStringBuilder(fixture.ConnectionString);
         script = script.Replace(

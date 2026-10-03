@@ -97,6 +97,8 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
         services.AddOptions<AuthorizationOptions>().Configure(options => options.PuestosAdministracion = new List<string> { "Administrador" });
         services.AddSingleton<ILogger<AuthorizationGuard>>(_ => NullLogger<AuthorizationGuard>.Instance);
         services.AddSingleton<IAuthorizationGuard, AuthorizationGuard>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddSingleton<IAuditService, NoOpAuditService>();
         services.AddOptions<CashRegisterOptions>().Configure(options => options.Codigo = "CAJA-INT");
         services.AddSingleton(serviceType);

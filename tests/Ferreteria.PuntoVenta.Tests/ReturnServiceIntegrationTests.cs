@@ -412,16 +412,14 @@ public sealed class ReturnServiceIntegrationTests
                 RefundAmount = sale.Total
             };
             var before = await LoadReturnStateSnapshotAsync(sale);
+            var pinOkBefore = await CountPinOkEventsAsync();
             var exception = await Assert.ThrowsAsync<InvalidReturnException>(() => BuildService().CreateReturnAsync(request, "1234"));
             Assert.Contains(code, exception.Message, StringComparison.OrdinalIgnoreCase);
             await AssertUnchangedAsync(sale, before);
 
-            await using var scope = _fixture.Services.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-            Assert.Equal(1, await db.AuditLogs.CountAsync(item =>
-                item.TableName == SalesDomainConstants.PinAuditActions.TableName
-                && item.RecordId == $"Caja:{code}"
-                && item.Action == SalesDomainConstants.PinAuditActions.PinOk));
+            // El PIN del autorizador era válido: el lockout persistente registra exactamente un PIN_OK,
+            // fuera de la transacción de la devolución (que no dejó filas).
+            Assert.Equal(pinOkBefore + 1, await CountPinOkEventsAsync());
         }
         finally
         {
@@ -483,6 +481,16 @@ public sealed class ReturnServiceIntegrationTests
         }
     }
 
+    /// <summary>Cuenta los eventos PIN_OK del lockout persistente en <c>system.AuditLog</c>.</summary>
+    /// <returns>Cantidad de eventos de PIN correcto registrados.</returns>
+    private async Task<int> CountPinOkEventsAsync()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return await db.AuditLogs.CountAsync(item =>
+            item.TableName == SalesDomainConstants.PinAuditActions.TableName
+            && item.Action == SalesDomainConstants.PinAuditActions.PinOk);
+    }
     /// <summary>Construye el servicio compartido por el fixture, con las implementaciones reales.</summary>
     /// <returns>Servicio de devoluciones configurado contra PostgreSQL.</returns>
     private IReturnService BuildService() => _fixture.Services.GetRequiredService<IReturnService>();

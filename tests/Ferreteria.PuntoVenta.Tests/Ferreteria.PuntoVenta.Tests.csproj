@@ -97,5 +97,6 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Data/DatabaseConnectionResolver.cs" Link="Data/DatabaseConnectionResolver.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />
     <None Include="../../Ferreteria.PuntoVenta/Squema.sql" Link="Data/Squema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../docs/pos/pos_app_rol_minimo.sql" Link="Data/pos_app_rol_minimo.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

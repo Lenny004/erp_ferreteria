@@ -188,7 +188,7 @@ public sealed class EfReturnWriter : IReturnWriter
             UpdatedAt = record.Header.UpdatedAt
         };
 
-        var productIds = record.InventoryMovements.Select(movement => movement.ProductId).Distinct().OrderBy(id => id).ToArray();
+        var productIds = record.InventoryMovements.Select(movement => movement.ProductId).Distinct().ToArray(); // Orden de bloqueo: ORDER BY "id" en PostgreSQL, no en C#.
         var lockedProducts = await db.Products
             .FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = ANY({productIds}) ORDER BY \"id\" FOR UPDATE")
             .ToDictionaryAsync(product => product.Id, cancellationToken);

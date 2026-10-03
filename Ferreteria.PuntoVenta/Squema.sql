@@ -675,6 +675,18 @@ CREATE TRIGGER "TrgWebUserTimestamp"
 BEFORE UPDATE ON system."WebUsers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
+-- =============================================================================
+-- QA SEGURIDAD (backend) — system."WebUsers"."TokenVersion"
+-- Origen: ferreteria_backend, prisma/migrations/4_qa_seguridad/migration.sql
+--   (backend PR #17, squash 66c01d1; rama desarrollo).
+-- Copiado literal solo para las tablas que existen en este esquema. Las sentencias de la misma
+-- migración sobre system."ShopCustomers" y system."ShopPayments" no se copian porque esas tablas
+-- de la tienda web no forman parte de Squema.sql. La caja WPF no lee ni escribe WebUsers.
+-- No editar aquí sin actualizar primero el backend.
+-- =============================================================================
+-- Migración aditiva de seguridad: rotación de sesiones y auditoría de pagos.
+ALTER TABLE system."WebUsers"
+  ADD COLUMN "TokenVersion" INTEGER NOT NULL DEFAULT 0;
 -- Bitácora de auditoría para cambios críticos
 CREATE TABLE system."AuditLog" (
     "id"        UUID PRIMARY KEY DEFAULT gen_random_uuid(),

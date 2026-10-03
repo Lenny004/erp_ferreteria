@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
@@ -533,7 +533,7 @@ public sealed class OrderService : IOrderService
         IEnumerable<Guid> productIds,
         CancellationToken cancellationToken)
     {
-        var ids = productIds.Where(id => id != Guid.Empty).Distinct().OrderBy(id => id).ToArray();
+        var ids = productIds.Where(id => id != Guid.Empty).Distinct().ToArray(); // El orden de bloqueo lo define PostgreSQL (ORDER BY "id"), no C#: Guid y uuid ordenan distinto.
         var products = await dbContext.Products
             .FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = ANY({ids}) ORDER BY \"id\" FOR UPDATE")
             .Include(product => product.MeasurementType)
@@ -564,9 +564,12 @@ public sealed class OrderService : IOrderService
             throw new InvalidOrderException("No se puede cobrar sin una sesión de caja abierta.");
         }
 
+        // Fila padre primero: FOR SHARE permite ventas concurrentes en la sesión, pero impide que un cierre
+        // (FOR UPDATE) cambie su estado hasta el commit. Después se bloquean los productos.
         var session = await dbContext.CashSessions
+            .FromSqlInterpolated($"SELECT * FROM sales.\"CashSessions\" WHERE \"id\" = {sessionId} FOR SHARE")
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == sessionId, cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         if (session is null)
         {
             throw new InvalidOrderException("La sesión de caja no existe. Abra la caja antes de cobrar.");
