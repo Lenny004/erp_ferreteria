@@ -49,7 +49,11 @@ public sealed class PinAttemptService : IPinAttemptService
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-            return PinLockoutPolicy.Evaluate(await LoadEventsAsync(db, cancellationToken), _clock.GetUtcNow(), _lockoutOptions);
+            var events = await LoadEventsAsync(db, cancellationToken);
+            return PinLockoutPolicy.Evaluate(
+                events,
+                PinLockoutPolicy.ResolveEvaluationTime(events, _clock.GetUtcNow()),
+                _lockoutOptions);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -84,13 +88,21 @@ public sealed class PinAttemptService : IPinAttemptService
                 cancellationToken);
 
             var events = await LoadEventsAsync(db, cancellationToken);
-            var current = PinLockoutPolicy.Evaluate(events, _clock.GetUtcNow(), _lockoutOptions);
+            var clockUtc = _clock.GetUtcNow();
+            var current = PinLockoutPolicy.Evaluate(
+                events,
+                PinLockoutPolicy.ResolveEvaluationTime(events, clockUtc),
+                _lockoutOptions);
             if (action == SalesDomainConstants.PinAuditActions.PinFail && current.IsLocked)
             {
                 await transaction.CommitAsync(cancellationToken);
                 return current;
             }
 
+            // Orden estrictamente creciente por terminal aunque el reloj repita el instante o retroceda.
+            var createdAtUtc = PinLockoutPolicy.NextEventTimestamp(
+                events.Select(item => (DateTimeOffset?)item.CreatedAtUtc).Max(),
+                clockUtc);
             db.AuditLogs.Add(new AuditLog
             {
                 Id = Guid.NewGuid(),
@@ -98,13 +110,13 @@ public sealed class PinAttemptService : IPinAttemptService
                 RecordId = $"Caja:{_cashRegisterCode}",
                 Action = action,
                 NewData = JsonSerializer.Serialize(new { terminal = _cashRegisterCode }),
-                CreatedAt = _clock.GetUtcNow().UtcDateTime
+                CreatedAt = createdAtUtc.UtcDateTime
             });
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            var updatedEvents = events.Append(new PinLockoutEvent(action, _clock.GetUtcNow()));
-            return PinLockoutPolicy.Evaluate(updatedEvents, _clock.GetUtcNow(), _lockoutOptions);
+            var updatedEvents = events.Append(new PinLockoutEvent(action, createdAtUtc));
+            return PinLockoutPolicy.Evaluate(updatedEvents, createdAtUtc, _lockoutOptions);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

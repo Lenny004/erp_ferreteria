@@ -67,6 +67,18 @@ public sealed class PinUnlockService : IPinUnlockService
                 $"SELECT pg_advisory_xact_lock({SalesDomainConstants.PinAttemptAdvisoryLockKey})",
                 cancellationToken);
 
+            var recordId = $"Caja:{normalizedCode}";
+            // Bajo el mismo advisory lock que PinAttemptService: el desbloqueo queda después del último evento
+            // de la terminal aunque esta máquina tenga el reloj atrasado o repita el mismo instante.
+            var latestEventUtc = await db.AuditLogs.AsNoTracking()
+                .Where(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName
+                    && item.RecordId == recordId)
+                .Select(item => (DateTime?)item.CreatedAt)
+                .MaxAsync(cancellationToken);
+            var createdAtUtc = PinLockoutPolicy.NextEventTimestamp(
+                latestEventUtc is { } latest ? new DateTimeOffset(latest, TimeSpan.Zero) : null,
+                _clock.GetUtcNow());
+
             var auditData = new Dictionary<string, string>
             {
                 ["terminal"] = normalizedCode
@@ -80,11 +92,11 @@ public sealed class PinUnlockService : IPinUnlockService
             {
                 Id = Guid.NewGuid(),
                 TableName = SalesDomainConstants.PinAuditActions.TableName,
-                RecordId = $"Caja:{normalizedCode}",
+                RecordId = recordId,
                 Action = SalesDomainConstants.PinAuditActions.PinUnlock,
                 UserId = actor.Id,
                 NewData = JsonSerializer.Serialize(auditData),
-                CreatedAt = _clock.GetUtcNow().UtcDateTime
+                CreatedAt = createdAtUtc.UtcDateTime
             });
 
             await db.SaveChangesAsync(cancellationToken);

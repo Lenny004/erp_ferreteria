@@ -354,6 +354,9 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
         await using var scope = fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         db.DteIssued.RemoveRange(await db.DteIssued.Where(item => item.OrderId == orderId).ToListAsync());
+        // La nota de crédito reingresa el stock con un movimiento de kardex que referencia la orden y el producto propios.
+        db.InventoryMovements.RemoveRange(await db.InventoryMovements.Where(item => item.OrderId == orderId || item.ProductId == productId).ToListAsync());
+        db.StockAlerts.RemoveRange(await db.StockAlerts.Where(item => item.ProductId == productId).ToListAsync());
         db.OrderDetails.RemoveRange(await db.OrderDetails.Where(item => item.OrderId == orderId).ToListAsync());
         db.Orders.RemoveRange(await db.Orders.Where(item => item.Id == orderId).ToListAsync());
         db.Products.RemoveRange(await db.Products.Where(item => item.Id == productId).ToListAsync());

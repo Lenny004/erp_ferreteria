@@ -27,6 +27,18 @@ La sección **Desbloquear terminal** de `UsuariosView` permite usar la caja conf
 
 El riesgo residual es que un empleado puede provocar bloqueos de hasta `MaxLockoutMinutes` por terminal. El evento queda auditado por terminal y un administrador autorizado puede liberar la terminal sin borrar la evidencia histórica.
 
+## Orden de eventos y reloj
+
+`AuditLog` no tiene columna de secuencia (el `Id` es un `uuid`), así que el orden de los eventos de una terminal sale de `CreatedAt`. Para que ese orden sea confiable, `PinAttemptService` y `PinUnlockService` graban cada evento (`PIN_FAIL`, `PIN_OK`, `PIN_UNLOCK`) dentro del mismo `pg_advisory_xact_lock(PinAttemptAdvisoryLockKey)` y con `CreatedAt = max(reloj local, último evento de la terminal + 1 µs)`, truncado a microsegundos (`PinLockoutPolicy.NextEventTimestamp`). La evaluación usa `max(reloj local, último evento)` (`PinLockoutPolicy.ResolveEvaluationTime`).
+
+Esto cubre tres casos que antes dejaban la política en un estado incorrecto:
+
+- **Mismo instante.** Si el reloj devuelve el mismo valor para un fallo y para el desbloqueo, el filtro `fallo > último desbloqueo` descartaba el fallo posterior. Ahora el evento nuevo siempre queda al menos 1 µs después.
+- **Reloj que retrocede** (por ejemplo, una corrección de NTP). Los fallos ya grabados quedaban "en el futuro" y se ignoraban, con lo que la terminal se desbloqueaba sola. Ahora se evalúa desde el último evento.
+- **Desbloqueo desde otra terminal con el reloj desfasado.** Si esa terminal está atrasada, el desbloqueo queda igual después del último fallo. Si está adelantada, el desbloqueo se aplica de inmediato y los fallos siguientes de la terminal bloqueada se graban después de él, así que cuentan.
+
+Riesgo residual: si una terminal graba eventos con el reloj adelantado, el bloqueo en curso puede vencer antes, como mucho por la diferencia de reloj. Conviene mantener las terminales sincronizadas por NTP.
+
 ## Parámetros
 
 La sección `PinLockout` de `Config/appsettings.json` tiene valores por defecto documentados:

@@ -191,6 +191,15 @@ public sealed class ReturnServiceIntegrationTests
             Assert.Equal(original.DiscountAmount, returns.Sum(item => item.DiscountAmount));
             Assert.Equal(original.TaxAmount, returns.Sum(item => item.TaxAmount));
             Assert.Equal(original.Total, returns.Sum(item => item.Total));
+            // Cada línea queda devuelta exactamente por lo vendido: 1 + 2 = 3, 0 + 1 = 1 y 2 + 5 = 7.
+            var soldByLine = await db.OrderDetails.AsNoTracking().Where(item => item.OrderId == sale.OrderId)
+                .ToDictionaryAsync(item => item.Id, item => item.Quantity);
+            var returnIds = returns.Select(item => item.Id).ToArray();
+            var returnedByLine = (await db.ReturnDetails.AsNoTracking().Where(item => returnIds.Contains(item.ReturnId)).ToListAsync())
+                .GroupBy(item => item.OrderDetailId)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+            Assert.Equal(new[] { 3m, 1m, 7m }, sale.LineIds.Select(id => soldByLine[id]).ToArray());
+            Assert.Equal(new[] { 3m, 1m, 7m }, sale.LineIds.Select(id => returnedByLine[id]).ToArray());
             Assert.Equal(original, await LoadOrderSnapshotAsync(sale.OrderId));
         }
         finally
@@ -559,25 +568,28 @@ public sealed class ReturnServiceIntegrationTests
             20m,
             new[] { 3.33m, 7.77m, 1.01m });
         var originalPrices = products.Select(item => item.SalePrice).ToArray();
+        // Las cantidades se aplican por índice de creación; LineIds y ProductIds conservan ese mismo índice.
         var quantities = new[] { 3m, 1m, 7m };
-        try
-        {
-            var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * originalPrices[index], 2, MidpointRounding.AwayFromZero)).Sum();
-            var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
-                _fixture.CashierId, session.Id, null, Guid.NewGuid(),
-                products.Select((product, index) => new CashSaleLineRequest(product.Id, quantities[index])).ToArray(),
-                new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, TaxAmountCalculator.CalculateGrandTotal(subtotal)) },
-                "Venta con redondeo para devolución"));
-            var order = await db.Orders.AsNoTracking().Include(item => item.OrderDetails).SingleAsync(item => item.Id == result.OrderId);
-            var detailsByProduct = order.OrderDetails.ToDictionary(item => item.ProductId);
-            var stockAfter = await db.Products.Where(item => products.Select(product => product.Id).Contains(item.Id)).OrderBy(item => item.Id).Select(item => item.CurrentStock).ToArrayAsync();
-            var orderedProducts = products.OrderBy(item => item.Id).ToArray();
-            return new TestSale(result.OrderId, orderedProducts.Select(product => detailsByProduct[product.Id].Id).ToArray(), orderedProducts.Select(product => product.Id).ToArray(), orderedProducts.Select(item => item.CostPrice).ToArray(), stockAfter, session.Id, cashRegisterCode, session.OpeningAmount, result.Total);
-        }
-        finally
-        {
-            // Los productos son exclusivos del caso y se eliminan con la limpieza de la venta.
-        }
+        var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * originalPrices[index], 2, MidpointRounding.AwayFromZero)).Sum();
+        var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
+            _fixture.CashierId, session.Id, null, Guid.NewGuid(),
+            products.Select((product, index) => new CashSaleLineRequest(product.Id, quantities[index])).ToArray(),
+            new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, TaxAmountCalculator.CalculateGrandTotal(subtotal)) },
+            "Venta con redondeo para devolución"));
+        var order = await db.Orders.AsNoTracking().Include(item => item.OrderDetails).SingleAsync(item => item.Id == result.OrderId);
+        var detailsByProduct = order.OrderDetails.ToDictionary(item => item.ProductId);
+        var productIds = products.Select(product => product.Id).ToArray();
+        var stockById = await db.Products.AsNoTracking().Where(item => productIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.CurrentStock);
+        return new TestSale(
+            result.OrderId,
+            products.Select(product => detailsByProduct[product.Id].Id).ToArray(),
+            productIds,
+            products.Select(item => item.CostPrice).ToArray(),
+            products.Select(product => stockById[product.Id]).ToArray(),
+            session.Id,
+            cashRegisterCode,
+            session.OpeningAmount,
+            result.Total);
     }
 
     /// <summary>Construye una solicitud de devolución de una sola línea.</summary>

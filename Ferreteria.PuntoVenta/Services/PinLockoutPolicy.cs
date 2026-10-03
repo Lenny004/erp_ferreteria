@@ -97,6 +97,44 @@ public static class PinLockoutPolicy
         };
     }
 
+    /// <summary>
+    /// Resolución mínima entre eventos de una terminal: 1 µs, la precisión de <c>timestamp</c> en PostgreSQL.
+    /// </summary>
+    public static readonly TimeSpan EventResolution = TimeSpan.FromTicks(10);
+
+    /// <summary>
+    /// Devuelve el instante con que se evalúa el bloqueo: el reloj local o el último evento de la terminal, el mayor.
+    /// Si el reloj retrocede o el desbloqueo se grabó desde otra terminal con el reloj adelantado,
+    /// los eventos ya registrados no quedan "en el futuro" ni se ignoran.
+    /// </summary>
+    /// <param name="events">Eventos de PIN de la terminal.</param>
+    /// <param name="clockUtc">Hora actual del reloj local en UTC.</param>
+    /// <returns>Instante de evaluación, nunca anterior al último evento.</returns>
+    public static DateTimeOffset ResolveEvaluationTime(IEnumerable<PinLockoutEvent> events, DateTimeOffset clockUtc)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        var latest = events.Select(item => (DateTimeOffset?)item.CreatedAtUtc).Max();
+        return latest is { } last && last > clockUtc ? last : clockUtc;
+    }
+
+    /// <summary>
+    /// Calcula la marca de tiempo del próximo evento de la terminal: el reloj local o el último evento más
+    /// <see cref="EventResolution"/>, el mayor, truncado a microsegundos. Así los eventos de una terminal quedan en
+    /// orden estrictamente creciente aunque el reloj repita el mismo instante o retroceda. Debe llamarse dentro del
+    /// advisory lock <see cref="SalesDomainConstants.PinAttemptAdvisoryLockKey"/>.
+    /// </summary>
+    /// <param name="latestEventUtc">Último evento de PIN registrado para la terminal, si existe.</param>
+    /// <param name="clockUtc">Hora actual del reloj local en UTC.</param>
+    /// <returns>Marca de tiempo estrictamente posterior al último evento.</returns>
+    public static DateTimeOffset NextEventTimestamp(DateTimeOffset? latestEventUtc, DateTimeOffset clockUtc)
+    {
+        var candidate = latestEventUtc is { } last && last + EventResolution > clockUtc
+            ? last + EventResolution
+            : clockUtc;
+        var utc = candidate.ToUniversalTime();
+        return new DateTimeOffset(utc.Ticks - (utc.Ticks % EventResolution.Ticks), TimeSpan.Zero);
+    }
+
     private static TimeSpan CalculateLockoutDuration(PinLockoutOptions options, int lockoutCount)
     {
         var minutes = options.InitialLockoutMinutes

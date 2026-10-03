@@ -157,6 +157,43 @@ public sealed class PinLockoutPolicyTests
         Assert.Equal(1, status.FailedAttempts);
     }
 
+    /// <summary>Con el reloj detenido, cada evento nuevo de la terminal queda estrictamente después del anterior.</summary>
+    [Fact]
+    public void NextEventTimestamp_FrozenClock_IsStrictlyIncreasing()
+    {
+        var first = PinLockoutPolicy.NextEventTimestamp(null, Start);
+        var second = PinLockoutPolicy.NextEventTimestamp(first, Start);
+
+        Assert.Equal(Start, first);
+        Assert.Equal(Start + PinLockoutPolicy.EventResolution, second);
+    }
+
+    /// <summary>Si el reloj retrocede, el evento nuevo igual queda después del último registrado.</summary>
+    [Fact]
+    public void NextEventTimestamp_ClockGoesBack_StaysAfterLastEvent()
+    {
+        var last = Start.AddMinutes(10);
+
+        Assert.Equal(last + PinLockoutPolicy.EventResolution, PinLockoutPolicy.NextEventTimestamp(last, Start));
+    }
+
+    /// <summary>Un desbloqueo grabado con reloj adelantado se aplica y los fallos posteriores cuentan desde cero.</summary>
+    [Fact]
+    public void ResolveEvaluationTime_UnlockStampedAhead_IsHonored()
+    {
+        var unlockAt = Start.AddMinutes(3);
+        var events = Fails(5).Append(new PinLockoutEvent("PIN_UNLOCK", unlockAt)).ToList();
+        events.Add(new PinLockoutEvent("PIN_FAIL", PinLockoutPolicy.NextEventTimestamp(unlockAt, Start.AddMinutes(1))));
+
+        var status = PinLockoutPolicy.Evaluate(
+            events,
+            PinLockoutPolicy.ResolveEvaluationTime(events, Start.AddMinutes(1)),
+            new PinLockoutOptions());
+
+        Assert.False(status.IsLocked);
+        Assert.Equal(1, status.FailedAttempts);
+    }
+
     private static IEnumerable<PinLockoutEvent> Fails(int count) =>
         Enumerable.Range(0, count)
             .Select(index => new PinLockoutEvent("PIN_FAIL", Start.AddSeconds(index)));
