@@ -649,6 +649,8 @@ npm run db:seed
 
 `Ferreteria.PuntoVenta/Config/appsettings.json` apunta al PostgreSQL local (puerto **55432** por defecto).
 
+La sección `Negocio:ZonaHoraria` define la zona horaria usada para el día de negocio y los rangos de reportes del POS.
+
 `tools/Ferreteria.DbApply` queda como herramienta legacy/diagnóstico. **No** es la fuente de verdad: usar Prisma (`ferreteria_backend/prisma/schema.prisma`).
 
 **Empleados demo (solo desarrollo)** — ver [`ferreteria_backend/README.md`](../ferreteria_backend/README.md):

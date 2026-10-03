@@ -1,5 +1,6 @@
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.CashRegister;
 
@@ -92,7 +93,7 @@ public sealed record CashRegisterMovement(
     string Status)
 {
     /// <summary>Hora local de El Salvador para la tabla de caja.</summary>
-    public string LocalTimeText => TimeZoneSupport.ToElSalvadorTime(CreatedAtUtc).ToString("HH:mm");
+    public string LocalTimeText => TimeZoneSupport.ToLocalTime(CreatedAtUtc).ToString("HH:mm");
 }
 
 /// <summary>Resumen calculado de una sesión abierta o cerrada.</summary>

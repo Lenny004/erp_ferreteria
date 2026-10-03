@@ -1,4 +1,5 @@
 using System.Text;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.SalesHistory;
 
@@ -76,43 +77,43 @@ public sealed record SalesHistoryFilter(
 
     /// <summary>Construye los límites UTC de un atajo.</summary>
     /// <param name="shortcut">Atajo de fecha que se desea convertir.</param>
-    /// <param name="clock">Reloj usado para determinar la fecha local actual.</param>
+    /// <param name="calendar">Calendario que determina la fecha y los límites locales.</param>
     /// <returns>Rango UTC semiabierto correspondiente al atajo.</returns>
     public static (DateTime FromUtc, DateTime ToUtc) CreateShortcutRange(
         SalesHistoryDateShortcut shortcut,
-        TimeProvider? clock = null)
+        BusinessCalendar calendar)
     {
-        var localNow = TimeZoneSupport.ToElSalvadorTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+        ArgumentNullException.ThrowIfNull(calendar);
+        var today = calendar.Today();
         var localDate = shortcut switch
         {
-            SalesHistoryDateShortcut.Yesterday => localNow.Date.AddDays(-1),
-            SalesHistoryDateShortcut.Week => StartOfWeek(localNow.Date),
-            SalesHistoryDateShortcut.Month => new DateTime(localNow.Year, localNow.Month, 1),
-            _ => localNow.Date
+            SalesHistoryDateShortcut.Yesterday => today.AddDays(-1),
+            SalesHistoryDateShortcut.Week => StartOfWeek(today),
+            SalesHistoryDateShortcut.Month => new DateOnly(today.Year, today.Month, 1),
+            _ => today
         };
         var endDate = shortcut switch
         {
             SalesHistoryDateShortcut.Yesterday => localDate.AddDays(1),
-            SalesHistoryDateShortcut.Week => localNow.Date.AddDays(1),
+            SalesHistoryDateShortcut.Week => today.AddDays(1),
             SalesHistoryDateShortcut.Month => localDate.AddMonths(1),
             _ => localDate.AddDays(1)
         };
-        return (TimeZoneSupport.ToUtc(localDate), TimeZoneSupport.ToUtc(endDate));
+        return calendar.RangeUtc(localDate, endDate.AddDays(-1));
     }
 
     /// <summary>Convierte fechas locales inclusivas en un rango UTC semiabierto.</summary>
     /// <param name="from">Fecha local inicial, inclusiva.</param>
     /// <param name="to">Fecha local final, inclusiva.</param>
+    /// <param name="calendar">Calendario que realiza la conversión a UTC.</param>
     /// <returns>Rango UTC con el final exclusivo del día siguiente.</returns>
-    public static (DateTime FromUtc, DateTime ToUtc) CreateLocalDateRange(DateOnly from, DateOnly to)
+    public static (DateTime FromUtc, DateTime ToUtc) CreateLocalDateRange(
+        DateOnly from,
+        DateOnly to,
+        BusinessCalendar calendar)
     {
-        if (from > to)
-        {
-            throw new ArgumentException("Desde no puede ser posterior a Hasta.");
-        }
-
-        return (TimeZoneSupport.ToUtc(from.ToDateTime(TimeOnly.MinValue)),
-            TimeZoneSupport.ToUtc(to.AddDays(1).ToDateTime(TimeOnly.MinValue)));
+        ArgumentNullException.ThrowIfNull(calendar);
+        return calendar.RangeUtc(from, to);
     }
 
     /// <summary>Escapa comodines de PostgreSQL para un patrón ILIKE.</summary>
@@ -126,54 +127,10 @@ public sealed record SalesHistoryFilter(
             .Replace("_", "\\_", StringComparison.Ordinal);
     }
 
-    private static DateTime StartOfWeek(DateTime date)
+    private static DateOnly StartOfWeek(DateOnly date)
     {
         int daysSinceMonday = ((int)date.DayOfWeek + 6) % 7;
         return date.AddDays(-daysSinceMonday);
-    }
-}
-
-/// <summary>Conversión controlada entre la hora del POS y UTC.</summary>
-public static class TimeZoneSupport
-{
-    private static readonly TimeSpan ElSalvadorOffset = TimeSpan.FromHours(-6);
-
-    /// <summary>Obtiene la zona de El Salvador o usa UTC-6 como respaldo.</summary>
-    public static TimeZoneInfo ElSalvador { get; } = FindElSalvadorZone();
-
-    /// <summary>Convierte una fecha UTC a hora local de El Salvador.</summary>
-    /// <param name="utc">Fecha que se interpretará como UTC.</param>
-    /// <returns>Fecha convertida a la zona local de El Salvador.</returns>
-    public static DateTime ToElSalvadorTime(DateTime utc)
-    {
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), ElSalvador);
-    }
-
-    /// <summary>Convierte una fecha local de El Salvador a UTC.</summary>
-    /// <param name="local">Fecha local sin información de zona horaria.</param>
-    /// <returns>Fecha convertida a UTC.</returns>
-    public static DateTime ToUtc(DateTime local)
-    {
-        return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), ElSalvador);
-    }
-
-    private static TimeZoneInfo FindElSalvadorZone()
-    {
-        foreach (var id in new[] { "America/El_Salvador", "Central America Standard Time" })
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(id);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-            }
-            catch (InvalidTimeZoneException)
-            {
-            }
-        }
-
-        return TimeZoneInfo.CreateCustomTimeZone("El Salvador UTC-6", ElSalvadorOffset, "El Salvador", "El Salvador");
     }
 }
 

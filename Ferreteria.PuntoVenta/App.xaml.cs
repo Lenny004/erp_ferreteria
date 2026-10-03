@@ -5,6 +5,7 @@ using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -57,6 +58,15 @@ public partial class App : Application
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
                 services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
+                services.AddOptions<BusinessTimeOptions>()
+                    .Bind(context.Configuration.GetSection(BusinessTimeOptions.SectionName))
+                    .Validate(BusinessTimeZone.IsValid,
+                        "La clave de configuración 'Negocio:ZonaHoraria' debe contener una zona horaria válida.")
+                    .ValidateOnStart();
+                services.AddSingleton<BusinessTimeZone>(serviceProvider =>
+                    BusinessTimeZoneFactory.Create(
+                        serviceProvider.GetRequiredService<IOptions<BusinessTimeOptions>>()));
+                services.AddSingleton<BusinessCalendar>();
                 services.Configure<ReturnOptions>(context.Configuration.GetSection(ReturnOptions.SectionName));
                 services.PostConfigure<ReturnOptions>(ReturnOptions.ApplyDefaults);
                 services.AddSingleton(TimeProvider.System);
@@ -117,6 +127,7 @@ public partial class App : Application
         try
         {
             await _host.StartAsync();
+            TimeZoneSupport.Initialize(_host.Services.GetRequiredService<BusinessTimeZone>());
 
             var dbOk = await VerifyDatabaseConnectionAsync();
             if (!dbOk)

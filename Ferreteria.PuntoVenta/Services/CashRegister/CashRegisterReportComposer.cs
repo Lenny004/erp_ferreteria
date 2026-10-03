@@ -1,5 +1,6 @@
 using System.Globalization;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.CashRegister;
 
@@ -98,6 +99,6 @@ public static class CashRegisterReportComposer
 
     private static string FormatDate(DateTime utc)
     {
-        return TimeZoneSupport.ToElSalvadorTime(utc).ToString("dd/MM/yyyy HH:mm");
+        return TimeZoneSupport.ToLocalTime(utc).ToString("dd/MM/yyyy HH:mm");
     }
 }

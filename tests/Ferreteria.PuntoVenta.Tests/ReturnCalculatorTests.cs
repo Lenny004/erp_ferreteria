@@ -6,6 +6,12 @@ namespace Ferreteria.PuntoVenta.Tests;
 /// <summary>Pruebas puras de reglas, crédito, cierre por remanente y comprobante.</summary>
 public sealed class ReturnCalculatorTests
 {
+    /// <summary>Inicializa la zona de negocio usada al formatear la fecha del comprobante.</summary>
+    public ReturnCalculatorTests()
+    {
+        TestBusinessTime.EnsureInitialized();
+    }
+
     /// <summary>Comprueba que dos devoluciones sucesivas cierran exactamente el crédito original.</summary>
     [Fact]
     public void Calculate_SuccessiveReturns_CloseByRemainingCredit()

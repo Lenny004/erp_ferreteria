@@ -1,5 +1,5 @@
 using System.Globalization;
-using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.Returns;
 
@@ -70,7 +70,7 @@ public static class ReturnReceiptComposer
             new string('-', columnWidth),
             FitExact($"Venta: ORD-{shortOrder}", columnWidth),
             FitExact($"Control: {data.ControlNumber ?? "No disponible"}", columnWidth),
-            FitExact($"Fecha venta: {TimeZoneSupport.ToElSalvadorTime(data.SaleCreatedAtUtc):dd/MM/yyyy HH:mm}", columnWidth),
+            FitExact($"Fecha venta: {TimeZoneSupport.ToLocalTime(data.SaleCreatedAtUtc):dd/MM/yyyy HH:mm}", columnWidth),
             new string('-', columnWidth)
         };
 
