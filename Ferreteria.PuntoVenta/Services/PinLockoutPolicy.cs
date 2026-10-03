@@ -5,70 +5,100 @@ namespace Ferreteria.PuntoVenta.Services;
 /// <param name="CreatedAtUtc">Fecha UTC del evento.</param>
 public sealed record PinLockoutEvent(string Action, DateTimeOffset CreatedAtUtc);
 
-/// <summary>Política pura de cinco fallos y dos minutos de bloqueo.</summary>
+/// <summary>Política pura de fallos por terminal y bloqueos progresivos.</summary>
 public static class PinLockoutPolicy
 {
-    /// <summary>Cantidad de fallos consecutivos que activa el bloqueo.</summary>
+    /// <summary>Umbral predeterminado de fallos que activa el bloqueo.</summary>
     public const int MaxAttempts = 5;
 
-    /// <summary>Duración del bloqueo temporal.</summary>
+    /// <summary>Duración predeterminada del primer bloqueo temporal.</summary>
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(2);
 
-    /// <summary>Calcula el estado a partir de eventos del terminal y un reloj inyectado.</summary>
+    /// <summary>Calcula el estado con los parámetros predeterminados.</summary>
     /// <param name="events">Eventos de PIN del terminal.</param>
     /// <param name="nowUtc">Instante actual inyectado.</param>
     /// <returns>Estado calculado del lockout.</returns>
     public static PinAttemptStatus Evaluate(IEnumerable<PinLockoutEvent> events, DateTimeOffset nowUtc)
     {
+        return Evaluate(events, nowUtc, new PinLockoutOptions());
+    }
+
+    /// <summary>
+    /// Calcula el estado a partir de los fallos recientes del terminal.
+    /// </summary>
+    /// <param name="events">Eventos de PIN del terminal.</param>
+    /// <param name="nowUtc">Instante actual inyectado.</param>
+    /// <param name="options">Parámetros de umbral, ventana y progresión.</param>
+    /// <returns>Estado calculado del lockout.</returns>
+    public static PinAttemptStatus Evaluate(
+        IEnumerable<PinLockoutEvent> events,
+        DateTimeOffset nowUtc,
+        PinLockoutOptions options)
+    {
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(options);
+        ValidateOptions(options);
+
+        var windowStart = nowUtc - TimeSpan.FromMinutes(options.WindowMinutes);
         var failedAttempts = 0;
+        var lockoutCount = 0;
         DateTimeOffset? lockedUntil = null;
 
-        foreach (var pinEvent in events.OrderBy(item => item.CreatedAtUtc))
+        foreach (var pinEvent in events
+            .Where(item => string.Equals(item.Action, "PIN_FAIL", StringComparison.Ordinal)
+                && item.CreatedAtUtc >= windowStart
+                && item.CreatedAtUtc <= nowUtc)
+            .OrderBy(item => item.CreatedAtUtc))
         {
-            if (string.Equals(pinEvent.Action, "PIN_OK", StringComparison.Ordinal))
+            if (lockedUntil is { } previousLock)
             {
-                failedAttempts = 0;
+                if (previousLock > pinEvent.CreatedAtUtc)
+                {
+                    continue;
+                }
+
                 lockedUntil = null;
-                continue;
-            }
-
-            if (!string.Equals(pinEvent.Action, "PIN_FAIL", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (lockedUntil is { } previousLock && previousLock <= nowUtc)
-            {
-                failedAttempts = 0;
-                lockedUntil = null;
-            }
-
-            if (lockedUntil is not null)
-            {
-                continue;
             }
 
             failedAttempts++;
-            if (failedAttempts >= MaxAttempts)
+            if (failedAttempts >= options.MaxAttempts)
             {
-                lockedUntil = pinEvent.CreatedAtUtc + LockoutDuration;
+                lockoutCount++;
+                lockedUntil = pinEvent.CreatedAtUtc + CalculateLockoutDuration(options, lockoutCount);
             }
         }
 
         if (lockedUntil is { } expired && expired <= nowUtc)
         {
-            failedAttempts = 0;
             lockedUntil = null;
         }
 
         return new PinAttemptStatus(
             lockedUntil is not null,
             failedAttempts,
-            MaxAttempts,
+            options.MaxAttempts,
             lockedUntil?.UtcDateTime)
         {
             EvaluatedAtUtc = nowUtc.UtcDateTime
         };
+    }
+
+    private static TimeSpan CalculateLockoutDuration(PinLockoutOptions options, int lockoutCount)
+    {
+        var minutes = options.InitialLockoutMinutes
+            * Math.Pow(options.ProgressiveMultiplier, Math.Max(0, lockoutCount - 1));
+        return TimeSpan.FromMinutes(Math.Min(options.MaxLockoutMinutes, minutes));
+    }
+
+    private static void ValidateOptions(PinLockoutOptions options)
+    {
+        if (options.MaxAttempts <= 0
+            || options.WindowMinutes <= 0
+            || options.InitialLockoutMinutes <= 0
+            || options.ProgressiveMultiplier < 1d
+            || options.MaxLockoutMinutes < options.InitialLockoutMinutes)
+        {
+            throw new ArgumentException("La configuración de bloqueo de PIN no es válida.", nameof(options));
+        }
     }
 }

@@ -25,17 +25,20 @@ REVOKE CREATE ON SCHEMA public, purchasing, sales, dte, hr, system FROM pos_app;
 -- system."WebUsers" si está instalada; el POS no recibe permisos sobre ella.
 
 -- Catálogo, clientes e inventario.
-GRANT SELECT, INSERT, UPDATE ON TABLE
+GRANT SELECT ON TABLE
     public."MeasurementTypes",
     public."Families",
     public."Subfamilies",
-    purchasing."Suppliers",
-    public."Products",
-    public."InventoryMovements",
-    public."StockAlerts",
     public."SaleUnits",
     public."ProductSaleUnits",
     public."VolumeDiscounts",
+    public."InventoryMovements"
+TO pos_app;
+
+GRANT SELECT, INSERT, UPDATE ON TABLE
+    purchasing."Suppliers",
+    public."Products",
+    public."StockAlerts",
     public."Customers"
 TO pos_app;
 
@@ -43,7 +46,10 @@ TO pos_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE
     sales."Orders",
     sales."OrderDetails",
-    sales."CashSessions",
+    sales."CashSessions"
+TO pos_app;
+
+GRANT SELECT, INSERT ON TABLE
     sales."Payments",
     sales."Returns",
     sales."ReturnDetails",
@@ -59,13 +65,17 @@ TO pos_app;
 
 -- Identidad POS y configuración de impresión/auditoría.
 GRANT SELECT, INSERT, UPDATE ON TABLE
-    hr."Departments",
-    hr."Positions",
     hr."Employees",
     system."Settings",
-    system."Printers",
-    system."AuditLog"
+    system."Printers"
 TO pos_app;
+
+GRANT SELECT ON TABLE
+    hr."Departments",
+    hr."Positions"
+TO pos_app;
+
+GRANT SELECT, INSERT ON TABLE system."AuditLog" TO pos_app;
 
 -- No hay DELETE en los flujos POS actuales. Si aparece un borrado legítimo,
 -- debe agregarse aquí de forma explícita y documentarse por servicio.

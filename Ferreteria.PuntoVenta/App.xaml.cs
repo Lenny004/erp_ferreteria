@@ -61,6 +61,7 @@ public partial class App : Application
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
                 services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
+                services.Configure<PinLockoutOptions>(context.Configuration.GetSection(PinLockoutOptions.SectionName));
                 services.Configure<AuthorizationOptions>(context.Configuration.GetSection(AuthorizationOptions.SectionName));
                 services.AddOptions<BusinessTimeOptions>()
                     .Bind(context.Configuration.GetSection(BusinessTimeOptions.SectionName))

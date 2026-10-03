@@ -18,23 +18,28 @@ public sealed class PinAttemptService : IPinAttemptService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _clock;
     private readonly string _cashRegisterCode;
+    private readonly PinLockoutOptions _lockoutOptions;
     private readonly ILogger<PinAttemptService> _logger;
     /// <summary>Construye el lockout persistente del terminal configurado.</summary>
     /// <param name="scopeFactory">Fábrica de contextos EF.</param>
     /// <param name="cashRegisterOptions">Configuración de la caja.</param>
     /// <param name="clock">Reloj inyectado para pruebas deterministas.</param>
     /// <param name="logger">Logger sin secretos.</param>
+    /// <param name="lockoutOptions">Parámetros configurables de bloqueo.</param>
     public PinAttemptService(
         IServiceScopeFactory scopeFactory,
         IOptions<CashRegisterOptions> cashRegisterOptions,
         TimeProvider clock,
-        ILogger<PinAttemptService> logger)
+        ILogger<PinAttemptService> logger,
+        IOptions<PinLockoutOptions> lockoutOptions)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         ArgumentNullException.ThrowIfNull(cashRegisterOptions);
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _cashRegisterCode = CashRegisterInputRules.ValidateCashRegisterCode(cashRegisterOptions.Value.Codigo);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(lockoutOptions);
+        _lockoutOptions = lockoutOptions.Value;
     }
 
     /// <inheritdoc />
@@ -44,7 +49,7 @@ public sealed class PinAttemptService : IPinAttemptService
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-            return PinLockoutPolicy.Evaluate(await LoadEventsAsync(db, cancellationToken), _clock.GetUtcNow());
+            return PinLockoutPolicy.Evaluate(await LoadEventsAsync(db, cancellationToken), _clock.GetUtcNow(), _lockoutOptions);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -79,7 +84,7 @@ public sealed class PinAttemptService : IPinAttemptService
                 cancellationToken);
 
             var events = await LoadEventsAsync(db, cancellationToken);
-            var current = PinLockoutPolicy.Evaluate(events, _clock.GetUtcNow());
+            var current = PinLockoutPolicy.Evaluate(events, _clock.GetUtcNow(), _lockoutOptions);
             if (action == SalesDomainConstants.PinAuditActions.PinFail && current.IsLocked)
             {
                 await transaction.CommitAsync(cancellationToken);
@@ -99,7 +104,7 @@ public sealed class PinAttemptService : IPinAttemptService
             await transaction.CommitAsync(cancellationToken);
 
             var updatedEvents = events.Append(new PinLockoutEvent(action, _clock.GetUtcNow()));
-            return PinLockoutPolicy.Evaluate(updatedEvents, _clock.GetUtcNow());
+            return PinLockoutPolicy.Evaluate(updatedEvents, _clock.GetUtcNow(), _lockoutOptions);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -112,13 +117,15 @@ public sealed class PinAttemptService : IPinAttemptService
         FerreteriaDbContext db,
         CancellationToken cancellationToken)
     {
+        var windowStartUtc = _clock.GetUtcNow().UtcDateTime
+            - TimeSpan.FromMinutes(_lockoutOptions.WindowMinutes);
         var rows = await db.AuditLogs.AsNoTracking()
             .Where(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName
                 && item.RecordId == $"Caja:{_cashRegisterCode}"
+                && item.CreatedAt >= windowStartUtc
                 && (item.Action == SalesDomainConstants.PinAuditActions.PinFail
                     || item.Action == SalesDomainConstants.PinAuditActions.PinOk))
             .OrderByDescending(item => item.CreatedAt)
-            .Take(100)
             .Select(item => new { item.Action, item.CreatedAt })
             .ToListAsync(cancellationToken);
 

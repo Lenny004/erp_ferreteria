@@ -3,6 +3,7 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ public sealed class ReturnService : IReturnService
     private readonly ILogger<ReturnService> _logger;
     private readonly PinAuthService _pinAuthService;
     private readonly IPinAttemptService _pinAttemptService;
+    private readonly IAuthorizationGuard _authorizationGuard;
 
     /// <summary>Inicializa el servicio de devoluciones.</summary>
     /// <param name="scopeFactory">Fábrica de contextos EF por operación.</param>
@@ -44,6 +46,7 @@ public sealed class ReturnService : IReturnService
     /// <param name="logger">Logger de fallos técnicos sin datos sensibles.</param>
     /// <param name="pinAuthService">Servicio que valida el PIN del autorizador.</param>
     /// <param name="pinAttemptService">Servicio que aplica el limite de intentos del PIN.</param>
+    /// <param name="authorizationGuard">Guard que valida que el ejecutor sea la sesión activa.</param>
     public ReturnService(
         IServiceScopeFactory scopeFactory,
         IReturnedQuantityReader returnedQuantityReader,
@@ -55,7 +58,8 @@ public sealed class ReturnService : IReturnService
         TimeProvider clock,
         ILogger<ReturnService> logger,
         PinAuthService pinAuthService,
-        IPinAttemptService pinAttemptService)
+        IPinAttemptService pinAttemptService,
+        IAuthorizationGuard authorizationGuard)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _returnedQuantityReader = returnedQuantityReader ?? throw new ArgumentNullException(nameof(returnedQuantityReader));
@@ -71,6 +75,7 @@ public sealed class ReturnService : IReturnService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _pinAuthService = pinAuthService ?? throw new ArgumentNullException(nameof(pinAuthService));
         _pinAttemptService = pinAttemptService ?? throw new ArgumentNullException(nameof(pinAttemptService));
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
     }
 
     /// <inheritdoc />
@@ -151,6 +156,7 @@ public sealed class ReturnService : IReturnService
     public async Task<ReturnResult> CreateReturnAsync(ReturnRequest request, string authorizerPin, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, request.EmployeeId, cancellationToken);
         if (string.IsNullOrWhiteSpace(authorizerPin))
         {
             throw new InvalidReturnException("Ingrese el PIN del autorizador.");

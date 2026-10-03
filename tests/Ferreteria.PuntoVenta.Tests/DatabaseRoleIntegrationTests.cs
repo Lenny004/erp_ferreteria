@@ -66,6 +66,12 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
             new NpgsqlCommand("SELECT COUNT(*) FROM system.\"WebUsers\"", restricted).ExecuteScalarAsync());
         await Assert.ThrowsAsync<PostgresException>(() =>
             new NpgsqlCommand("CREATE TABLE public.pos_app_ddl_forbidden (id integer)", restricted).ExecuteNonQueryAsync());
+        await Assert.ThrowsAsync<PostgresException>(() =>
+            new NpgsqlCommand("UPDATE system.\"AuditLog\" SET \"Action\" = \"Action\" WHERE FALSE", restricted).ExecuteNonQueryAsync());
+        await Assert.ThrowsAsync<PostgresException>(() =>
+            new NpgsqlCommand("UPDATE hr.\"Positions\" SET \"Name\" = \"Name\" WHERE FALSE", restricted).ExecuteNonQueryAsync());
+        await Assert.ThrowsAsync<PostgresException>(() =>
+            new NpgsqlCommand("UPDATE hr.\"Departments\" SET \"Name\" = \"Name\" WHERE FALSE", restricted).ExecuteNonQueryAsync());
     }
 
     /// <summary>Ejecuta apertura, venta, devolución, cierre y lockout usando exclusivamente la conexión <c>pos_app</c>.</summary>
@@ -151,6 +157,7 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
         services.AddDbContext<FerreteriaDbContext>(options => options.UseNpgsql(connectionString));
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(PostgreSqlFixture.Now));
         services.AddOptions<CashRegisterOptions>().Configure(options => options.Codigo = code);
+        services.AddOptions<PinLockoutOptions>();
         services.AddOptions<SalesHistoryOptions>().Configure(options => options.FullHistoryPositionNames = new List<string> { "Administrador" });
         services.Configure<ReturnOptions>(ReturnOptions.ApplyDefaults);
         services.AddOptions<AuthorizationOptions>().Configure(options => options.PuestosAdministracion = new List<string> { "Administrador" });

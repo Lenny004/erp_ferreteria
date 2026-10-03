@@ -39,8 +39,33 @@ public sealed class PinLockoutPersistenceIntegrationTests(PostgreSqlFixture fixt
             clock.Advance(PinLockoutPolicy.LockoutDuration + TimeSpan.FromSeconds(1));
             var unlocked = await attempts.GetStatusAsync();
             Assert.False(unlocked.IsLocked);
-            Assert.Equal(0, unlocked.FailedAttempts);
+            Assert.Equal(PinLockoutPolicy.MaxAttempts, unlocked.FailedAttempts);
+
+            clock.Advance(TimeSpan.FromMinutes(15));
+            var outsideWindow = await attempts.GetStatusAsync();
+            Assert.Equal(0, outsideWindow.FailedAttempts);
         }
+    }
+
+    /// <summary>Un éxito de otro empleado no elimina los fallos acumulados en la terminal.</summary>
+    [Fact]
+    public async Task FallosTerminal_ExitoDeOtroEmpleado_NoReiniciaYBloquea()
+    {
+        var clock = new ManualTimeProvider(PostgreSqlFixture.Now);
+        var code = $"QA-{Guid.NewGuid():N}";
+
+        await using var provider = BuildProvider(code, clock);
+        var attempts = provider.GetRequiredService<IPinAttemptService>();
+        for (var index = 0; index < PinLockoutPolicy.MaxAttempts - 1; index++)
+        {
+            await attempts.RegisterFailedAttemptAsync();
+        }
+
+        await attempts.ResetAsync();
+        var status = await attempts.RegisterFailedAttemptAsync();
+
+        Assert.True(status.IsLocked);
+        Assert.Equal(PinLockoutPolicy.MaxAttempts, status.FailedAttempts);
     }
 
     private ServiceProvider BuildProvider(string code, TimeProvider clock)
@@ -48,6 +73,7 @@ public sealed class PinLockoutPersistenceIntegrationTests(PostgreSqlFixture fixt
         var services = new ServiceCollection();
         services.AddDbContext<FerreteriaDbContext>(options => options.UseNpgsql(fixture.ConnectionString));
         services.AddOptions<CashRegisterOptions>().Configure(options => options.Codigo = code);
+        services.AddOptions<PinLockoutOptions>();
         services.AddSingleton(clock);
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<PinAttemptService>>(
             _ => NullLogger<PinAttemptService>.Instance);

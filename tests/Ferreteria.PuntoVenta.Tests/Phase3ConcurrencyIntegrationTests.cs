@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Security;
 using Xunit;
 
 namespace Ferreteria.PuntoVenta.Tests;
@@ -208,12 +209,14 @@ public sealed class Phase3ConcurrencyIntegrationTests(PostgreSqlFixture fixture)
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.Configure<ReturnOptions>(ReturnOptions.ApplyDefaults);
         services.AddOptions<CashRegisterOptions>().Configure(options => options.Codigo = code);
+        services.AddOptions<PinLockoutOptions>();
         services.AddOptions<SalesHistoryOptions>().Configure(options => options.FullHistoryPositionNames = new List<string> { "Administrador" });
         services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
         services.AddSingleton<IReturnWriter, EfReturnWriter>();
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
         services.AddSingleton<IPinAttemptService, PinAttemptService>();
         services.AddSingleton<PinAuthService>();
+        services.AddSingleton<IAuthorizationGuard, TestAuthorizationGuard>();
         services.AddSingleton<IReturnService, ReturnService>();
         services.AddSingleton<ILogger<PinAttemptService>>(_ => NullLogger<PinAttemptService>.Instance);
         services.AddSingleton<ILogger<ReturnService>>(_ => NullLogger<ReturnService>.Instance);

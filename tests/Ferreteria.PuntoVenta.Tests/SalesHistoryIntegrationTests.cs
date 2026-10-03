@@ -92,6 +92,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 options.UmbralDiferencia = 1m;
                 options.AnchoReporte = 48;
             });
+        services.AddOptions<PinLockoutOptions>();
         services.Configure<ReturnOptions>(ReturnOptions.ApplyDefaults);
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
         services.AddSingleton<IReportService, ReportService>();

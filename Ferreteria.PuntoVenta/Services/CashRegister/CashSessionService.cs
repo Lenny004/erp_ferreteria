@@ -4,6 +4,7 @@ using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ public sealed class CashSessionService : ICashSessionService
     private readonly ICashMovementReader _cashMovementReader;
     private readonly TimeProvider _clock;
     private readonly ILogger<CashSessionService> _logger;
+    private readonly IAuthorizationGuard _authorizationGuard;
 
     /// <summary>Inicializa el servicio de sesiones de caja.</summary>
     /// <param name="scopeFactory">Fábrica de ámbitos para contextos EF independientes.</param>
@@ -34,13 +36,15 @@ public sealed class CashSessionService : ICashSessionService
     /// <param name="logger">Logger de conflictos y fallos técnicos.</param>
     /// <param name="salesHistoryOptions">Puestos de acceso completo compartidos con el historial.</param>
     /// <param name="cashMovementReader">Lector abstracto de devoluciones en efectivo por sesión.</param>
+    /// <param name="authorizationGuard">Guard que valida permiso e identidad de la sesión activa.</param>
     public CashSessionService(
         IServiceScopeFactory scopeFactory,
         IOptions<CashRegisterOptions> options,
         IOptions<SalesHistoryOptions> salesHistoryOptions,
         ICashMovementReader cashMovementReader,
         TimeProvider clock,
-        ILogger<CashSessionService> logger)
+        ILogger<CashSessionService> logger,
+        IAuthorizationGuard authorizationGuard)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         ArgumentNullException.ThrowIfNull(options);
@@ -50,6 +54,7 @@ public sealed class CashSessionService : ICashSessionService
         _cashMovementReader = cashMovementReader ?? throw new ArgumentNullException(nameof(cashMovementReader));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
     }
 
     /// <inheritdoc />
@@ -77,6 +82,7 @@ public sealed class CashSessionService : ICashSessionService
         string? notes,
         CancellationToken cancellationToken = default)
     {
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, employeeId, cancellationToken);
         var normalizedCode = CashRegisterInputRules.ValidateCashRegisterCode(cashRegisterCode);
         var normalizedAmount = CashRegisterInputRules.ValidateAmount(
             openingAmount,
@@ -162,6 +168,7 @@ public sealed class CashSessionService : ICashSessionService
         Guid closedByEmployeeId,
         CancellationToken cancellationToken = default)
     {
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, closedByEmployeeId, cancellationToken);
         var normalizedDeclaredCash = CashRegisterInputRules.ValidateAmount(
             declaredCash,
             "El efectivo contado",

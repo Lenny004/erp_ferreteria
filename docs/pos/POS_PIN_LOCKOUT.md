@@ -2,31 +2,33 @@
 
 ## Unicidad
 
-`EmployeeService.CreateAsync` y `SetPinAsync` abren una transacción y toman `pg_advisory_xact_lock(735928559)`. Luego cargan todos los `PinHash` no nulos de empleados activos e inactivos y verifican el PIN propuesto con bcrypt. Si alguno coincide, se devuelve `ValidationException("Ese PIN no está disponible. Elija otro.")` sin identificar al dueño. Cambiar el PIN por el mismo PIN del propio empleado está permitido porque la comparación excluye su propio registro; el resultado sigue siendo único.
+`EmployeeService.CreateAsync` y `SetPinAsync` verifican los hashes bcrypt dentro de una transacción y bajo el advisory lock de PIN. La auditoría `PIN_CHANGE` no contiene el PIN ni su hash. El login recorre los candidatos activos y rechaza coincidencias duplicadas heredadas.
 
-La auditoría `PIN_CHANGE` se agrega al mismo `FerreteriaDbContext` antes de `SaveChangesAsync` y no contiene el PIN ni el hash. El lock también cubre altas concurrentes para que solo una transacción pueda ganar un PIN.
+## Lockout por terminal
 
-El login no elige arbitrariamente entre datos heredados duplicados: `PinAuthService` verifica todos los candidatos activos ordenados por Id y rechaza si hay más de una coincidencia, registrando solo un warning sin PIN ni Ids.
-
-El costo es aproximadamente `N × tiempo de bcrypt` por alta o cambio, donde `N` es la cantidad de hashes. Con el costo actual puede ser del orden de cientos de milisegundos por hash; debe medirse con el volumen real antes de aumentar el factor bcrypt.
-
-## Lockout persistente
-
-`system.AuditLog` alcanza para esta fase: es append-only, tiene índices por `(TableName, RecordId)` y `CreatedAt`, y sus columnas permiten la representación requerida. No se cambió el esquema ni se agregó DDL.
-
-Cada evento usa:
+El flujo de login no identifica al empleado antes de verificar el PIN; por eso un fallo no se atribuye a una persona. `PinAttemptService` usa `system."AuditLog"` append-only, con:
 
 - `TableName = "pos.PinAttempts"`.
 - `RecordId = "Caja:<código configurado>"`.
-- `Action = "PIN_FAIL"` o `"PIN_OK"`, ambos dentro de `VARCHAR(10)`.
-- `UserId = null` y `NewData` solo con el terminal; nunca contiene el PIN.
+- `Action = "PIN_FAIL"` o `"PIN_OK"`.
+- `NewData` únicamente con el código de terminal; nunca contiene PIN, hash ni identidad inferida.
 
-La consulta del estado filtra `TableName`, `RecordId` y esas dos acciones, ordena por `CreatedAt DESC` y toma los últimos 100 eventos. La función pura `PinLockoutPolicy.Evaluate` reordena los eventos, reinicia con `PIN_OK`, bloquea al quinto fallo por dos minutos y vuelve a cero al vencer. El reloj se inyecta mediante `TimeProvider`.
+`PIN_OK` se registra para auditoría, pero no elimina los fallos de la terminal. `PinLockoutPolicy` ignora ese evento para el cálculo, conserva los fallos dentro de una ventana deslizante y aplica una duración progresiva a cada nuevo bloqueo que ocurra en esa ventana. Al salir los fallos de la ventana, el estado vuelve a cero. Si no se puede leer o escribir la auditoría, el flujo falla cerrado con `PinLockoutUnavailableException`.
 
-`PinAttemptService` persiste tanto el login por PIN como el PIN del autorizador de devoluciones. Si PostgreSQL no responde al consultar o guardar, lanza `PinLockoutUnavailableException`; la UI muestra un mensaje seguro y no permite continuar. La implementación en memoria solo queda como adaptador de compatibilidad para los tests legacy que construyen el servicio sin infraestructura; la instancia de producción siempre usa el constructor registrado por DI.
+## Parámetros
 
-Pruebas puras relevantes: `PinLockoutPolicyTests.Evaluate_CuatroFallos_NoBloquea`, `Evaluate_QuintoFallo_BloqueaDosMinutos`, `Evaluate_BloqueoVencido_ReiniciaRacha` y `Evaluate_PinCorrecto_ReiniciaRacha`.
+La sección `PinLockout` de `Config/appsettings.json` tiene valores por defecto documentados:
 
-La persistencia entre instancias y el vencimiento con `TimeProvider` se cubren en `PinLockoutPersistenceIntegrationTests.LockoutPersistente_SobreviveNuevaInstancia_YVenceAlAvanzarReloj`.
+| Parámetro | Predeterminado | Significado |
+|---|---:|---|
+| `MaxAttempts` | 5 | Fallos recientes que activan un bloqueo. |
+| `WindowMinutes` | 15 | Ventana deslizante de conteo. |
+| `InitialLockoutMinutes` | 2 | Primer bloqueo. |
+| `ProgressiveMultiplier` | 2 | Multiplicador del bloqueo sucesivo. |
+| `MaxLockoutMinutes` | 30 | Tope de duración. |
 
-La cobertura de BD para repetición, concurrencia y duplicados heredados está en `PinUniquenessIntegrationTests`.
+La progresión y la ventana son reglas puras en `PinLockoutPolicy`; `TimeProvider` permite probarlas sin depender del reloj del equipo. No se agregó DDL: los eventos existentes de `system."AuditLog"` son suficientes.
+
+## Pruebas
+
+Las pruebas unitarias cubren cuatro fallos, el umbral, expiración conservando la ventana, éxito de otro empleado, progresión con tope y salida de ventana. `PinLockoutPersistenceIntegrationTests` cubre persistencia entre instancias, vencimiento y el escenario `FallosTerminal_ExitoDeOtroEmpleado_NoReiniciaYBloquea`. Cada caso usa un código de caja único.

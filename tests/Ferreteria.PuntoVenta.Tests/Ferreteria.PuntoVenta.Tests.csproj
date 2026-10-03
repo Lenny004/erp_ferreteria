@@ -50,6 +50,15 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/IReceiptPrintService.cs" Link="Printing/IReceiptPrintService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/SaleReceiptPrinter.cs" Link="Printing/SaleReceiptPrinter.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteConstants.cs" Link="Dte/DteConstants.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteContracts.cs" Link="Dte/DteContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteExceptions.cs" Link="Dte/DteExceptions.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteJsonBuilder.cs" Link="Dte/DteJsonBuilder.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteNumberingService.cs" Link="Dte/DteNumberingService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/DteService.cs" Link="Dte/DteService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/MhContracts.cs" Link="Dte/MhContracts.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/MhApiClient.cs" Link="Dte/MhApiClient.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/FirmadorHttpClient.cs" Link="Dte/FirmadorHttpClient.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Dte/MhOptions.cs" Link="Dte/MhOptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryFilter.cs" Link="SalesHistory/SalesHistoryFilter.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryContracts.cs" Link="SalesHistory/SalesHistoryContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryService.cs" Link="SalesHistory/SalesHistoryService.cs" />
@@ -79,6 +88,7 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/IPinAttemptService.cs" Link="Services/IPinAttemptService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAttemptService.cs" Link="Services/PinAttemptService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinLockoutPolicy.cs" Link="Services/PinLockoutPolicy.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PinLockoutOptions.cs" Link="Services/PinLockoutOptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Security/*.cs" LinkBase="Services/Security" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CrudExceptions.cs" Link="Services/CrudExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/IEmployeeService.cs" Link="Services/IEmployeeService.cs" />

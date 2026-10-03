@@ -4,6 +4,7 @@ using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Models.Dte.Json;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Time;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -60,6 +61,7 @@ public sealed class DteService : IDteService
     private readonly MhOptions _options;
     private readonly ILogger<DteService> _logger;
     private readonly BusinessCalendar _calendar;
+    private readonly IAuthorizationGuard _authorizationGuard;
 
     /// <summary>Crea el servicio DTE con sus dependencias.</summary>
     /// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
@@ -70,6 +72,7 @@ public sealed class DteService : IDteService
     /// <param name="options">Opciones de emisión.</param>
     /// <param name="logger">Logger técnico sin datos sensibles.</param>
     /// <param name="calendar">Calendario de negocio con reloj UTC inyectado.</param>
+    /// <param name="authorizationGuard">Guard que valida el permiso vigente del empleado de sesión.</param>
     public DteService(
         IServiceScopeFactory scopeFactory,
         IDteNumberingService numberingService,
@@ -78,7 +81,8 @@ public sealed class DteService : IDteService
         IMhApiClient mhApiClient,
         IOptions<MhOptions> options,
         ILogger<DteService> logger,
-        BusinessCalendar calendar)
+        BusinessCalendar calendar,
+        IAuthorizationGuard authorizationGuard)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _numberingService = numberingService ?? throw new ArgumentNullException(nameof(numberingService));
@@ -89,6 +93,7 @@ public sealed class DteService : IDteService
         _options = options.Value;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
     }
 
     /// <inheritdoc />
@@ -97,6 +102,7 @@ public sealed class DteService : IDteService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, cancellationToken: cancellationToken);
 
         if (request.OrderId == Guid.Empty)
         {
@@ -200,6 +206,11 @@ public sealed class DteService : IDteService
         Guid employeeId,
         CancellationToken cancellationToken = default)
     {
+        var authorized = await _authorizationGuard.RequireAsync(
+            PosPermission.OperarCaja,
+            employeeId,
+            cancellationToken);
+
         if (string.IsNullOrWhiteSpace(originalControlNumber))
         {
             throw new DteException("Indique el numero de control del DTE original.");
@@ -311,7 +322,7 @@ public sealed class DteService : IDteService
 
             dbContext.DteIssued.Add(note);
 
-            RestoreInventory(dbContext, order, employeeId, reason);
+            RestoreInventory(dbContext, order, authorized.Id, reason);
             order.Status = SalesDomainConstants.OrderStatuses.Cancelled;
             order.UpdatedAt = issuedAtUtc;
 
@@ -356,6 +367,8 @@ public sealed class DteService : IDteService
     /// <inheritdoc />
     public async Task<int> ProcessPendingContingenciesAsync(CancellationToken cancellationToken = default)
     {
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, cancellationToken: cancellationToken);
+
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 

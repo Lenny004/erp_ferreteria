@@ -24,7 +24,7 @@ Las pruebas `SensitiveServiceAuthorizationIntegrationTests` usan el `Authorizati
 | `CustomerService` | `CreateAsync`, `UpdateAsync`, `DeactivateAsync` | `OperarCaja` |
 | `OrderService` | `CreateCashSaleAsync`, `CreateConfectionOrderAsync`, `CompleteConfectionOrderAsync` | `OperarCaja` o `OperarInventario` según el flujo |
 
-`CashSessionService` no implementa `IAuthorizationGuard`; valida empleado activo/permisos dentro de sus propios contratos. `ReturnService` tampoco usa ese guard: valida al ejecutor desde la BD y exige PIN autorizador, con lockout persistente.
+`CashSessionService` y `ReturnService` usan `IAuthorizationGuard` con `PosPermission.OperarCaja`; el guard recarga desde PostgreSQL al empleado de `ICurrentSessionService` y rechaza un identificador actuante distinto antes de escribir. `ReturnService` conserva además el PIN de administrador para autorizar la devolución.
 
 ## Concurrencia y reintentos
 
