@@ -86,6 +86,30 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
         Assert.Equal(await verifyDb.Positions.Where(item => item.Name == "Administrador").Select(item => (Guid?)item.Id).SingleAsync(), state.PositionId);
     }
 
+    /// <summary>Dejar sin puesto al único administrador activo se rechaza y la BD queda igual.</summary>
+    [Fact]
+    public async Task EmployeeService_LastActiveAdministrator_NullPosition_IsRejected()
+    {
+        await using var provider = BuildProvider(fixture.ManagerId, typeof(EmployeeService));
+        var service = provider.GetRequiredService<EmployeeService>();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        var manager = await db.Employees.AsNoTracking().SingleAsync(item => item.Id == fixture.ManagerId);
+        var input = new EmployeeInput(manager.FirstName, manager.LastName, manager.Dui, null, manager.DepartmentId,
+            manager.HireDate, manager.BaseSalary, manager.ContractType, manager.SalaryType, manager.Phone, manager.Email,
+            manager.CanCashier, manager.CanSell);
+
+        var error = await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(manager.Id, input, fixture.ManagerId));
+        Assert.Contains("puesto", error.Message, StringComparison.OrdinalIgnoreCase);
+
+        await using var verifyScope = fixture.Services.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        var state = await verifyDb.Employees.AsNoTracking().Where(item => item.Id == fixture.ManagerId)
+            .Select(item => new { item.IsActive, item.PositionId }).SingleAsync();
+        Assert.True(state.IsActive);
+        Assert.Equal(manager.PositionId, state.PositionId);
+    }
+
     private async Task RunAuthorizationCaseAsync(string operation, string scenario)
     {
         var sessionEmployeeId = scenario == "InsufficientPermission" ? ResolveInsufficientEmployee(operation) : fixture.ManagerId;
@@ -139,7 +163,7 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
     private async Task<AuthorizationProbe> PrepareEmployeeCreateAsync(Guid employeeId)
     {
         var marker = $"QA-EMP-{Guid.NewGuid():N}";
-        var input = new EmployeeInput("QA", marker, null, null, null, DateTime.UtcNow.Date, 0m, "PLAZO_FIJO", "MENSUAL", null, null, false, false);
+        var input = new EmployeeInput("QA", marker, null, await LoadPositionIdAsync("Cajero"), null, DateTime.UtcNow.Date, 0m, "PLAZO_FIJO", "MENSUAL", null, null, false, false);
         return new(typeof(EmployeeService), p => p.GetRequiredService<EmployeeService>().CreateAsync(input, null, employeeId), () => CaptureAsync("employee-create", marker), () => DeleteEmployeesAsync(marker));
     }
 
@@ -376,6 +400,11 @@ public sealed class SensitiveServiceAuthorizationIntegrationTests(PostgreSqlFixt
     private async Task SetProductActiveAsync(Guid id, bool value)
     {
         await using var scope = fixture.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>(); var product = await db.Products.SingleAsync(item => item.Id == id); product.IsActive = value; await db.SaveChangesAsync();
+    }
+
+    private async Task<Guid> LoadPositionIdAsync(string name)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope(); return await scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>().Positions.Where(item => item.Name == name).Select(item => item.Id).SingleAsync();
     }
 
     private async Task<Employee> LoadEmployeeAsync(Guid id)

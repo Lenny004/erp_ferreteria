@@ -131,6 +131,12 @@ public partial class UsuariosView : UserControl
             return;
         }
 
+        if (PositionCombo.SelectedValue is not Guid)
+        {
+            ShowError("Seleccione un puesto: es obligatorio. Si cambió el departamento, vuelva a elegir el puesto.");
+            return;
+        }
+
         var pin = PinBox.Password?.Trim() ?? string.Empty;
         if (!string.IsNullOrEmpty(pin) && (pin.Length != 4 || !pin.All(char.IsDigit)))
         {

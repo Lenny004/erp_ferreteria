@@ -288,6 +288,8 @@ public sealed class EmployeeService(
             throw new ValidationException("El nombre es obligatorio.");
         if (string.IsNullOrWhiteSpace(input.LastName))
             throw new ValidationException("El apellido es obligatorio.");
+        if (input.PositionId is null)
+            throw new ValidationException("El puesto es obligatorio.");
         if (input.BaseSalary < 0)
             throw new ValidationException("El salario base no puede ser negativo.");
         if (!ValidContractTypes.Contains(input.ContractType))
@@ -367,7 +369,8 @@ public sealed class EmployeeService(
             return false;
         }
 
-        if (currentPositionId is not Guid currentPosition || resultingPositionId is not Guid resultingPosition)
+        // Sin puesto actual no hay administrador que perder.
+        if (currentPositionId is not Guid currentPosition)
         {
             return false;
         }
@@ -375,15 +378,23 @@ public sealed class EmployeeService(
         var currentPositionName = await db.Positions
             .Where(position => position.Id == currentPosition)
             .Select(position => position.Name)
-            .SingleAsync(cancellationToken);
-        var resultingPositionName = await db.Positions
-            .Where(position => position.Id == resultingPosition)
-            .Select(position => position.Name)
-            .SingleAsync(cancellationToken);
-        if (!IsAdministrationPosition(currentPositionName)
-            || (!deactivating && IsAdministrationPosition(resultingPositionName)))
+            .SingleOrDefaultAsync(cancellationToken);
+        if (!IsAdministrationPosition(currentPositionName))
         {
             return false;
+        }
+
+        // Un puesto nuevo null o no administrativo cuenta como baja de administrador, igual que desactivar.
+        if (!deactivating && resultingPositionId is Guid resultingPosition)
+        {
+            var resultingPositionName = await db.Positions
+                .Where(position => position.Id == resultingPosition)
+                .Select(position => position.Name)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (IsAdministrationPosition(resultingPositionName))
+            {
+                return false;
+            }
         }
 
         var activeAdministrators = await db.Employees
