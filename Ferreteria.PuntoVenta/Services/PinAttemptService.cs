@@ -1,78 +1,160 @@
+using System.Text.Json;
+using Ferreteria.PuntoVenta.Data;
+using Ferreteria.PuntoVenta.Models;
+using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.CashRegister;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
-/// Implementación en memoria de <see cref="IPinAttemptService"/>.
-/// Política: 5 fallos → bloqueo de 2 minutos (UTC). Thread-safe con lock.
+/// Lockout persistente por terminal usando eventos append-only en <c>system.AuditLog</c>.
 /// </summary>
 public sealed class PinAttemptService : IPinAttemptService
 {
-    private const int MaxAttempts = 5;
-    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(2);
-
-    private readonly object _syncRoot = new();
-    private int _failedAttempts;
-    private DateTime? _lockedUntilUtc;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _clock;
+    private readonly string _cashRegisterCode;
+    private readonly PinLockoutOptions _lockoutOptions;
+    private readonly ILogger<PinAttemptService> _logger;
+    /// <summary>Construye el lockout persistente del terminal configurado.</summary>
+    /// <param name="scopeFactory">Fábrica de contextos EF.</param>
+    /// <param name="cashRegisterOptions">Configuración de la caja.</param>
+    /// <param name="clock">Reloj inyectado para pruebas deterministas.</param>
+    /// <param name="logger">Logger sin secretos.</param>
+    /// <param name="lockoutOptions">Parámetros configurables de bloqueo.</param>
+    public PinAttemptService(
+        IServiceScopeFactory scopeFactory,
+        IOptions<CashRegisterOptions> cashRegisterOptions,
+        TimeProvider clock,
+        ILogger<PinAttemptService> logger,
+        IOptions<PinLockoutOptions> lockoutOptions)
+    {
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentNullException.ThrowIfNull(cashRegisterOptions);
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _cashRegisterCode = CashRegisterInputRules.ValidateCashRegisterCode(cashRegisterOptions.Value.Codigo);
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(lockoutOptions);
+        _lockoutOptions = lockoutOptions.Value;
+    }
 
     /// <inheritdoc />
-    public PinAttemptStatus GetStatus()
+    public async Task<PinAttemptStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        lock (_syncRoot)
+        try
         {
-            ClearExpiredLockout();
-            return BuildStatus();
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            var events = await LoadEventsAsync(db, cancellationToken);
+            return PinLockoutPolicy.Evaluate(
+                events,
+                PinLockoutPolicy.ResolveEvaluationTime(events, _clock.GetUtcNow()),
+                _lockoutOptions);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError(exception, "No se pudo consultar el lockout persistente de PIN.");
+            throw new PinLockoutUnavailableException();
         }
     }
 
     /// <inheritdoc />
-    public PinAttemptStatus RegisterFailedAttempt()
-    {
-        lock (_syncRoot)
-        {
-            ClearExpiredLockout();
+    public Task<PinAttemptStatus> RegisterFailedAttemptAsync(CancellationToken cancellationToken = default) =>
+        AppendEventAsync(SalesDomainConstants.PinAuditActions.PinFail, cancellationToken);
 
-            if (_lockedUntilUtc is not null)
+    /// <inheritdoc />
+    public async Task ResetAsync(CancellationToken cancellationToken = default)
+    {
+        await AppendEventAsync(SalesDomainConstants.PinAuditActions.PinOk, cancellationToken);
+    }
+
+    /// <summary>Agrega un evento persistente de éxito o fallo al historial de la caja.</summary>
+    /// <param name="action">Acción de PIN que se debe registrar.</param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Estado actualizado del lockout.</returns>
+    private async Task<PinAttemptStatus> AppendEventAsync(string action, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({SalesDomainConstants.PinAttemptAdvisoryLockKey})",
+                cancellationToken);
+
+            var events = await LoadEventsAsync(db, cancellationToken);
+            var clockUtc = _clock.GetUtcNow();
+            var current = PinLockoutPolicy.Evaluate(
+                events,
+                PinLockoutPolicy.ResolveEvaluationTime(events, clockUtc),
+                _lockoutOptions);
+            if (action == SalesDomainConstants.PinAuditActions.PinFail && current.IsLocked)
             {
-                return BuildStatus();
+                await transaction.CommitAsync(cancellationToken);
+                return current;
             }
 
-            _failedAttempts++;
-            if (_failedAttempts >= MaxAttempts)
+            // Orden estrictamente creciente por terminal aunque el reloj repita el instante o retroceda.
+            var createdAtUtc = PinLockoutPolicy.NextEventTimestamp(
+                events.Select(item => (DateTimeOffset?)item.CreatedAtUtc).Max(),
+                clockUtc);
+            db.AuditLogs.Add(new AuditLog
             {
-                _lockedUntilUtc = DateTime.UtcNow.Add(LockoutDuration);
-            }
+                Id = Guid.NewGuid(),
+                TableName = SalesDomainConstants.PinAuditActions.TableName,
+                RecordId = $"Caja:{_cashRegisterCode}",
+                Action = action,
+                NewData = JsonSerializer.Serialize(new { terminal = _cashRegisterCode }),
+                CreatedAt = createdAtUtc.UtcDateTime
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
-            return BuildStatus();
+            var updatedEvents = events.Append(new PinLockoutEvent(action, createdAtUtc));
+            return PinLockoutPolicy.Evaluate(updatedEvents, createdAtUtc, _lockoutOptions);
         }
-    }
-
-    /// <inheritdoc />
-    public void Reset()
-    {
-        lock (_syncRoot)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            _failedAttempts = 0;
-            _lockedUntilUtc = null;
+            _logger.LogError(exception, "No se pudo registrar el evento de lockout de PIN {Action}.", action);
+            throw new PinLockoutUnavailableException();
         }
     }
 
-    /// <summary>Si el bloqueo ya venció, reinicia contadores.</summary>
-    private void ClearExpiredLockout()
+    private async Task<IReadOnlyList<PinLockoutEvent>> LoadEventsAsync(
+        FerreteriaDbContext db,
+        CancellationToken cancellationToken)
     {
-        if (_lockedUntilUtc is null || _lockedUntilUtc > DateTime.UtcNow)
-        {
-            return;
-        }
+        var windowStartUtc = _clock.GetUtcNow().UtcDateTime
+            - TimeSpan.FromMinutes(_lockoutOptions.WindowMinutes);
+        var rows = await db.AuditLogs.AsNoTracking()
+            .Where(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName
+                && item.RecordId == $"Caja:{_cashRegisterCode}"
+                && (item.Action == SalesDomainConstants.PinAuditActions.PinUnlock
+                    || (item.CreatedAt >= windowStartUtc
+                        && (item.Action == SalesDomainConstants.PinAuditActions.PinFail
+                            || item.Action == SalesDomainConstants.PinAuditActions.PinOk))))
+            .OrderByDescending(item => item.CreatedAt)
+            .Select(item => new { item.Action, item.CreatedAt })
+            .ToListAsync(cancellationToken);
 
-        _failedAttempts = 0;
-        _lockedUntilUtc = null;
+        return rows
+            .OrderBy(item => item.CreatedAt)
+            .Select(item => new PinLockoutEvent(item.Action, new DateTimeOffset(item.CreatedAt, TimeSpan.Zero)))
+            .ToArray();
     }
+}
 
-    private PinAttemptStatus BuildStatus()
+/// <summary>Indica que no fue posible consultar o persistir el lockout.</summary>
+public sealed class PinLockoutUnavailableException : Exception
+{
+    /// <summary>Inicializa la excepción con un mensaje seguro para el usuario.</summary>
+    public PinLockoutUnavailableException()
+        : base("No se pudo verificar la protección del PIN. Revise la conexión e intente de nuevo.")
     {
-        return new PinAttemptStatus(
-            _lockedUntilUtc is not null,
-            _failedAttempts,
-            MaxAttempts,
-            _lockedUntilUtc);
     }
 }

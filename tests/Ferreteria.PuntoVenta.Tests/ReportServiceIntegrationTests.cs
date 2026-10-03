@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Xunit;
 
@@ -41,7 +42,7 @@ public sealed class ReportServiceIntegrationTests
             22m);
         afterMidnight.Notes = tag + "-00-05";
 
-        var productId = await _fixture.GetAnyProductIdAsync();
+        var productId = await CreateOwnProductAsync();
 
         await _fixture.SeedAsync(db =>
         {
@@ -171,5 +172,14 @@ public sealed class ReportServiceIntegrationTests
             Shortcut: SalesHistoryDateShortcut.None,
             SearchText: tag,
             OrderStatus: SalesDomainConstants.OrderStatuses.Completed);
+    }
+
+    /// <summary>Crea el producto exclusivo usado por el caso de reportes.</summary>
+    /// <returns>Id del producto recién persistido.</returns>
+    private async Task<Guid> CreateOwnProductAsync()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<Ferreteria.PuntoVenta.Data.FerreteriaDbContext>();
+        return (await TestDataFactory.CreateProductsAsync(db, 1, 10m)).Single().Id;
     }
 }

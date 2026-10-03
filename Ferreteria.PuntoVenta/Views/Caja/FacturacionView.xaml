@@ -260,6 +260,7 @@
                             FontWeight="Bold"
                             Margin="14,6,0,20" />
                         <Button
+                            x:Name="FacturarButton"
                             Style="{StaticResource AppPrimaryWideButtonStyle}"
                             Click="OnFacturarClick">
                             <TextBlock

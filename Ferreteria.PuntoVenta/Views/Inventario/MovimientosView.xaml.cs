@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
@@ -44,6 +45,10 @@ public partial class MovimientosView : UserControl
                 .ToList();
             ProductCombo.ItemsSource = _products;
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {
@@ -132,6 +137,10 @@ public partial class MovimientosView : UserControl
         catch (ValidationException vex)
         {
             ShowError(vex.Message);
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {

@@ -134,9 +134,7 @@ public sealed class OrderCashSessionIntegrationTests
     {
         await using var scope = _fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var product = await db.Products.Include(item => item.MeasurementType).OrderBy(item => item.Id).FirstAsync();
-        product.CurrentStock = 100m;
-        await db.SaveChangesAsync();
+        var product = (await TestDataFactory.CreateProductsAsync(db, 1, 100m)).Single();
         return (product.Id, TaxAmountCalculator.CalculateGrandTotal(product.SalePrice));
     }
 

@@ -1,11 +1,14 @@
-﻿using System.Data;
+using System.Data;
 using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Npgsql;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -17,17 +20,29 @@ public sealed class OrderService : IOrderService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly CashRegisterOptions _cashRegisterOptions;
+    private readonly IAuthorizationGuard _authorizationGuard;
+    private readonly TimeProvider _clock;
+    private readonly ILogger<OrderService> _logger;
 
     /// <summary>Inicializa el servicio de órdenes con el alcance de datos y la caja configurada.</summary>
     /// <param name="scopeFactory">Fábrica de ámbitos para crear contextos EF por operación.</param>
     /// <param name="cashRegisterOptions">Configuración del código de caja activa.</param>
+    /// <param name="authorizationGuard">Guard que valida el permiso vigente del empleado.</param>
+    /// <param name="clock">Reloj inyectado para timestamps deterministas.</param>
+    /// <param name="logger">Logger de reintentos sin datos sensibles.</param>
     public OrderService(
         IServiceScopeFactory scopeFactory,
-        IOptions<CashRegisterOptions> cashRegisterOptions)
+        IOptions<CashRegisterOptions> cashRegisterOptions,
+        IAuthorizationGuard authorizationGuard,
+        TimeProvider clock,
+        ILogger<OrderService> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         ArgumentNullException.ThrowIfNull(cashRegisterOptions);
         _cashRegisterOptions = cashRegisterOptions.Value;
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
@@ -41,11 +56,39 @@ public sealed class OrderService : IOrderService
         CreateCashSaleRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarCaja, request.EmployeeId, cancellationToken);
         ValidateCashSaleRequest(request);
+        var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
+        var normalizedRequest = request with { ClientRequestId = clientRequestId };
+
+        try
+        {
+            return await PostgresTransientRetry.ExecuteAsync(
+                retryToken => CreateCashSaleOnceAsync(normalizedRequest, retryToken),
+                (retry, _) => _logger.LogWarning("Reintento de venta POS por conflicto transitorio. Intento {Retry}", retry),
+                cancellationToken);
+        }
+        catch (PostgresUniqueRequestException)
+        {
+            var existing = await FindOrderByClientRequestIdInNewScopeAsync(clientRequestId, cancellationToken)
+                ?? throw new InvalidOrderException("No se pudo recuperar la venta idempotente. Intente de nuevo.");
+            EnsureCashSaleMatches(existing, normalizedRequest);
+            return MapToCashSaleResult(existing);
+        }
+        catch (PostgresTransientOperationException)
+        {
+            throw new InvalidOrderException("Otra caja está vendiendo los mismos productos. Intente de nuevo.");
+        }
+    }
+
+    private async Task<CashSaleResult> CreateCashSaleOnceAsync(
+        CreateCashSaleRequest request,
+        CancellationToken cancellationToken)
+    {
 
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
+        var clientRequestId = request.ClientRequestId!.Value;
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
@@ -54,6 +97,7 @@ public sealed class OrderService : IOrderService
         var existingOrder = await FindOrderByClientRequestIdAsync(dbContext, clientRequestId, cancellationToken);
         if (existingOrder is not null)
         {
+            EnsureCashSaleMatches(existingOrder, request);
             return MapToCashSaleResult(existingOrder);
         }
 
@@ -63,6 +107,7 @@ public sealed class OrderService : IOrderService
             request.EmployeeId,
             cancellationToken);
 
+        var now = _clock.GetUtcNow().UtcDateTime;
         var order = new Order
         {
             Id = Guid.NewGuid(),
@@ -73,27 +118,37 @@ public sealed class OrderService : IOrderService
             OrderType = SalesDomainConstants.OrderTypes.CashRegisterSale,
             Status = SalesDomainConstants.OrderStatuses.Completed,
             Notes = request.Notes,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
+        var products = await LockProductsAsync(dbContext, request.Lines.Select(line => line.ProductId), cancellationToken);
         foreach (var line in request.Lines)
         {
             await AddSaleLineAsync(
                 dbContext,
                 order,
                 line,
+                products,
                 request.EmployeeId,
                 inventoryReason: "Venta de caja",
-                cancellationToken);
+                cancellationToken,
+                now);
         }
 
         ApplyTaxTotals(order);
         ValidatePaymentTotals(request.Payments, order.Total);
-        AddPayments(order, request.Payments, request.CashSessionId);
+        AddPayments(order, request.Payments, request.CashSessionId, now);
 
         dbContext.Orders.Add(order);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsOrderClientRequestUniqueViolation(exception))
+        {
+            throw new PostgresUniqueRequestException(exception);
+        }
         await transaction.CommitAsync(cancellationToken);
 
         return MapToCashSaleResult(order);
@@ -104,11 +159,39 @@ public sealed class OrderService : IOrderService
         CreateConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarInventario, request.EmployeeId, cancellationToken);
         ValidateConfectionOrderRequest(request);
+        var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
+        var normalizedRequest = request with { ClientRequestId = clientRequestId };
+
+        try
+        {
+            return await PostgresTransientRetry.ExecuteAsync(
+                retryToken => CreateConfectionOrderOnceAsync(normalizedRequest, retryToken),
+                (retry, _) => _logger.LogWarning("Reintento de orden de confección por conflicto transitorio. Intento {Retry}", retry),
+                cancellationToken);
+        }
+        catch (PostgresUniqueRequestException)
+        {
+            var existing = await FindOrderByClientRequestIdInNewScopeAsync(clientRequestId, cancellationToken)
+                ?? throw new InvalidOrderException("No se pudo recuperar la orden idempotente. Intente de nuevo.");
+            EnsureConfectionOrderMatches(existing, normalizedRequest);
+            return MapToWorkOrderResult(existing);
+        }
+        catch (PostgresTransientOperationException)
+        {
+            throw new InvalidOrderException("No se pudo registrar la orden por concurrencia. Intente de nuevo.");
+        }
+    }
+
+    private async Task<WorkOrderResult> CreateConfectionOrderOnceAsync(
+        CreateConfectionOrderRequest request,
+        CancellationToken cancellationToken)
+    {
 
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var clientRequestId = request.ClientRequestId ?? Guid.NewGuid();
+        var clientRequestId = request.ClientRequestId!.Value;
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
@@ -117,9 +200,11 @@ public sealed class OrderService : IOrderService
         var existingOrder = await FindOrderByClientRequestIdAsync(dbContext, clientRequestId, cancellationToken);
         if (existingOrder is not null)
         {
+            EnsureConfectionOrderMatches(existingOrder, request);
             return MapToWorkOrderResult(existingOrder);
         }
 
+        var now = _clock.GetUtcNow().UtcDateTime;
         var order = new Order
         {
             Id = Guid.NewGuid(),
@@ -132,8 +217,8 @@ public sealed class OrderService : IOrderService
                 request.CustomerName,
                 request.CustomerPhone,
                 request.Notes),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         foreach (var line in request.Lines)
@@ -144,7 +229,14 @@ public sealed class OrderService : IOrderService
         ApplyTaxTotals(order);
 
         dbContext.Orders.Add(order);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsOrderClientRequestUniqueViolation(exception))
+        {
+            throw new PostgresUniqueRequestException(exception);
+        }
         await transaction.CommitAsync(cancellationToken);
 
         return MapToWorkOrderResult(order);
@@ -208,10 +300,33 @@ public sealed class OrderService : IOrderService
         CompleteConfectionOrderRequest request,
         CancellationToken cancellationToken = default)
     {
+        await RequirePermissionAsync(PosPermission.OperarCaja, request.EmployeeId, cancellationToken);
         if (request.EmployeeId == Guid.Empty)
         {
             throw new InvalidOrderException("La facturacion requiere empleado autenticado.");
         }
+
+        try
+        {
+            return await PostgresTransientRetry.ExecuteAsync(
+                retryToken => CompleteConfectionOrderOnceAsync(request, retryToken),
+                (retry, _) => _logger.LogWarning(
+                    "Conflicto transitorio al facturar confección para {OrderId}; reintento {Attempt}",
+                    request.OrderId,
+                    retry),
+                cancellationToken);
+        }
+        catch (PostgresTransientOperationException exception)
+        {
+            _logger.LogError(exception, "Se agotaron los reintentos transitorios al facturar confección para {OrderId}", request.OrderId);
+            throw new InvalidOrderException("Otra caja está vendiendo los mismos productos. Intente de nuevo.");
+        }
+    }
+
+    private async Task<CashSaleResult> CompleteConfectionOrderOnceAsync(
+        CompleteConfectionOrderRequest request,
+        CancellationToken cancellationToken)
+    {
 
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
@@ -250,6 +365,11 @@ public sealed class OrderService : IOrderService
         }
 
         ValidatePaymentTotals(request.Payments, order.Total);
+        var lockedProducts = await LockProductsAsync(
+            dbContext,
+            order.OrderDetails.Select(detail => detail.ProductId),
+            cancellationToken);
+        var now = _clock.GetUtcNow().UtcDateTime;
 
         var existingPaymentIds = order.Payments.Select(payment => payment.Id).ToHashSet();
         var existingMovementIds = order.InventoryMovements.Select(movement => movement.Id).ToHashSet();
@@ -258,13 +378,14 @@ public sealed class OrderService : IOrderService
         {
             DeductInventoryForCompletedSale(
                 order,
-                detail.Product,
+                lockedProducts[detail.ProductId],
                 detail.Quantity,
                 request.EmployeeId,
-                inventoryReason: "Facturacion de orden de confeccion");
+                inventoryReason: "Facturacion de orden de confeccion",
+                now);
         }
 
-        AddPayments(order, request.Payments, request.CashSessionId);
+        AddPayments(order, request.Payments, request.CashSessionId, now);
 
         // La orden ya existe y está rastreada: los hijos nuevos traen Id asignado y EF los
         // trataría como filas existentes (UPDATE sin filas afectadas). Se registran como altas.
@@ -275,7 +396,7 @@ public sealed class OrderService : IOrderService
 
         order.CashSessionId = request.CashSessionId;
         order.Status = SalesDomainConstants.OrderStatuses.Completed;
-        order.UpdatedAt = DateTime.UtcNow;
+        order.UpdatedAt = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -340,7 +461,84 @@ public sealed class OrderService : IOrderService
     {
         return await dbContext.Orders
             .AsNoTracking()
+            .Include(order => order.OrderDetails)
+            .Include(order => order.Payments)
             .FirstOrDefaultAsync(order => order.ClientRequestId == clientRequestId, cancellationToken);
+    }
+
+    private async Task<Order?> FindOrderByClientRequestIdInNewScopeAsync(
+        Guid clientRequestId,
+        CancellationToken cancellationToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return await FindOrderByClientRequestIdAsync(db, clientRequestId, cancellationToken);
+    }
+
+    private static void EnsureCashSaleMatches(Order existing, CreateCashSaleRequest request)
+    {
+        var linesMatch = existing.OrderDetails
+            .OrderBy(line => line.ProductId)
+            .ThenBy(line => line.Quantity)
+            .Select(line => (line.ProductId, line.Quantity, line.Notes?.Trim()))
+            .SequenceEqual(request.Lines
+                .OrderBy(line => line.ProductId)
+                .ThenBy(line => line.Quantity)
+                .Select(line => (line.ProductId, line.Quantity, line.Notes?.Trim())));
+        var paymentsMatch = existing.Payments
+            .OrderBy(payment => payment.Method)
+            .ThenBy(payment => payment.Amount)
+            .Select(payment => (payment.Method, payment.Amount, payment.Reference?.Trim()))
+            .SequenceEqual(request.Payments
+                .OrderBy(payment => payment.Method.Trim().ToUpperInvariant())
+                .ThenBy(payment => payment.Amount)
+                .Select(payment => (payment.Method.Trim().ToUpperInvariant(), payment.Amount, payment.Reference?.Trim())));
+
+        if (existing.OrderType != SalesDomainConstants.OrderTypes.CashRegisterSale
+            || existing.EmployeeId != request.EmployeeId
+            || existing.CashSessionId != request.CashSessionId
+            || existing.CustomerId != request.CustomerId
+            || !string.Equals(existing.Notes?.Trim(), request.Notes?.Trim(), StringComparison.Ordinal)
+            || !linesMatch
+            || !paymentsMatch)
+        {
+            throw new InvalidOrderException("Esta solicitud ya se registró con otro contenido. Inicie una venta nueva.");
+        }
+    }
+
+    private static void EnsureConfectionOrderMatches(Order existing, CreateConfectionOrderRequest request)
+    {
+        var expectedNotes = OrderNotesFormatter.BuildConfectionOrderNotes(request.CustomerName, request.CustomerPhone, request.Notes);
+        var linesMatch = existing.OrderDetails
+            .OrderBy(line => line.ProductId)
+            .ThenBy(line => line.Quantity)
+            .Select(line => (line.ProductId, line.Quantity, line.Notes?.Trim()))
+            .SequenceEqual(request.Lines
+                .OrderBy(line => line.ProductId)
+                .ThenBy(line => line.Quantity)
+                .Select(line => (line.ProductId, line.Quantity, line.Notes?.Trim())));
+
+        if (existing.OrderType != SalesDomainConstants.OrderTypes.ConfectionWorkOrder
+            || existing.EmployeeId != request.EmployeeId
+            || existing.CustomerId != request.CustomerId
+            || !string.Equals(existing.Notes, expectedNotes, StringComparison.Ordinal)
+            || !linesMatch)
+        {
+            throw new InvalidOrderException("Esta solicitud ya se registró con otro contenido. Inicie una orden nueva.");
+        }
+    }
+
+    private static async Task<Dictionary<Guid, Product>> LockProductsAsync(
+        FerreteriaDbContext dbContext,
+        IEnumerable<Guid> productIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = productIds.Where(id => id != Guid.Empty).Distinct().ToArray(); // El orden de bloqueo lo define PostgreSQL (ORDER BY "id"), no C#: Guid y uuid ordenan distinto.
+        var products = await dbContext.Products
+            .FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = ANY({ids}) ORDER BY \"id\" FOR UPDATE")
+            .Include(product => product.MeasurementType)
+            .ToListAsync(cancellationToken);
+        return products.ToDictionary(product => product.Id);
     }
 
     /// <summary>
@@ -366,9 +564,12 @@ public sealed class OrderService : IOrderService
             throw new InvalidOrderException("No se puede cobrar sin una sesión de caja abierta.");
         }
 
+        // Fila padre primero: FOR SHARE permite ventas concurrentes en la sesión, pero impide que un cierre
+        // (FOR UPDATE) cambie su estado hasta el commit. Después se bloquean los productos.
         var session = await dbContext.CashSessions
+            .FromSqlInterpolated($"SELECT * FROM sales.\"CashSessions\" WHERE \"id\" = {sessionId} FOR SHARE")
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == sessionId, cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         if (session is null)
         {
             throw new InvalidOrderException("La sesión de caja no existe. Abra la caja antes de cobrar.");
@@ -395,11 +596,16 @@ public sealed class OrderService : IOrderService
         FerreteriaDbContext dbContext,
         Order order,
         CashSaleLineRequest line,
+        IReadOnlyDictionary<Guid, Product> products,
         Guid employeeId,
         string inventoryReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTime now)
     {
-        var product = await LoadActiveProductAsync(dbContext, line.ProductId, cancellationToken);
+        if (!products.TryGetValue(line.ProductId, out var product))
+        {
+            throw new ProductNotFoundException(line.ProductId);
+        }
         InventoryQuantityValidator.ValidatePositiveQuantity(line.Quantity, product.MeasurementType.Decimals);
 
         var lineSubtotal = Math.Round(product.SalePrice * line.Quantity, 2, MidpointRounding.AwayFromZero);
@@ -416,7 +622,7 @@ public sealed class OrderService : IOrderService
             Notes = line.Notes
         });
 
-        DeductInventoryForCompletedSale(order, product, line.Quantity, employeeId, inventoryReason);
+        DeductInventoryForCompletedSale(order, product, line.Quantity, employeeId, inventoryReason, now);
     }
 
     private static async Task AddPendingWorkOrderLineAsync(
@@ -467,7 +673,8 @@ public sealed class OrderService : IOrderService
         Product product,
         decimal quantity,
         Guid employeeId,
-        string inventoryReason)
+        string inventoryReason,
+        DateTime now)
     {
         var stockBefore = product.CurrentStock;
         if (stockBefore < quantity)
@@ -477,7 +684,7 @@ public sealed class OrderService : IOrderService
 
         var stockAfter = stockBefore - quantity;
         product.CurrentStock = stockAfter;
-        product.UpdatedAt = DateTime.UtcNow;
+        product.UpdatedAt = now;
 
         order.InventoryMovements.Add(new InventoryMovement
         {
@@ -491,7 +698,7 @@ public sealed class OrderService : IOrderService
             StockAfter = stockAfter,
             EmployeeId = employeeId,
             Reason = inventoryReason,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         });
     }
 
@@ -504,7 +711,8 @@ public sealed class OrderService : IOrderService
     private static void AddPayments(
         Order order,
         IReadOnlyList<CashSalePaymentRequest> payments,
-        Guid? cashSessionId)
+        Guid? cashSessionId,
+        DateTime now)
     {
         foreach (var payment in payments)
         {
@@ -515,7 +723,7 @@ public sealed class OrderService : IOrderService
                 Method = payment.Method.Trim().ToUpperInvariant(),
                 Amount = payment.Amount,
                 Reference = payment.Reference,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now
             });
         }
     }
@@ -584,4 +792,30 @@ public sealed class OrderService : IOrderService
             throw new InvalidOrderException("La suma de pagos debe coincidir con el total de la venta.");
         }
     }
+
+    private async Task RequirePermissionAsync(
+        PosPermission permission,
+        Guid actingEmployeeId,
+        CancellationToken cancellationToken)
+    {
+        await _authorizationGuard.RequireAsync(permission, actingEmployeeId, cancellationToken);
+    }
+
+    private static bool IsOrderClientRequestUniqueViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException postgres
+                && postgres.SqlState == PostgresErrorCodes.UniqueViolation
+                && string.Equals(postgres.ConstraintName, "IdxOrdersClientRequest", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private sealed class PostgresUniqueRequestException(Exception innerException) : Exception(
+        "La solicitud de venta ya fue insertada por otra operación.", innerException);
 }

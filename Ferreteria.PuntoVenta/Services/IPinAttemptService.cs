@@ -1,26 +1,26 @@
 namespace Ferreteria.PuntoVenta.Services;
 
-/// <summary>
-/// Controla intentos fallidos de PIN en el cliente WPF (bloqueo temporal anti fuerza bruta).
-/// El estado vive solo en memoria del proceso; no sustituye el hash bcrypt en <c>hr.Employees.PinHash</c>.
-/// </summary>
+/// <summary>Controla intentos fallidos de PIN mediante eventos persistentes de auditoría.</summary>
 public interface IPinAttemptService
 {
-    /// <summary>Obtiene el estado actual (intentos, bloqueo y tiempo restante).</summary>
-    PinAttemptStatus GetStatus();
+    /// <summary>Obtiene el estado persistente actual del terminal.</summary>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Estado de intentos y bloqueo vigente.</returns>
+    Task<PinAttemptStatus> GetStatusAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Registra un intento fallido. Tras alcanzar el máximo, aplica bloqueo temporal.
-    /// </summary>
+    /// <summary>Registra de forma persistente un fallo y devuelve el estado resultante.</summary>
+    /// <param name="cancellationToken">Token de cancelación.</param>
     /// <returns>Estado actualizado tras el intento.</returns>
-    PinAttemptStatus RegisterFailedAttempt();
+    Task<PinAttemptStatus> RegisterFailedAttemptAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Reinicia contadores tras un PIN correcto o al cerrar el diálogo.</summary>
-    void Reset();
+    /// <summary>Registra un PIN correcto y reinicia la racha persistida.</summary>
+    /// <param name="cancellationToken">Token de cancelación.</param>
+    /// <returns>Una tarea que representa la escritura del evento.</returns>
+    Task ResetAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Estado del bloqueo por intentos fallidos de PIN.</summary>
-/// <param name="IsLocked">True si el teclado PIN debe permanecer bloqueado.</param>
+/// <param name="IsLocked">Indica si el teclado PIN debe permanecer bloqueado.</param>
 /// <param name="FailedAttempts">Cantidad de fallos acumulados en la ventana actual.</param>
 /// <param name="MaxAttempts">Umbral de fallos antes del bloqueo.</param>
 /// <param name="LockedUntilUtc">Fin del bloqueo en UTC, o null si no hay bloqueo.</param>
@@ -30,11 +30,14 @@ public sealed record PinAttemptStatus(
     int MaxAttempts,
     DateTime? LockedUntilUtc)
 {
+    /// <summary>Instante utilizado para calcular el tiempo restante.</summary>
+    public DateTime? EvaluatedAtUtc { get; init; }
+
     /// <summary>Intentos restantes antes del bloqueo.</summary>
     public int RemainingAttempts => Math.Max(0, MaxAttempts - FailedAttempts);
 
-    /// <summary>Tiempo restante de bloqueo (cero si ya expiró o no hay bloqueo).</summary>
+    /// <summary>Tiempo restante de bloqueo, o cero si no está bloqueado.</summary>
     public TimeSpan RemainingLockout => LockedUntilUtc is null
         ? TimeSpan.Zero
-        : LockedUntilUtc.Value - DateTime.UtcNow;
+        : LockedUntilUtc.Value - (EvaluatedAtUtc ?? DateTime.UtcNow);
 }

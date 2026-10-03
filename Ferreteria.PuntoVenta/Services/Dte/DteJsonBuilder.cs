@@ -2,6 +2,7 @@ using System.Globalization;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Models.Dte.Json;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.Dte;
 
@@ -12,7 +13,8 @@ namespace Ferreteria.PuntoVenta.Services.Dte;
 /// <param name="TipoDte">Tipo de DTE (01/03).</param>
 /// <param name="Numbering">Numero de control y codigo de generacion.</param>
 /// <param name="Ambiente">Ambiente activo (00/01).</param>
-/// <param name="IssuedAtLocal">Fecha/hora local de emision.</param>
+/// <param name="IssuedAtLocal">Fecha/hora local de emisión calculada desde UTC en la zona del negocio.</param>
+/// <remarks>El criterio fiscal de fecha/hora de emisión queda a verificar con contador/MH.</remarks>
 public sealed record DteBuildContext(
     Order Order,
     DteConfig Emisor,
@@ -101,7 +103,7 @@ public sealed class DteJsonBuilder : IDteJsonBuilder
                     TipoDocumento = "1",
                     TipoGeneracion = 2,
                     NumeroDocumento = originalDte.GenerationCode.ToString().ToUpperInvariant(),
-                    FechaEmision = originalDte.IssuedAt.ToLocalTime().ToString("yyyy-MM-dd", Invariant)
+                    FechaEmision = TimeZoneSupport.ToLocalTime(originalDte.IssuedAt).ToString("yyyy-MM-dd", Invariant)
                 }
             },
             Emisor = BuildEmisor(context.Emisor),

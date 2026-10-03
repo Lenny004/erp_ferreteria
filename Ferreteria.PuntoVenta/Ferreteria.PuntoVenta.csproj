@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <!-- Genera Ferreteria.PuntoVenta.xml; CS1591 avisa miembros públicos sin /// -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <UserSecretsId>ferreteria-puntoventa-development</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

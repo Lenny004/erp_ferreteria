@@ -2,14 +2,21 @@
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>CRUD de proveedores (esquema <c>purchasing.Suppliers</c>) con validación y auditoría.</summary>
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 public sealed class SupplierService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : ISupplierService
+    IAuditService auditService,
+    IAuthorizationGuard authorizationGuard) : ISupplierService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "purchasing.Suppliers";
 
     /// <inheritdoc />
@@ -18,6 +25,7 @@ public sealed class SupplierService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -44,6 +52,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task<Supplier?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireInventoryOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
@@ -52,6 +61,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task<Guid> CreateAsync(SupplierInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -88,7 +98,7 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("INSERT", TableName, supplier.Id.ToString(),
-            null, new { supplier.Name, supplier.Nit }, userId, cancellationToken);
+            null, new { supplier.Name, supplier.Nit }, actor, cancellationToken);
 
         return supplier.Id;
     }
@@ -96,6 +106,7 @@ public sealed class SupplierService(
     /// <inheritdoc />
     public async Task UpdateAsync(Guid id, SupplierInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -129,12 +140,13 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("UPDATE", TableName, supplier.Id.ToString(),
-            before, new { supplier.Name, supplier.Nit, supplier.Phone }, userId, cancellationToken);
+            before, new { supplier.Name, supplier.Nit, supplier.Phone }, actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireInventoryOperationAsync(userId, cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -151,7 +163,7 @@ public sealed class SupplierService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("DELETE", TableName, supplier.Id.ToString(),
-            new { supplier.Name, IsActive = true }, new { IsActive = false }, userId, cancellationToken);
+            new { supplier.Name, IsActive = true }, new { IsActive = false }, actor, cancellationToken);
     }
 
     private static string? Normalize(string? value) =>
@@ -167,5 +179,13 @@ public sealed class SupplierService(
             throw new ValidationException("Los días de crédito no pueden ser negativos.");
         if (!string.IsNullOrWhiteSpace(input.Email) && !input.Email.Contains('@'))
             throw new ValidationException("El correo electrónico no es válido.");
+    }
+
+    private async Task<Guid> RequireInventoryOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)
+    {
+        return (await _authorizationGuard.RequireAsync(
+            PosPermission.OperarInventario,
+            allowMissingActingEmployee ? null : actingEmployeeId,
+            cancellationToken)).Id;
     }
 }

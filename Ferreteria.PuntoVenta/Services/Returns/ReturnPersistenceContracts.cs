@@ -188,12 +188,17 @@ public sealed class EfReturnWriter : IReturnWriter
             UpdatedAt = record.Header.UpdatedAt
         };
 
+        var productIds = record.InventoryMovements.Select(movement => movement.ProductId).Distinct().ToArray(); // Orden de bloqueo: ORDER BY "id" en PostgreSQL, no en C#.
+        var lockedProducts = await db.Products
+            .FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = ANY({productIds}) ORDER BY \"id\" FOR UPDATE")
+            .ToDictionaryAsync(product => product.Id, cancellationToken);
+
         foreach (var movement in record.InventoryMovements)
         {
-            var product = await db.Products.FromSqlInterpolated($"SELECT * FROM public.\"Products\" WHERE \"id\" = {movement.ProductId} FOR UPDATE").SingleAsync(cancellationToken);
+            var product = lockedProducts[movement.ProductId];
             var stockBefore = product.CurrentStock;
             product.CurrentStock += movement.Quantity;
-            product.UpdatedAt = DateTime.UtcNow;
+            product.UpdatedAt = movement.CreatedAt;
             var inventoryMovement = new InventoryMovement
             {
                 Id = movement.Id,
@@ -308,6 +313,15 @@ public sealed class EfReturnWriter : IReturnWriter
             detail.Restocked)).ToArray();
         var calculation = new ReturnCalculationResult(lines, saleReturn.Subtotal, saleReturn.DiscountAmount, saleReturn.TaxAmount, saleReturn.Total, lines.Sum(line => line.RestockCost), saleReturn.ReturnType);
         var fiscal = new ReturnFiscalDecision(saleReturn.FiscalStatus, null, "Devolución recuperada desde la base de datos.");
-        return new ReturnResult(saleReturn.ClientRequestId, saleReturn.OrderId, calculation, fiscal, saleReturn.Id, saleReturn.AuthorizedByEmployeeId);
+        return new ReturnResult(
+            saleReturn.ClientRequestId,
+            saleReturn.OrderId,
+            calculation,
+            fiscal,
+            saleReturn.Id,
+            saleReturn.AuthorizedByEmployeeId,
+            saleReturn.RefundMethod,
+            saleReturn.RefundAmount,
+            saleReturn.EmployeeId);
     }
 }

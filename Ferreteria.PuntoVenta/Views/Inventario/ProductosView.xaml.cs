@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
@@ -16,17 +17,21 @@ public partial class ProductosView : UserControl
     private readonly IProductCatalogService _catalog;
     private readonly ISupplierService _suppliers;
     private readonly ICurrentSessionService _currentSession;
+    private readonly IAuthorizationGuard _authorizationGuard;
+    private bool _canEdit;
     private Guid? _selectedId;
 
     /// <summary>Inicializa el catálogo e hidrata combos al Loaded.</summary>
     public ProductosView(
         IProductCatalogService catalog,
         ISupplierService suppliers,
-        ICurrentSessionService currentSession)
+        ICurrentSessionService currentSession,
+        IAuthorizationGuard authorizationGuard)
     {
         _catalog = catalog;
         _suppliers = suppliers;
         _currentSession = currentSession;
+        _authorizationGuard = authorizationGuard;
         InitializeComponent();
         Loaded += async (_, _) => await InitializeAsync();
     }
@@ -39,10 +44,25 @@ public partial class ProductosView : UserControl
     {
         try
         {
+            var permissions = await _authorizationGuard.GetGrantedPermissionsAsync();
+            _canEdit = permissions.Contains(PosPermission.AdministrarCatalogo);
+            NewButton.Visibility = _canEdit ? Visibility.Visible : Visibility.Collapsed;
+            SaveButton.Visibility = _canEdit ? Visibility.Visible : Visibility.Collapsed;
+            EditorPanel.IsEnabled = _canEdit;
+            if (!_canEdit)
+            {
+                FormTitle.Text = "Catálogo de productos (solo lectura)";
+                ShowError("Solo un administrador puede modificar precios, costos o productos.");
+            }
+
             FamilyCombo.ItemsSource = await _catalog.GetFamiliesAsync();
             MeasurementCombo.ItemsSource = await _catalog.GetMeasurementTypesAsync();
             SupplierCombo.ItemsSource = await _suppliers.GetSuppliersAsync(null);
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {
@@ -118,6 +138,12 @@ public partial class ProductosView : UserControl
     /// <summary>Crea o actualiza el Product con los datos del formulario.</summary>
     private async void OnGuardarClick(object sender, RoutedEventArgs e)
     {
+        if (!_canEdit)
+        {
+            ShowError("Solo un administrador puede modificar el catálogo.");
+            return;
+        }
+
         HideError();
 
         if (string.IsNullOrWhiteSpace(CodeBox.Text))
@@ -183,6 +209,10 @@ public partial class ProductosView : UserControl
             ClearForm();
             await ReloadAsync();
         }
+        catch (UnauthorizedOperationException uex)
+        {
+            ShowError(uex.Message);
+        }
         catch (ValidationException vex)
         {
             ShowError(vex.Message);
@@ -196,6 +226,12 @@ public partial class ProductosView : UserControl
     /// <summary>Desactiva el producto seleccionado (soft-delete) tras confirmación.</summary>
     private async void OnDesactivarClick(object sender, RoutedEventArgs e)
     {
+        if (!_canEdit)
+        {
+            ShowError("Solo un administrador puede modificar el catálogo.");
+            return;
+        }
+
         if (_selectedId is not { } id)
         {
             return;
@@ -212,6 +248,10 @@ public partial class ProductosView : UserControl
             await _catalog.DeactivateProductAsync(id, CurrentUserId);
             ClearForm();
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException uex)
+        {
+            ShowError(uex.Message);
         }
         catch (Exception ex)
         {

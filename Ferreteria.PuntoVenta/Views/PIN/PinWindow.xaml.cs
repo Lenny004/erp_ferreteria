@@ -34,6 +34,11 @@ public partial class PinWindow : Window
     /// <summary>
     /// Crea la ventana PIN para el módulo indicado (Caja → facturación, Inventario → productos, etc.).
     /// </summary>
+    /// <param name="pinAuth">Servicio que valida el PIN contra los empleados activos.</param>
+    /// <param name="services">Proveedor de servicios para resolver dependencias de la sección solicitada.</param>
+    /// <param name="currentSession">Servicio que mantiene la sesión del empleado autenticado.</param>
+    /// <param name="auditService">Servicio que registra el acceso exitoso al módulo.</param>
+    /// <param name="pinAttemptService">Servicio persistente que controla los intentos y el bloqueo.</param>
     /// <param name="module">Módulo operativo al que se intenta entrar.</param>
     /// <param name="initialSection">Sección inicial del shell tras login (opcional).</param>
     public PinWindow(
@@ -146,9 +151,6 @@ public partial class PinWindow : Window
         if (_validando)
             return;
 
-        if (MostrarBloqueoSiAplica())
-            return;
-
         OcultarError();
 
         if (_pinIngresado.Length >= PinLength || string.IsNullOrEmpty(digito))
@@ -191,7 +193,7 @@ public partial class PinWindow : Window
         if (_validando)
             return;
 
-        if (MostrarBloqueoSiAplica())
+        if (await MostrarBloqueoSiAplicaAsync())
             return;
 
         if (_pinIngresado.Length < PinLength)
@@ -206,14 +208,14 @@ public partial class PinWindow : Window
             var employee = await _pinAuth.ValidatePinAsync(_pinIngresado, _module);
             if (employee is null)
             {
-                var status = _pinAttemptService.RegisterFailedAttempt();
+                var status = await _pinAttemptService.RegisterFailedAttemptAsync();
                 MostrarError(BuildFailedAttemptMessage(status, _module));
                 AnimarError();
                 LimpiarPin();
                 return;
             }
 
-            _pinAttemptService.Reset();
+            await _pinAttemptService.ResetAsync();
             _currentSession.StartSession(employee, _module, _initialSection);
             await _auditService.RecordLoginAsync(employee, _currentSession.CurrentModule!);
 
@@ -257,9 +259,9 @@ public partial class PinWindow : Window
     }
 
     /// <summary>Si hay lockout activo por intentos fallidos, muestra el mensaje y limpia el PIN.</summary>
-    private bool MostrarBloqueoSiAplica()
+    private async Task<bool> MostrarBloqueoSiAplicaAsync()
     {
-        var status = _pinAttemptService.GetStatus();
+        var status = await _pinAttemptService.GetStatusAsync();
         if (!status.IsLocked)
         {
             return false;

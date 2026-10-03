@@ -8,6 +8,7 @@ using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +92,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 options.UmbralDiferencia = 1m;
                 options.AnchoReporte = 48;
             });
+        services.AddOptions<PinLockoutOptions>();
         services.Configure<ReturnOptions>(ReturnOptions.ApplyDefaults);
         services.AddSingleton<ISalesHistoryService, SalesHistoryService>();
         services.AddSingleton<IReportService, ReportService>();
@@ -99,6 +101,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<IReturnWriter, EfReturnWriter>();
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
         services.AddSingleton<IReturnService, ReturnService>();
+        services.AddSingleton<ILogger<PinAttemptService>>(_ => NullLogger<PinAttemptService>.Instance);
         services.AddSingleton<IPinAttemptService, PinAttemptService>();
         services.AddSingleton<PinAuthService>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
@@ -107,6 +110,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         services.AddSingleton<ILogger<AuditService>>(_ => NullLogger<AuditService>.Instance);
         services.AddSingleton<ILogger<CashSessionService>>(_ => NullLogger<CashSessionService>.Instance);
         services.AddSingleton<ILogger<OrderService>>(_ => NullLogger<OrderService>.Instance);
+        services.AddSingleton<IAuthorizationGuard, TestAuthorizationGuard>();
         services.AddSingleton<ILogger<ReturnService>>(_ => NullLogger<ReturnService>.Instance);
         _services = services.BuildServiceProvider();
         TimeZoneSupport.Initialize(_services.GetRequiredService<BusinessTimeZone>());
@@ -164,15 +168,6 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         seed(db);
         await db.SaveChangesAsync();
-    }
-
-    /// <summary>Obtiene el id de un producto semilla para líneas y movimientos.</summary>
-    /// <returns>Id de un producto existente.</returns>
-    public async Task<Guid> GetAnyProductIdAsync()
-    {
-        await using var scope = Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        return await db.Products.OrderBy(product => product.Id).Select(product => product.Id).FirstAsync();
     }
 
     /// <summary>Convierte una hora local de El Salvador en UTC para sembrar datos.</summary>
@@ -709,7 +704,7 @@ public sealed class SalesHistoryIntegrationTests
     [Fact]
     public async Task GetDetailAsync_ReturnsLinesPaymentsDteCreditNotesMovementsAndNotes()
     {
-        var productId = await _fixture.GetAnyProductIdAsync();
+        var productId = await CreateOwnProductAsync();
         var order = PostgreSqlFixture.NewOrder(_fixture.ManagerId, PostgreSqlFixture.Local(2026, 6, 1, 10), SalesDomainConstants.OrderStatuses.Completed);
         order.Notes = "Nota de prueba del detalle";
         var dte = PostgreSqlFixture.NewDte(order.Id, "01", DteConstants.EstadosMh.Procesado, "DET");
@@ -830,5 +825,14 @@ public sealed class SalesHistoryIntegrationTests
             Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(1),
                 $"La página {pageNumber} tardó {stopwatch.Elapsed.TotalMilliseconds:0} ms (criterio: < 1000 ms).");
         }
+    }
+
+    /// <summary>Crea el producto exclusivo usado por el detalle de historial.</summary>
+    /// <returns>Id del producto recién persistido.</returns>
+    private async Task<Guid> CreateOwnProductAsync()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return (await TestDataFactory.CreateProductsAsync(db, 1, 10m)).Single().Id;
     }
 }
