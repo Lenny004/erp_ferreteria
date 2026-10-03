@@ -31,9 +31,11 @@ GRANT SELECT ON TABLE
     public."Subfamilies",
     public."SaleUnits",
     public."ProductSaleUnits",
-    public."VolumeDiscounts",
-    public."InventoryMovements"
+    public."VolumeDiscounts"
 TO pos_app;
+
+-- Kardex: la caja inserta movimientos en ventas, devoluciones e inventario, pero nunca los modifica.
+GRANT SELECT, INSERT ON TABLE public."InventoryMovements" TO pos_app;
 
 GRANT SELECT, INSERT, UPDATE ON TABLE
     purchasing."Suppliers",

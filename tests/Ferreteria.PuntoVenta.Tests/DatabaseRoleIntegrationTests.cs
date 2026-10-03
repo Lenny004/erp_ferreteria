@@ -119,8 +119,9 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
                 await pinAttempts.RegisterFailedAttemptAsync();
             }
             Assert.True((await pinAttempts.GetStatusAsync()).IsLocked);
+            // Un PIN_OK queda auditado, pero ya no borra los fallos de la terminal: el bloqueo sigue vigente.
             await pinAttempts.ResetAsync();
-            Assert.False((await pinAttempts.GetStatusAsync()).IsLocked);
+            Assert.True((await pinAttempts.GetStatusAsync()).IsLocked);
 
             await cash.CloseAsync(sessionId, total, "QA cierre pos_app", fixture.ManagerId);
 

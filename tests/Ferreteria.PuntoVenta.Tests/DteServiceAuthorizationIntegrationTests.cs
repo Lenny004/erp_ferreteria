@@ -53,7 +53,9 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
     public async Task EmitCreditNote_Authorized_ReachesBusinessValidation()
     {
         await using var provider = BuildProvider(fixture.ManagerId, new FakeMhApiClient());
-        var exception = await Assert.ThrowsAsync<DteException>(() =>
+        // Según el estado del fixture puede faltar la configuración del emisor (DteConfigurationException) o el DTE original;
+        // ambas son DteException posteriores al guard, nunca UnauthorizedOperationException.
+        var exception = await Assert.ThrowsAnyAsync<DteException>(() =>
             provider.GetRequiredService<IDteService>().EmitCreditNoteAsync("QA-INEXISTENTE", "QA", fixture.ManagerId));
 
         Assert.Contains("DTE", exception.Message, StringComparison.OrdinalIgnoreCase);
