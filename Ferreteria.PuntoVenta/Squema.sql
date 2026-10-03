@@ -3,6 +3,13 @@
 -- Versión: 3.0.0-ferreteria | Motor: PostgreSQL 14+ | ORM: EF Core + Npgsql / Prisma
 -- Convención de columnas: minúsculas para id/code/name/description/barcode/phone/
 --   email/address/notes/key/value; PascalCase para el resto (alineado con Prisma).
+-- FUENTE DE VERDAD: las migraciones de Prisma del backend (ferreteria_backend,
+--   prisma/migrations, rama desarrollo). Este archivo es solo una REFERENCIA PARCIAL que usa
+--   el fixture de pruebas del POS; no incluye las tablas de la tienda web (system."Shop*").
+--   Migraciones reflejadas aquí (solo en tablas presentes): 2_pos_devoluciones,
+--   3_pos_vkpistoday_zona_horaria, 4_qa_seguridad, 5_qa_seguimiento (sin efecto: solo ShopPayments),
+--   6_qa_cancelacion_tienda, 7_qa_movimientos_tienda_validacion y 8_qa_notas_recepcion.
+--   Ver docs/pos/POS_SQUEMA_REFERENCIA.md.
 -- =============================================================================
 
 -- Extensiones necesarias
@@ -675,6 +682,72 @@ CREATE TRIGGER "TrgWebUserTimestamp"
 BEFORE UPDATE ON system."WebUsers"
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_timestamp();
 
+-- =============================================================================
+-- QA SEGURIDAD (backend) — system."WebUsers"."TokenVersion"
+-- Origen: ferreteria_backend, prisma/migrations/4_qa_seguridad/migration.sql
+--   (backend PR #17, squash 66c01d1; rama desarrollo).
+-- Copiado literal solo para las tablas que existen en este esquema. Las sentencias de la misma
+-- migración sobre system."ShopCustomers" y system."ShopPayments" no se copian porque esas tablas
+-- de la tienda web no forman parte de Squema.sql. La caja WPF no lee ni escribe WebUsers.
+-- No editar aquí sin actualizar primero el backend.
+-- =============================================================================
+-- Migración aditiva de seguridad: rotación de sesiones y auditoría de pagos.
+ALTER TABLE system."WebUsers"
+  ADD COLUMN "TokenVersion" INTEGER NOT NULL DEFAULT 0;
+
+-- =============================================================================
+-- QA BACKEND (migraciones 5 a 8) - columnas nuevas en tablas que sí existen aquí
+-- Origen: ferreteria_backend, rama desarrollo, prisma/migrations/:
+--   6_qa_cancelacion_tienda, 7_qa_movimientos_tienda_validacion y 8_qa_notas_recepcion.
+-- Sentencias copiadas literalmente, salvo las omisiones siguientes:
+--   - 5_qa_seguimiento solo altera system."ShopPayments" (CustomerReference, CustomerReferenceAt):
+--     esa tabla de la tienda web no está en este esquema; no se copia nada.
+--   - 6_qa_cancelacion_tienda: se omite la FK "FKInventoryMovementsShopOrder" hacia
+--     system."ShopOrders" (tabla ausente aquí) y, por eso, también su VALIDATE CONSTRAINT de la 7.
+--     La columna "ShopOrderId" y su índice sí se copian.
+--   - 8_qa_notas_recepcion: se omite `SET LOCAL lock_timeout = '5s';` porque solo regula la
+--     ejecución de esa migración en `prisma migrate deploy`, no la estructura.
+-- La caja WPF no mapea purchasing."PurchaseOrders" en EF ni lee "EmployeeId" de esa tabla;
+-- InventoryMovements."ShopOrderId" es NULL-able y la caja no la escribe (queda NULL).
+-- No editar aquí sin actualizar primero el backend.
+-- =============================================================================
+-- (6_qa_cancelacion_tienda)
+ALTER TABLE purchasing."PurchaseOrders"
+  ALTER COLUMN "EmployeeId" DROP NOT NULL;
+
+ALTER TABLE purchasing."PurchaseOrders"
+  ADD COLUMN "CreatedByWebUserId" UUID NULL;
+
+ALTER TABLE purchasing."PurchaseOrders"
+  ADD CONSTRAINT "FKPurchaseOrdersCreatedByWebUser"
+  FOREIGN KEY ("CreatedByWebUserId")
+  REFERENCES system."WebUsers"("id")
+  ON DELETE NO ACTION
+  ON UPDATE NO ACTION;
+
+CREATE INDEX "IdxPurchaseOrdersCreatedByWebUser"
+  ON purchasing."PurchaseOrders"("CreatedByWebUserId");
+
+ALTER TABLE public."InventoryMovements"
+  ADD COLUMN "ShopOrderId" UUID NULL;
+
+-- (7_qa_movimientos_tienda_validacion)
+CREATE INDEX "IdxInvMovShopOrder"
+  ON public."InventoryMovements"("ShopOrderId");
+
+-- (8_qa_notas_recepcion)
+ALTER TABLE purchasing."PurchaseOrders"
+  ADD COLUMN "ReceivedByWebUserId" UUID NULL;
+
+ALTER TABLE purchasing."PurchaseOrders"
+  ADD CONSTRAINT "FKPurchaseOrdersReceivedByWebUser"
+  FOREIGN KEY ("ReceivedByWebUserId")
+  REFERENCES system."WebUsers"("id")
+  ON DELETE NO ACTION
+  ON UPDATE NO ACTION;
+
+CREATE INDEX "IdxPurchaseOrdersReceivedByWebUser"
+  ON purchasing."PurchaseOrders"("ReceivedByWebUserId");
 -- Bitácora de auditoría para cambios críticos
 CREATE TABLE system."AuditLog" (
     "id"        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -764,14 +837,23 @@ JOIN public."Products" p ON al."ProductId" = p."id"
 WHERE al."IsResolved" = FALSE
 ORDER BY al."CreatedAt" DESC;
 
--- KPIs de ventas del día
+-- KPIs de ventas del día (corte de día en America/El_Salvador).
+-- Origen: ferreteria_backend, docs/pos/3_pos_vkpistoday_zona_horaria_squema.sql
+--   (backend PR #15, squash 7d0e72c; migración Prisma 3_pos_vkpistoday_zona_horaria).
+-- Copiado literal; no editar aquí sin actualizar primero el backend.
+-- 3_pos_vkpistoday_zona_horaria: sales."VKpisToday" con el corte de día en America/El_Salvador.
+-- Origen: prisma/migrations/3_pos_vkpistoday_zona_horaria/migration.sql (misma sentencia, carácter por carácter;
+-- tests-db/pos-vkpistoday-zona-horaria.test.ts lo verifica).
+-- Para Ferretería Caja: reemplaza la definición de sales."VKpisToday" de la sección VISTAS de
+-- Ferreteria.PuntoVenta/Squema.sql. Es idempotente (CREATE OR REPLACE VIEW) y no toca datos.
 CREATE OR REPLACE VIEW sales."VKpisToday" AS
 SELECT
-    COUNT(*)                       AS "TotalOrders",
-    COALESCE(SUM(o."total"), 0)    AS "TotalAmount",
-    COALESCE(AVG(o."total"), 0)    AS "AvgTicket"
+    COUNT(*)                    AS "TotalOrders",
+    COALESCE(SUM(o."total"), 0) AS "TotalAmount",
+    COALESCE(AVG(o."total"), 0) AS "AvgTicket"
 FROM sales."Orders" o
-WHERE o."CreatedAt"::date = CURRENT_DATE
+WHERE (o."CreatedAt" AT TIME ZONE 'America/El_Salvador')::date
+        = (now() AT TIME ZONE 'America/El_Salvador')::date
   AND o."status" = 'COMPLETADA';
 
 -- =============================================================================

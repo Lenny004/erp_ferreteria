@@ -5,6 +5,7 @@ using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Returns;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -190,6 +191,15 @@ public sealed class ReturnServiceIntegrationTests
             Assert.Equal(original.DiscountAmount, returns.Sum(item => item.DiscountAmount));
             Assert.Equal(original.TaxAmount, returns.Sum(item => item.TaxAmount));
             Assert.Equal(original.Total, returns.Sum(item => item.Total));
+            // Cada línea queda devuelta exactamente por lo vendido: 1 + 2 = 3, 0 + 1 = 1 y 2 + 5 = 7.
+            var soldByLine = await db.OrderDetails.AsNoTracking().Where(item => item.OrderId == sale.OrderId)
+                .ToDictionaryAsync(item => item.Id, item => item.Quantity);
+            var returnIds = returns.Select(item => item.Id).ToArray();
+            var returnedByLine = (await db.ReturnDetails.AsNoTracking().Where(item => returnIds.Contains(item.ReturnId)).ToListAsync())
+                .GroupBy(item => item.OrderDetailId)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+            Assert.Equal(new[] { 3m, 1m, 7m }, sale.LineIds.Select(id => soldByLine[id]).ToArray());
+            Assert.Equal(new[] { 3m, 1m, 7m }, sale.LineIds.Select(id => returnedByLine[id]).ToArray());
             Assert.Equal(original, await LoadOrderSnapshotAsync(sale.OrderId));
         }
         finally
@@ -319,20 +329,21 @@ public sealed class ReturnServiceIntegrationTests
         var sale = await CreateRealCashSaleAsync(code, 2m);
         try
         {
-            var attempts = new PinAttemptService();
+            var attempts = new TestPinAttemptService(TimeProvider.System);
             using var provider = BuildProvider(new EfReturnWriter(), attempts);
             var service = provider.GetRequiredService<IReturnService>();
             var before = await LoadReturnStateSnapshotAsync(sale);
 
             var cashierPin = CreateRequest(sale.OrderId, sale.LineIds[0], _fixture.CashierId, 1m);
             var cashierException = await Assert.ThrowsAsync<InvalidReturnException>(() => service.CreateReturnAsync(cashierPin, "0000"));
-            Assert.Contains("historial", cashierException.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("PIN", cashierException.Message, StringComparison.OrdinalIgnoreCase);
             await AssertUnchangedAsync(sale, before);
 
             var badPin = cashierPin with { ClientRequestId = Guid.NewGuid() };
             var badPinException = await Assert.ThrowsAsync<InvalidReturnException>(() => service.CreateReturnAsync(badPin, "9999"));
             Assert.Contains("PIN", badPinException.Message, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(1, attempts.GetStatus().FailedAttempts);
+            Assert.Equal(cashierException.Message, badPinException.Message);
+            Assert.Equal(2, attempts.GetCurrentStatus().FailedAttempts);
             await AssertUnchangedAsync(sale, before);
 
             var maria = cashierPin with { ClientRequestId = Guid.NewGuid(), EmployeeId = _fixture.NonCashierId };
@@ -411,9 +422,14 @@ public sealed class ReturnServiceIntegrationTests
                 RefundAmount = sale.Total
             };
             var before = await LoadReturnStateSnapshotAsync(sale);
+            var pinOkBefore = await CountPinOkEventsAsync();
             var exception = await Assert.ThrowsAsync<InvalidReturnException>(() => BuildService().CreateReturnAsync(request, "1234"));
             Assert.Contains(code, exception.Message, StringComparison.OrdinalIgnoreCase);
             await AssertUnchangedAsync(sale, before);
+
+            // El PIN del autorizador era válido: el lockout persistente registra exactamente un PIN_OK,
+            // fuera de la transacción de la devolución (que no dejó filas).
+            Assert.Equal(pinOkBefore + 1, await CountPinOkEventsAsync());
         }
         finally
         {
@@ -475,6 +491,16 @@ public sealed class ReturnServiceIntegrationTests
         }
     }
 
+    /// <summary>Cuenta los eventos PIN_OK del lockout persistente en <c>system.AuditLog</c>.</summary>
+    /// <returns>Cantidad de eventos de PIN correcto registrados.</returns>
+    private async Task<int> CountPinOkEventsAsync()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return await db.AuditLogs.CountAsync(item =>
+            item.TableName == SalesDomainConstants.PinAuditActions.TableName
+            && item.Action == SalesDomainConstants.PinAuditActions.PinOk);
+    }
     /// <summary>Construye el servicio compartido por el fixture, con las implementaciones reales.</summary>
     /// <returns>Servicio de devoluciones configurado contra PostgreSQL.</returns>
     private IReturnService BuildService() => _fixture.Services.GetRequiredService<IReturnService>();
@@ -490,12 +516,14 @@ public sealed class ReturnServiceIntegrationTests
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IOptions<ReturnOptions>>(Options.Create(ReturnOptions.CreateDefault()));
         services.AddOptions<CashRegisterOptions>().Configure(options => options.Codigo = CurrentCashRegisterCode());
+        services.AddOptions<PinLockoutOptions>();
         services.AddOptions<SalesHistoryOptions>().Configure(options => options.FullHistoryPositionNames = new List<string> { "Administrador" });
         services.AddSingleton<IReturnedQuantityReader, ReturnDetailsReturnedQuantityReader>();
         services.AddSingleton(writer);
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
-        services.AddSingleton<IPinAttemptService>(pinAttempts ?? new PinAttemptService());
+        services.AddSingleton<IPinAttemptService>(pinAttempts ?? new TestPinAttemptService(TimeProvider.System));
         services.AddSingleton<PinAuthService>();
+        services.AddSingleton<IAuthorizationGuard, TestAuthorizationGuard>();
         services.AddSingleton<IReturnService, ReturnService>();
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<ReturnService>>(NullLogger<ReturnService>.Instance);
         return services.BuildServiceProvider();
@@ -512,7 +540,7 @@ public sealed class ReturnServiceIntegrationTests
         var ownSession = session ?? await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 10m, "Venta de devolución");
         await using var scope = _fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var product = await db.Products.OrderBy(item => item.Id).FirstAsync();
+        var product = (await TestDataFactory.CreateProductsAsync(db, 1, 20m)).Single();
         var stockBeforeSale = product.CurrentStock;
         var subtotal = Math.Round(product.SalePrice * quantity, 2, MidpointRounding.AwayFromZero);
         var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
@@ -534,37 +562,34 @@ public sealed class ReturnServiceIntegrationTests
         var session = await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 10m, "Venta de redondeo");
         await using var scope = _fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var products = await db.Products.OrderBy(item => item.Id).Take(3).ToListAsync();
+        var products = await TestDataFactory.CreateProductsAsync(
+            db,
+            3,
+            20m,
+            new[] { 3.33m, 7.77m, 1.01m });
         var originalPrices = products.Select(item => item.SalePrice).ToArray();
+        // Las cantidades se aplican por índice de creación; LineIds y ProductIds conservan ese mismo índice.
         var quantities = new[] { 3m, 1m, 7m };
-        var prices = new[] { 3.33m, 7.77m, 1.01m };
-        for (var index = 0; index < products.Count; index++)
-        {
-            products[index].SalePrice = prices[index];
-        }
-        await db.SaveChangesAsync();
-        try
-        {
-            var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * prices[index], 2, MidpointRounding.AwayFromZero)).Sum();
-            var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
-                _fixture.CashierId, session.Id, null, Guid.NewGuid(),
-                products.Select((product, index) => new CashSaleLineRequest(product.Id, quantities[index])).ToArray(),
-                new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, TaxAmountCalculator.CalculateGrandTotal(subtotal)) },
-                "Venta con redondeo para devolución"));
-            var order = await db.Orders.AsNoTracking().Include(item => item.OrderDetails).SingleAsync(item => item.Id == result.OrderId);
-            var detailsByProduct = order.OrderDetails.ToDictionary(item => item.ProductId);
-            var stockAfter = await db.Products.Where(item => products.Select(product => product.Id).Contains(item.Id)).OrderBy(item => item.Id).Select(item => item.CurrentStock).ToArrayAsync();
-            var orderedProducts = products.OrderBy(item => item.Id).ToArray();
-            return new TestSale(result.OrderId, orderedProducts.Select(product => detailsByProduct[product.Id].Id).ToArray(), orderedProducts.Select(product => product.Id).ToArray(), orderedProducts.Select(item => item.CostPrice).ToArray(), stockAfter, session.Id, cashRegisterCode, session.OpeningAmount, result.Total);
-        }
-        finally
-        {
-            for (var index = 0; index < products.Count; index++)
-            {
-                products[index].SalePrice = originalPrices[index];
-            }
-            await db.SaveChangesAsync();
-        }
+        var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * originalPrices[index], 2, MidpointRounding.AwayFromZero)).Sum();
+        var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
+            _fixture.CashierId, session.Id, null, Guid.NewGuid(),
+            products.Select((product, index) => new CashSaleLineRequest(product.Id, quantities[index])).ToArray(),
+            new[] { new CashSalePaymentRequest(SalesDomainConstants.PaymentMethods.Cash, TaxAmountCalculator.CalculateGrandTotal(subtotal)) },
+            "Venta con redondeo para devolución"));
+        var order = await db.Orders.AsNoTracking().Include(item => item.OrderDetails).SingleAsync(item => item.Id == result.OrderId);
+        var detailsByProduct = order.OrderDetails.ToDictionary(item => item.ProductId);
+        var productIds = products.Select(product => product.Id).ToArray();
+        var stockById = await db.Products.AsNoTracking().Where(item => productIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.CurrentStock);
+        return new TestSale(
+            result.OrderId,
+            products.Select(product => detailsByProduct[product.Id].Id).ToArray(),
+            productIds,
+            products.Select(item => item.CostPrice).ToArray(),
+            products.Select(product => stockById[product.Id]).ToArray(),
+            session.Id,
+            cashRegisterCode,
+            session.OpeningAmount,
+            result.Total);
     }
 
     /// <summary>Construye una solicitud de devolución de una sola línea.</summary>
@@ -616,7 +641,7 @@ public sealed class ReturnServiceIntegrationTests
             await db.Returns.CountAsync(item => item.OrderId == sale.OrderId),
             await db.ReturnDetails.CountAsync(item => item.OrderDetailId == sale.LineIds[0]),
             await db.CashMovements.CountAsync(item => item.CashSessionId == sale.SessionId),
-            await db.AuditLogs.CountAsync(),
+            await db.AuditLogs.CountAsync(item => item.TableName != SalesDomainConstants.PinAuditActions.TableName),
             await db.InventoryMovements.CountAsync(item => item.OrderId == sale.OrderId && item.MovementType == SalesDomainConstants.InventoryMovementTypes.ReturnInflow),
             await db.Products.Where(item => item.Id == sale.ProductIds[0]).Select(item => item.CurrentStock).SingleAsync());
     }

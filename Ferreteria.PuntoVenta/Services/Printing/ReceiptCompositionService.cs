@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
+using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -89,12 +90,12 @@ public sealed class ReceiptCompositionService : IReceiptCompositionService
             // A VERIFICAR con contador / normativa MH: validez y leyenda del comprobante interno.
             return _documentFactory.Create(
                 new ReceiptSaleData(order.Id, BuildEmployeeName(order.Employee), customerName, customerDocument,
-                    items, order.Subtotal, order.TaxAmount, order.Total, paymentMethod, amountPaid, order.CreatedAt.ToLocalTime()),
+                    items, order.Subtotal, order.TaxAmount, order.Total, paymentMethod, amountPaid, TimeZoneSupport.ToLocalTime(order.CreatedAt)),
                 MapIssuer(emisor), null, _printingOptions.InternalReceiptFooter, isReprint);
         }
 
         var codigoGeneracion = dte.GenerationCode.ToString().ToUpperInvariant();
-        var issuedLocal = dte.IssuedAt.ToLocalTime();
+        var issuedLocal = TimeZoneSupport.ToLocalTime(dte.IssuedAt);
         var consultaUrl = _dteService.BuildConsultaUrl(dte.Ambiente, codigoGeneracion, issuedLocal);
         var isContingency = dte.MhStatus == DteConstants.EstadosMh.Contingencia;
 

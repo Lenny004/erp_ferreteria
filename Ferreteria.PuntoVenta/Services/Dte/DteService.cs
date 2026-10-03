@@ -3,6 +3,8 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Models.Dte.Json;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Time;
+using Ferreteria.PuntoVenta.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +47,10 @@ public interface IDteService
 }
 
 /// <summary>Implementacion del servicio de facturacion electronica DTE.</summary>
+/// <remarks>
+/// El criterio de fecha y hora de emisión se calcula desde un instante UTC del reloj inyectado
+/// y se convierte a la zona del negocio; queda a verificar con contador/MH.
+/// </remarks>
 public sealed class DteService : IDteService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -54,8 +60,19 @@ public sealed class DteService : IDteService
     private readonly IMhApiClient _mhApiClient;
     private readonly MhOptions _options;
     private readonly ILogger<DteService> _logger;
+    private readonly BusinessCalendar _calendar;
+    private readonly IAuthorizationGuard _authorizationGuard;
 
     /// <summary>Crea el servicio DTE con sus dependencias.</summary>
+    /// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+    /// <param name="numberingService">Servicio de numeración DTE.</param>
+    /// <param name="jsonBuilder">Constructor del documento DTE.</param>
+    /// <param name="signingService">Servicio de firma.</param>
+    /// <param name="mhApiClient">Cliente de recepción MH.</param>
+    /// <param name="options">Opciones de emisión.</param>
+    /// <param name="logger">Logger técnico sin datos sensibles.</param>
+    /// <param name="calendar">Calendario de negocio con reloj UTC inyectado.</param>
+    /// <param name="authorizationGuard">Guard que valida el permiso vigente del empleado de sesión.</param>
     public DteService(
         IServiceScopeFactory scopeFactory,
         IDteNumberingService numberingService,
@@ -63,7 +80,9 @@ public sealed class DteService : IDteService
         IDteSigningService signingService,
         IMhApiClient mhApiClient,
         IOptions<MhOptions> options,
-        ILogger<DteService> logger)
+        ILogger<DteService> logger,
+        BusinessCalendar calendar,
+        IAuthorizationGuard authorizationGuard)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _numberingService = numberingService ?? throw new ArgumentNullException(nameof(numberingService));
@@ -73,6 +92,8 @@ public sealed class DteService : IDteService
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
+        _authorizationGuard = authorizationGuard ?? throw new ArgumentNullException(nameof(authorizationGuard));
     }
 
     /// <inheritdoc />
@@ -81,6 +102,7 @@ public sealed class DteService : IDteService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, cancellationToken: cancellationToken);
 
         if (request.OrderId == Guid.Empty)
         {
@@ -127,7 +149,8 @@ public sealed class DteService : IDteService
         }
 
         var customer = await ResolveCustomerAsync(dbContext, request, order, cancellationToken);
-        var issuedAtLocal = DateTime.Now;
+        var issuedAtUtc = _calendar.UtcNow();
+        var issuedAtLocal = _calendar.ToLocal(issuedAtUtc);
         var ambiente = _options.Ambiente;
 
         Guid newDteId;
@@ -159,8 +182,8 @@ public sealed class DteService : IDteService
                 TotalGravada = document.Resumen.TotalGravada,
                 TotalIva = ivaValue,
                 TotalPagar = document.Resumen.TotalPagar,
-                IssuedAt = issuedAtLocal.ToUniversalTime(),
-                CreatedAt = DateTime.UtcNow
+                IssuedAt = issuedAtUtc,
+                CreatedAt = issuedAtUtc
             };
 
             dbContext.DteIssued.Add(dteIssued);
@@ -183,6 +206,11 @@ public sealed class DteService : IDteService
         Guid employeeId,
         CancellationToken cancellationToken = default)
     {
+        var authorized = await _authorizationGuard.RequireAsync(
+            PosPermission.OperarCaja,
+            employeeId,
+            cancellationToken);
+
         if (string.IsNullOrWhiteSpace(originalControlNumber))
         {
             throw new DteException("Indique el numero de control del DTE original.");
@@ -254,7 +282,8 @@ public sealed class DteService : IDteService
             throw new DteException("La nota de credito requiere el cliente del credito fiscal.");
         }
 
-        var issuedAtLocal = DateTime.Now;
+        var issuedAtUtc = _calendar.UtcNow();
+        var issuedAtLocal = _calendar.ToLocal(issuedAtUtc);
         var ambiente = _options.Ambiente;
         Guid noteId;
 
@@ -287,15 +316,15 @@ public sealed class DteService : IDteService
                 TotalGravada = document.Resumen.TotalGravada,
                 TotalIva = ivaValue,
                 TotalPagar = document.Resumen.TotalPagar,
-                IssuedAt = issuedAtLocal.ToUniversalTime(),
-                CreatedAt = DateTime.UtcNow
+                IssuedAt = issuedAtUtc,
+                CreatedAt = issuedAtUtc
             };
 
             dbContext.DteIssued.Add(note);
 
-            RestoreInventory(dbContext, order, employeeId, reason);
+            RestoreInventory(dbContext, order, authorized.Id, reason);
             order.Status = SalesDomainConstants.OrderStatuses.Cancelled;
-            order.UpdatedAt = DateTime.UtcNow;
+            order.UpdatedAt = issuedAtUtc;
 
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -338,6 +367,8 @@ public sealed class DteService : IDteService
     /// <inheritdoc />
     public async Task<int> ProcessPendingContingenciesAsync(CancellationToken cancellationToken = default)
     {
+        await _authorizationGuard.RequireAsync(PosPermission.OperarCaja, cancellationToken: cancellationToken);
+
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -551,7 +582,7 @@ public sealed class DteService : IDteService
     private EmitDteResult MapToResult(DteIssued dte)
     {
         var codigoGeneracion = dte.GenerationCode.ToString().ToUpperInvariant();
-        var issuedLocal = dte.IssuedAt.ToLocalTime();
+        var issuedLocal = _calendar.ToLocal(dte.IssuedAt);
         var consultaUrl = BuildConsultaUrl(dte.Ambiente, codigoGeneracion, issuedLocal);
         var message = BuildStatusMessage(dte);
 

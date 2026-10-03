@@ -6,6 +6,7 @@ using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Services.Returns;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Views.Caja;
 using Ferreteria.PuntoVenta.Views.Inventario;
 using Ferreteria.PuntoVenta.Views.Inicio;
@@ -49,7 +50,9 @@ public partial class App : Application
                     .AddJsonFile(
                         Path.Combine("Config", "appsettings.json"),
                         optional: false,
-                        reloadOnChange: true);
+                        reloadOnChange: true)
+                    .AddUserSecrets(typeof(App).Assembly, optional: true)
+                    .AddEnvironmentVariables();
             })
             .ConfigureServices((context, services) =>
             {
@@ -58,6 +61,8 @@ public partial class App : Application
                 services.Configure<MhOptions>(context.Configuration.GetSection(MhOptions.SectionName));
                 services.Configure<SalesHistoryOptions>(context.Configuration.GetSection(SalesHistoryOptions.SectionName));
                 services.Configure<CashRegisterOptions>(context.Configuration.GetSection(CashRegisterOptions.SectionName));
+                services.Configure<PinLockoutOptions>(context.Configuration.GetSection(PinLockoutOptions.SectionName));
+                services.Configure<AuthorizationOptions>(context.Configuration.GetSection(AuthorizationOptions.SectionName));
                 services.AddOptions<BusinessTimeOptions>()
                     .Bind(context.Configuration.GetSection(BusinessTimeOptions.SectionName))
                     .Validate(BusinessTimeZone.IsValid,
@@ -72,9 +77,11 @@ public partial class App : Application
                 services.AddSingleton(TimeProvider.System);
 
                 services.AddSingleton<ICurrentSessionService, CurrentSessionService>();
+                services.AddSingleton<IAuthorizationGuard, AuthorizationGuard>();
                 services.AddSingleton<IConnectivityService, ConnectivityService>();
                 services.AddSingleton<IAuditService, AuditService>();
                 services.AddSingleton<IPinAttemptService, PinAttemptService>();
+                services.AddSingleton<IPinUnlockService, PinUnlockService>();
                 services.AddSingleton<IInventoryService, InventoryService>();
                 services.AddSingleton<IOrderService, OrderService>();
                 services.AddSingleton<IProductCatalogService, ProductCatalogService>();
@@ -144,7 +151,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"Error critico al iniciar la aplicacion:\n{ex.Message}",
+                $"No se pudo iniciar el POS de forma segura:\n{ex.Message}",
                 "Error de Arranque",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Ferreteria.PuntoVenta.Services;
 
@@ -9,7 +10,9 @@ namespace Ferreteria.PuntoVenta.Services;
 /// Valida el PIN de 4 dígitos contra <c>hr.Employees.PinHash</c> (bcrypt) según el módulo operativo.
 /// Riesgo: el PIN llega en claro solo en memoria durante la verificación; nunca se persiste ni se registra en auditoría.
 /// </summary>
-public class PinAuthService(IServiceScopeFactory scopeFactory)
+public class PinAuthService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<PinAuthService>? logger = null)
 {
     /// <summary>
     /// Valida el PIN para el módulo de caja (requiere <see cref="Employee.CanCashier"/>).
@@ -37,15 +40,19 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
             .AsNoTracking()
             .Include(employee => employee.Position)
             .Where(employee => employee.IsActive && employee.PinHash != null)
+            .OrderBy(employee => employee.Id)
             .ToListAsync(cancellationToken);
 
-        foreach (var employee in candidates)
+        var matches = candidates
+            .Where(employee => employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
+            .ToArray();
+        if (matches.Length > 1)
         {
-            if (employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
-                return employee;
+            logger?.LogWarning("Se rechazó un PIN duplicado heredado en el flujo de autenticación.");
+            return null;
         }
 
-        return null;
+        return matches.SingleOrDefault();
     }
 
     /// <summary>
@@ -80,12 +87,15 @@ public class PinAuthService(IServiceScopeFactory scopeFactory)
 
         var candidates = await candidatesQuery.ToListAsync(cancellationToken);
 
-        foreach (var employee in candidates)
+        var matches = candidates
+            .Where(employee => employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
+            .ToArray();
+        if (matches.Length > 1)
         {
-            if (employee.PinHash is not null && BCrypt.Net.BCrypt.Verify(pin, employee.PinHash))
-                return employee;
+            logger?.LogWarning("Se rechazó un PIN duplicado heredado para el módulo {Module}.", module);
+            return null;
         }
 
-        return null;
+        return matches.SingleOrDefault();
     }
 }

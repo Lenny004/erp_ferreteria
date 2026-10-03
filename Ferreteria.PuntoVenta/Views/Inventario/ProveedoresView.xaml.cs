@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
@@ -35,6 +36,10 @@ public partial class ProveedoresView : UserControl
             var items = await _supplierService.GetSuppliersAsync(SearchTextBox.Text);
             ItemsList.ItemsSource = items;
             EmptyStateText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {
@@ -130,6 +135,10 @@ public partial class ProveedoresView : UserControl
         {
             ShowError(vex.Message);
         }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
+        }
         catch (Exception ex)
         {
             ShowError($"No se pudo guardar: {ex.Message}");
@@ -155,6 +164,10 @@ public partial class ProveedoresView : UserControl
             await _supplierService.DeactivateAsync(id, CurrentUserId);
             ClearForm();
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {

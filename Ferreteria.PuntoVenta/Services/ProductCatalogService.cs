@@ -2,17 +2,24 @@
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
 /// CRUD del catálogo de productos de ferretería. Valida entradas y registra auditoría
 /// en cada operación que modifica datos (CREATE/UPDATE/DELETE lógico).
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 /// </summary>
 public sealed class ProductCatalogService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : IProductCatalogService
+    IAuditService auditService,
+    IAuthorizationGuard authorizationGuard) : IProductCatalogService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "public.Products";
 
     /// <inheritdoc />
@@ -21,6 +28,7 @@ public sealed class ProductCatalogService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -56,6 +64,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -71,6 +80,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<Guid> CreateProductAsync(ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -113,7 +123,7 @@ public sealed class ProductCatalogService(
         await auditService.RecordChangeAsync("INSERT", TableName, product.Id.ToString(),
             oldData: null,
             newData: new { product.Code, product.Description, product.SalePrice, product.CurrentStock },
-            userId, cancellationToken);
+            actor, cancellationToken);
 
         return product.Id;
     }
@@ -121,6 +131,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task UpdateProductAsync(Guid id, ProductInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -160,23 +171,26 @@ public sealed class ProductCatalogService(
         await auditService.RecordChangeAsync("UPDATE", TableName, product.Id.ToString(),
             oldData: before,
             newData: new { product.Code, product.Description, product.SalePrice, product.CostPrice, product.MinStock },
-            userId, cancellationToken);
+            actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
-        await SetActiveAsync(id, false, userId, cancellationToken);
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
+        await SetActiveAsync(id, false, actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task ReactivateProductAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
-        await SetActiveAsync(id, true, userId, cancellationToken);
+        var actor = await RequireCatalogAdministrationAsync(userId, cancellationToken);
+        await SetActiveAsync(id, true, actor, cancellationToken);
     }
 
     private async Task SetActiveAsync(Guid id, bool isActive, Guid userId, CancellationToken cancellationToken)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -201,6 +215,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<Family>> GetFamiliesAsync(CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Families.AsNoTracking()
@@ -212,6 +227,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<Subfamily>> GetSubfamiliesAsync(Guid familyId, CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Subfamilies.AsNoTracking()
@@ -223,6 +239,7 @@ public sealed class ProductCatalogService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<MeasurementType>> GetMeasurementTypesAsync(CancellationToken cancellationToken = default)
     {
+        await RequireCatalogAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.MeasurementTypes.AsNoTracking()
@@ -273,5 +290,21 @@ public sealed class ProductCatalogService(
         if (input.SupplierId is { } supId
             && !await db.Suppliers.AnyAsync(s => s.Id == supId, cancellationToken))
             throw new ValidationException("El proveedor seleccionado no existe.");
+    }
+
+    private async Task<Guid> RequireCatalogAdministrationAsync(Guid actingEmployeeId, CancellationToken cancellationToken)
+    {
+        var actor = await _authorizationGuard.RequireAsync(
+            PosPermission.AdministrarCatalogo,
+            actingEmployeeId,
+            cancellationToken);
+        return actor.Id;
+    }
+
+    private async Task RequireCatalogAdministrationAsync(CancellationToken cancellationToken)
+    {
+        await _authorizationGuard.RequireAsync(
+            PosPermission.AdministrarCatalogo,
+            cancellationToken: cancellationToken);
     }
 }

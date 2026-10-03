@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Printing;
@@ -27,6 +28,7 @@ public partial class FacturacionView : UserControl
     private Guid? _lastOrderId;
     private readonly ObservableCollection<CartLineItem> _cartLineItems = new();
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
+    private readonly SaleAttemptTracker _saleAttemptTracker = new();
 
     /// <summary>Inicializa la vista de facturación y enlaza el carrito a la UI.</summary>
     public FacturacionView(
@@ -185,6 +187,11 @@ public partial class FacturacionView : UserControl
         var paymentMethod = (PaymentMethodCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
             ?? SalesDomainConstants.PaymentMethods.Cash;
         var grandTotal = CalculateGrandTotal();
+        var attemptId = _saleAttemptTracker.GetOrCreate(new SaleAttemptInput(
+            _cartLineItems.Select(line => new SaleAttemptLine(line.ProductId, line.Quantity)).ToArray(),
+            paymentMethod,
+            grandTotal));
+        FacturarButton.IsEnabled = false;
 
         try
         {
@@ -192,12 +199,13 @@ public partial class FacturacionView : UserControl
                 _currentSession.CurrentEmployee.Id,
                 CashSessionId: cashSessionId,
                 CustomerId: null,
-                ClientRequestId: Guid.NewGuid(),
+                ClientRequestId: attemptId,
                 Lines: _cartLineItems.Select(line => new CashSaleLineRequest(line.ProductId, line.Quantity)).ToList(),
                 Payments: new[] { new CashSalePaymentRequest(paymentMethod, grandTotal) },
                 Notes: "Venta registrada desde WPF"));
 
             _lastOrderId = saleResult.OrderId;
+            _saleAttemptTracker.MarkSucceeded(attemptId);
             _cartLineItems.Clear();
             RenderSaleTotals();
             await SearchProductsAsync();
@@ -212,10 +220,18 @@ public partial class FacturacionView : UserControl
             _logger.LogWarning(exception, "Venta rechazada por una regla de caja u orden");
             SetStatusMessage(exception.Message, isError: true);
         }
+        catch (UnauthorizedOperationException exception)
+        {
+            SetStatusMessage(exception.Message, isError: true);
+        }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Error técnico al registrar una venta");
-            SetStatusMessage("No se pudo registrar la venta. Revise la caja e intente nuevamente.", isError: true);
+            SetStatusMessage("Ocurrió un error técnico. Puede reintentar sin duplicar la venta.", isError: true);
+        }
+        finally
+        {
+            FacturarButton.IsEnabled = true;
         }
     }
 
