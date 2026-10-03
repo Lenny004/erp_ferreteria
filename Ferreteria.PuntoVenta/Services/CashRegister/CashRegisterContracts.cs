@@ -193,8 +193,8 @@ public sealed class CashRegisterOptions
     /// <summary>Sección de configuración en <c>appsettings.json</c>.</summary>
     public const string SectionName = "Caja";
 
-    /// <summary>Código físico de la caja activa.</summary>
-    public string Codigo { get; set; } = "CAJA-01";
+    /// <summary>Código físico de la caja activa; debe configurarse en <c>Caja:Codigo</c>.</summary>
+    public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Umbral absoluto que obliga a registrar observación al cerrar.</summary>
     public decimal UmbralDiferencia { get; set; } = 20m;

@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.Printing;
+using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.Extensions.Logging;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
@@ -23,6 +25,7 @@ public partial class ImpresorasView : UserControl
     private readonly IPrinterConfigService _configService;
     private readonly IReceiptPrintService _printService;
     private readonly ILogger<ImpresorasView> _logger;
+    private readonly BusinessCalendar _calendar;
     private IReadOnlyList<Printer> _printers = Array.Empty<Printer>();
 
     /// <summary>
@@ -31,14 +34,17 @@ public partial class ImpresorasView : UserControl
     /// <param name="configService">Servicio de persistencia de impresoras.</param>
     /// <param name="printService">Servicio de envío a impresoras térmicas.</param>
     /// <param name="logger">Registro técnico; los detalles de error no se muestran al cajero.</param>
+    /// <param name="calendar">Calendario de negocio para la vista previa.</param>
     public ImpresorasView(
         IPrinterConfigService configService,
         IReceiptPrintService printService,
-        ILogger<ImpresorasView> logger)
+        ILogger<ImpresorasView> logger,
+        BusinessCalendar calendar)
     {
         _configService = configService ?? throw new ArgumentNullException(nameof(configService));
         _printService = printService ?? throw new ArgumentNullException(nameof(printService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         InitializeComponent();
         Loaded += OnLoaded;
     }
@@ -54,6 +60,10 @@ public partial class ImpresorasView : UserControl
         {
             await ReloadAsync();
             StatusText.Text = "Lista cargada.";
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            MessageBox.Show(ex.Message, DialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
@@ -95,6 +105,10 @@ public partial class ImpresorasView : UserControl
         {
             // Los mensajes de validación ya están en español y no contienen datos técnicos.
             MessageBox.Show(ex.Message, InvalidDataTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            MessageBox.Show(ex.Message, DialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
@@ -191,7 +205,7 @@ public partial class ImpresorasView : UserControl
         dialog.ShowDialog();
     }
 
-    private static ReceiptDocument BuildSampleDocument()
+    private ReceiptDocument BuildSampleDocument()
     {
         // Datos ficticios solo para la vista previa; emisor y leyenda: A VERIFICAR con contador / normativa MH.
         return new ReceiptDocument(
@@ -207,7 +221,7 @@ public partial class ImpresorasView : UserControl
             CodigoGeneracion: string.Empty,
             SelloRecibido: null,
             Ambiente: string.Empty,
-            IssuedAt: DateTime.Now,
+            IssuedAt: _calendar.ToLocal(_calendar.UtcNow()),
             CashierName: "Cajero de prueba",
             CustomerName: "Cliente de prueba",
             CustomerDocument: null,

@@ -19,7 +19,6 @@ namespace Ferreteria.PuntoVenta.Services.Returns;
 /// </remarks>
 public sealed class ReturnService : IReturnService
 {
-    private const int MaximumSerializationRetries = 2;
     private const string ConfirmationUnavailableMessage = "La confirmación de devoluciones se habilitará cuando el registro de devoluciones exista en la base de datos.";
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IReturnedQuantityReader _returnedQuantityReader;
@@ -157,6 +156,11 @@ public sealed class ReturnService : IReturnService
             throw new InvalidReturnException("Ingrese el PIN del autorizador.");
         }
         ReturnInputRules.ValidateShape(request, _options);
+        if (request.RefundMethod.Equals(ReturnDomainConstants.RefundMethods.Cash, StringComparison.OrdinalIgnoreCase)
+            && request.RefundAmount == 0m)
+        {
+            throw new InvalidReturnException("El reintegro en efectivo es de $0.00: elija 'Sin reintegro' o revise las cantidades.");
+        }
         if (!Capabilities.CanConfirmReturns)
         {
             throw new ReturnsUnavailableException(ConfirmationUnavailableMessage);
@@ -169,33 +173,31 @@ public sealed class ReturnService : IReturnService
         }
         var authorizedRequest = request with { AuthorizedByEmployeeId = authorizer.Id };
 
-        for (var attempt = 0; ; attempt++)
+        try
         {
-            try
+            return await PostgresTransientRetry.ExecuteAsync(
+                retryToken => CreateReturnOnceAsync(authorizedRequest, retryToken),
+                (retry, _) => _logger.LogWarning(
+                    "Conflicto transitorio al crear devolución para {OrderId}; reintento {Attempt}",
+                    request.OrderId,
+                    retry),
+                cancellationToken);
+        }
+        catch (PostgresTransientOperationException exception)
+        {
+            _logger.LogError(exception, "Se agotaron los reintentos transitorios al crear devolución para {OrderId}", request.OrderId);
+            throw new ReturnsUnavailableException("No se pudo confirmar la devolución por concurrencia. Intente de nuevo.");
+        }
+        catch (Exception exception) when (IsClientRequestUniqueViolation(exception))
+        {
+            var existing = await FindByClientRequestIdInNewScopeAsync(authorizedRequest.ClientRequestId, cancellationToken);
+            if (existing is not null)
             {
-                return await CreateReturnOnceAsync(authorizedRequest, cancellationToken);
+                EnsureReturnMatches(existing, authorizedRequest);
+                return existing;
             }
-            catch (Exception exception) when (IsSerializationFailure(exception))
-            {
-                if (attempt < MaximumSerializationRetries)
-                {
-                    _logger.LogWarning(exception, "Conflicto serializable al crear devolución para {OrderId}; reintento {Attempt}", request.OrderId, attempt + 1);
-                    continue;
-                }
 
-                _logger.LogError(exception, "Se agotaron los reintentos serializables al crear devolución para {OrderId}", request.OrderId);
-                throw new ReturnsUnavailableException("No se pudo confirmar la devolución por concurrencia. Intente de nuevo.");
-            }
-            catch (Exception exception) when (IsClientRequestUniqueViolation(exception))
-            {
-                var existing = await FindByClientRequestIdInNewScopeAsync(authorizedRequest.ClientRequestId, cancellationToken);
-                if (existing is not null)
-                {
-                    return existing;
-                }
-
-                throw new ReturnsUnavailableException("No se pudo confirmar la devolución. Intente de nuevo.");
-            }
+            throw new ReturnsUnavailableException("No se pudo confirmar la devolución. Intente de nuevo.");
         }
     }
 
@@ -217,6 +219,7 @@ public sealed class ReturnService : IReturnService
         var existing = await _returnWriter.FindByClientRequestIdAsync(db, request.ClientRequestId, cancellationToken);
         if (existing is not null)
         {
+            EnsureReturnMatches(existing, request);
             await transaction.CommitAsync(cancellationToken);
             return existing;
         }
@@ -241,7 +244,16 @@ public sealed class ReturnService : IReturnService
         var persistence = BuildPersistenceRecord(request, sale, calculation, fiscal, returnableLines, openSession, employee, authorized);
         var returnId = await _returnWriter.PersistAsync(db, persistence, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return new ReturnResult(request.ClientRequestId, request.OrderId, calculation, fiscal, returnId, authorized.Id);
+        return new ReturnResult(
+            request.ClientRequestId,
+            request.OrderId,
+            calculation,
+            fiscal,
+            returnId,
+            authorized.Id,
+            request.RefundMethod.Trim(),
+            request.RefundAmount,
+            request.EmployeeId);
     }
 
     private ReturnPersistenceRecord BuildPersistenceRecord(ReturnRequest request, ReturnableSaleSummary sale, ReturnCalculationResult calculation, ReturnFiscalDecision fiscal, IReadOnlyList<ReturnableLine> lines, CashSession? openSession, Employee employee, Employee authorized)
@@ -255,7 +267,7 @@ public sealed class ReturnService : IReturnService
             var movementId = line.Restocked ? Guid.NewGuid() : Guid.Empty;
             if (line.Restocked)
             {
-                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, SalesDomainConstants.InventoryMovementTypes.ReturnInflow, request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, "Devolución POS", now));
+                movements.Add(new InventoryMovementRecord(movementId, source.ProductId, SalesDomainConstants.InventoryMovementTypes.ReturnInflow, request.OrderId, employee.Id, line.RestockQuantity, line.UnitCost, TruncateReason("Devolución POS (costo a verificar)"), now));
             }
 
             return new ReturnDetailRecord(source.OrderDetailId, source.ProductId, line.Quantity, line.UnitsPerPackage, line.UnitPrice, line.UnitCost, line.DiscountAmount, line.Subtotal, line.TaxAmount, line.Restocked, line.RestockQuantity, line.Restocked ? movementId : null, now);
@@ -321,7 +333,7 @@ public sealed class ReturnService : IReturnService
 
     private async Task<Employee> ValidateAuthorizerPinAsync(string authorizerPin, CancellationToken cancellationToken)
     {
-        var status = _pinAttemptService.GetStatus();
+        var status = await _pinAttemptService.GetStatusAsync(cancellationToken);
         if (status.IsLocked)
         {
             throw new InvalidReturnException("Demasiados intentos de PIN. Espere antes de volver a intentar.");
@@ -330,16 +342,17 @@ public sealed class ReturnService : IReturnService
         var employee = await _pinAuthService.ValidateActiveEmployeePinAsync(authorizerPin, cancellationToken);
         if (employee is null)
         {
-            _pinAttemptService.RegisterFailedAttempt();
+            await _pinAttemptService.RegisterFailedAttemptAsync(cancellationToken);
             throw new InvalidReturnException("PIN incorrecto o sin permiso para autorizar devoluciones.");
         }
 
         if (!IsFullHistoryPosition(employee.Position?.Name))
         {
-            throw new InvalidReturnException("El autorizador debe tener un puesto de historial completo.");
+            await _pinAttemptService.RegisterFailedAttemptAsync(cancellationToken);
+            throw new InvalidReturnException("PIN incorrecto o sin permiso para autorizar devoluciones.");
         }
 
-        _pinAttemptService.Reset();
+        await _pinAttemptService.ResetAsync(cancellationToken);
         return employee;
     }
 
@@ -372,7 +385,23 @@ public sealed class ReturnService : IReturnService
 
     private static string TruncateReason(string reason) => reason.Length <= 300 ? reason : reason[..300];
 
-    private static bool IsSerializationFailure(Exception exception) => FindPostgresException(exception)?.SqlState == PostgresErrorCodes.SerializationFailure;
+    private static void EnsureReturnMatches(ReturnResult existing, ReturnRequest request)
+    {
+        var existingLines = existing.Calculation.Lines
+            .OrderBy(line => line.OrderDetailId)
+            .Select(line => (line.OrderDetailId, line.Quantity, line.Restocked));
+        var requestedLines = request.Lines
+            .OrderBy(line => line.OrderDetailId)
+            .Select(line => (line.OrderDetailId, line.Quantity, line.Restock));
+        if (existing.OrderId != request.OrderId
+            || existing.EmployeeId != Guid.Empty && existing.EmployeeId != request.EmployeeId
+            || !string.Equals(existing.RefundMethod, request.RefundMethod.Trim(), StringComparison.OrdinalIgnoreCase)
+            || existing.RefundAmount != request.RefundAmount
+            || !existingLines.SequenceEqual(requestedLines))
+        {
+            throw new InvalidReturnException("Esta solicitud ya se registró con otro contenido. Inicie una devolución nueva.");
+        }
+    }
 
     private static bool IsClientRequestUniqueViolation(Exception exception)
     {

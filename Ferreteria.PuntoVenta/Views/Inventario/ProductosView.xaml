@@ -37,6 +37,7 @@
                     helpers:WatermarkService.Watermark="Buscar codigo, descripcion o categoria"
                     TextChanged="OnSearchChanged" />
                 <Button
+                    x:Name="NewButton"
                     Grid.Column="1"
                     Margin="10,0,0,0"
                     Style="{StaticResource AppSecondaryWideButtonStyle}"
@@ -114,7 +115,7 @@
             CornerRadius="{StaticResource AppRadius_MD}"
             Padding="16">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+                <StackPanel x:Name="EditorPanel">
                     <TextBlock x:Name="FormTitle" Text="Nuevo producto" Style="{StaticResource AppPanelTitleStyle}" Margin="0,0,0,12" />
 
                     <TextBlock Text="Codigo *" Style="{StaticResource AppCardLabelStyle}" />
@@ -185,7 +186,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Button Style="{StaticResource AppPrimaryWideButtonStyle}" Click="OnGuardarClick" Margin="0,0,6,0">
+                        <Button x:Name="SaveButton" Style="{StaticResource AppPrimaryWideButtonStyle}" Click="OnGuardarClick" Margin="0,0,6,0">
                             <TextBlock Text="GUARDAR" Foreground="{StaticResource AppBlanco}" FontWeight="Bold" />
                         </Button>
                         <Button Grid.Column="1" Style="{StaticResource AppSecondaryWideButtonStyle}" Click="OnCancelarClick" Margin="6,0,0,0">

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
@@ -37,6 +38,10 @@ public partial class UsuariosView : UserControl
             PositionCombo.ItemsSource = await _employees.GetPositionsAsync(null);
             HireDatePicker.SelectedDate = DateTime.Today;
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {
@@ -176,6 +181,10 @@ public partial class UsuariosView : UserControl
         {
             ShowError(vex.Message);
         }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
+        }
         catch (Exception ex)
         {
             ShowError($"No se pudo guardar: {ex.Message}");
@@ -201,6 +210,10 @@ public partial class UsuariosView : UserControl
             await _employees.DeactivateAsync(id, CurrentUserId);
             ClearForm();
             await ReloadAsync();
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowError(ex.Message);
         }
         catch (Exception ex)
         {

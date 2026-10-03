@@ -2,14 +2,21 @@
 using Ferreteria.PuntoVenta.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>CRUD de clientes (esquema <c>public.Customers</c>) con validación y auditoría.</summary>
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
 public sealed class CustomerService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : ICustomerService
+    IAuditService auditService,
+    IAuthorizationGuard authorizationGuard) : ICustomerService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
     private const string TableName = "public.Customers";
 
     /// <inheritdoc />
@@ -18,6 +25,7 @@ public sealed class CustomerService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireCashOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -43,6 +51,7 @@ public sealed class CustomerService(
     /// <inheritdoc />
     public async Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireCashOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
@@ -51,6 +60,7 @@ public sealed class CustomerService(
     /// <inheritdoc />
     public async Task<Guid> CreateAsync(CustomerInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCashOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -84,7 +94,7 @@ public sealed class CustomerService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("INSERT", TableName, customer.Id.ToString(),
-            null, new { customer.Name, customer.CustomerType, customer.Nit }, userId, cancellationToken);
+            null, new { customer.Name, customer.CustomerType, customer.Nit }, actor, cancellationToken);
 
         return customer.Id;
     }
@@ -92,6 +102,7 @@ public sealed class CustomerService(
     /// <inheritdoc />
     public async Task UpdateAsync(Guid id, CustomerInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCashOperationAsync(userId, cancellationToken);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
@@ -123,12 +134,13 @@ public sealed class CustomerService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("UPDATE", TableName, customer.Id.ToString(),
-            before, new { customer.Name, customer.CustomerType, customer.Nit }, userId, cancellationToken);
+            before, new { customer.Name, customer.CustomerType, customer.Nit }, actor, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireCashOperationAsync(userId, cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -145,7 +157,7 @@ public sealed class CustomerService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("DELETE", TableName, customer.Id.ToString(),
-            new { customer.Name, IsActive = true }, new { IsActive = false }, userId, cancellationToken);
+            new { customer.Name, IsActive = true }, new { IsActive = false }, actor, cancellationToken);
     }
 
     private static string? Normalize(string? value) =>
@@ -161,5 +173,13 @@ public sealed class CustomerService(
             throw new ValidationException("Un cliente de crédito fiscal (CCF) requiere NIT.");
         if (!string.IsNullOrWhiteSpace(input.Email) && !input.Email.Contains('@'))
             throw new ValidationException("El correo electrónico no es válido.");
+    }
+
+    private async Task<Guid> RequireCashOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)
+    {
+        return (await _authorizationGuard.RequireAsync(
+            PosPermission.OperarCaja,
+            allowMissingActingEmployee ? null : actingEmployeeId,
+            cancellationToken)).Id;
     }
 }

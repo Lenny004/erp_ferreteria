@@ -25,9 +25,8 @@ public static class DatabaseConfig
         // Registra FerreteriaDbContext como servicio scoped (un contexto por operación/scope en WPF).
         // Usa Npgsql como proveedor EF Core para conectarse a PostgreSQL.
         // La cadena de conexión debe estar en appsettings.json bajo ConnectionStrings:FerreteriaDB.
-        services.AddDbContext<FerreteriaDbContext>(options =>
-            options.UseNpgsql(
-                configuration.GetConnectionString("FerreteriaDB")));
+        var connectionString = new DatabaseConnectionResolver().Resolve(configuration);
+        services.AddDbContext<FerreteriaDbContext>(options => options.UseNpgsql(connectionString));
 
         return services;
     }

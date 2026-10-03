@@ -1,18 +1,30 @@
 ﻿using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
+using Ferreteria.PuntoVenta.Services.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Ferreteria.PuntoVenta.Services.Security;
 
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>
 /// Gestión básica de empleados / usuarios (nombre, cargo, PIN, permisos) sobre <c>hr.Employees</c>.
 /// El PIN se guarda como hash bcrypt (12 rounds) y nunca en texto plano.
+/// <param name="scopeFactory">Fábrica de ámbitos de datos.</param>
+/// <param name="auditService">Servicio de auditoría.</param>
+/// <param name="authorizationGuard">Guard obligatorio de autorización.</param>
+/// <param name="authorizationOptions">Configuración de puestos administrativos.</param>
 /// </summary>
 public sealed class EmployeeService(
     IServiceScopeFactory scopeFactory,
-    IAuditService auditService) : IEmployeeService
+    IAuditService auditService,
+    IAuthorizationGuard authorizationGuard,
+    IOptions<AuthorizationOptions> authorizationOptions) : IEmployeeService
 {
+    private readonly IAuthorizationGuard _authorizationGuard = authorizationGuard
+        ?? throw new ArgumentNullException(nameof(authorizationGuard));
+    private readonly HashSet<string> _administrationPositions = CreateAdministrationPositions(authorizationOptions);
     private const string TableName = "hr.Employees";
     private static readonly string[] ValidContractTypes = ["PLAZO_FIJO", "TIEMPO_PARCIAL", "HONORARIOS", "PASANTE"];
     private static readonly string[] ValidSalaryTypes = ["MENSUAL", "QUINCENAL", "SEMANAL"];
@@ -23,6 +35,7 @@ public sealed class EmployeeService(
         bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
+        await RequireAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -54,6 +67,7 @@ public sealed class EmployeeService(
     /// <inheritdoc />
     public async Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await RequireAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Employees.AsNoTracking()
@@ -65,10 +79,12 @@ public sealed class EmployeeService(
     /// <inheritdoc />
     public async Task<Guid> CreateAsync(EmployeeInput input, string? pin, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireAdministrationAsync(cancellationToken, userId);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var dui = Normalize(input.Dui);
         if (dui is not null && await db.Employees.AnyAsync(e => e.Dui == dui, cancellationToken))
@@ -100,15 +116,18 @@ public sealed class EmployeeService(
         if (!string.IsNullOrWhiteSpace(pin))
         {
             ValidatePin(pin);
+            await EnsurePinAvailableAsync(db, pin, null, cancellationToken);
             employee.PinHash = BCrypt.Net.BCrypt.HashPassword(pin, 12);
             employee.PinUpdatedAt = DateTime.UtcNow;
         }
 
         db.Employees.Add(employee);
         await db.SaveChangesAsync(cancellationToken);
-
-        await auditService.RecordChangeAsync("INSERT", TableName, employee.Id.ToString(),
-            null, new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, userId, cancellationToken);
+        db.AuditLogs.Add(AuditService.CreateChangeEntry(
+            "INSERT", TableName, employee.Id.ToString(), null,
+            new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, actor.Id));
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return employee.Id;
     }
@@ -116,10 +135,13 @@ public sealed class EmployeeService(
     /// <inheritdoc />
     public async Task UpdateAsync(Guid id, EmployeeInput input, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireAdministrationAsync(cancellationToken, userId);
         Validate(input);
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAdministratorStateAsync(db, cancellationToken);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException("empleado", id);
@@ -131,6 +153,7 @@ public sealed class EmployeeService(
         }
 
         var before = new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell };
+        var currentPositionId = employee.PositionId;
 
         employee.FirstName = input.FirstName.Trim();
         employee.LastName = input.LastName.Trim();
@@ -147,45 +170,76 @@ public sealed class EmployeeService(
         employee.CanSell = input.CanSell;
         employee.UpdatedAt = DateTime.UtcNow;
 
+        if (await WouldRemoveLastActiveAdministratorAsync(
+                db,
+                currentPositionId,
+                input.PositionId,
+                employee.IsActive,
+                deactivating: false,
+                cancellationToken: cancellationToken))
+        {
+            throw new ValidationException("No se puede quitar el último administrador activo del POS.");
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("UPDATE", TableName, employee.Id.ToString(),
-            before, new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, userId, cancellationToken);
+            before, new { employee.FirstName, employee.LastName, employee.CanCashier, employee.CanSell }, actor.Id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task SetPinAsync(Guid id, string pin, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireAdministrationAsync(cancellationToken, userId);
         ValidatePin(pin);
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException("empleado", id);
 
+        await EnsurePinAvailableAsync(db, pin, id, cancellationToken);
         employee.PinHash = BCrypt.Net.BCrypt.HashPassword(pin, 12);
         employee.PinUpdatedAt = DateTime.UtcNow;
         employee.UpdatedAt = DateTime.UtcNow;
+        // El cambio y su auditoría comparten contexto y transacción; nunca se agrega el PIN ni su hash.
+        db.AuditLogs.Add(AuditService.CreateChangeEntry(
+            "PIN_CHANGE", TableName, employee.Id.ToString(), null,
+            new { PinChanged = true }, actor.Id));
         await db.SaveChangesAsync(cancellationToken);
-
-        // No se registra el PIN en la auditoría, solo el evento.
-        await auditService.RecordChangeAsync("PIN_CHANGE", TableName, employee.Id.ToString(),
-            null, new { PinChanged = true }, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeactivateAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
     {
+        var actor = await RequireAdministrationAsync(cancellationToken, userId);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAdministratorStateAsync(db, cancellationToken);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException("empleado", id);
 
         if (!employee.IsActive)
         {
+            await transaction.CommitAsync(cancellationToken);
             return;
+        }
+
+        if (await WouldRemoveLastActiveAdministratorAsync(
+                db,
+                employee.PositionId,
+                employee.PositionId,
+                employee.IsActive,
+                deactivating: true,
+                cancellationToken: cancellationToken))
+        {
+            throw new ValidationException("No se puede desactivar el último administrador activo del POS.");
         }
 
         employee.IsActive = false;
@@ -193,12 +247,14 @@ public sealed class EmployeeService(
         await db.SaveChangesAsync(cancellationToken);
 
         await auditService.RecordChangeAsync("DELETE", TableName, employee.Id.ToString(),
-            new { employee.FirstName, employee.LastName, IsActive = true }, new { IsActive = false }, userId, cancellationToken);
+            new { employee.FirstName, employee.LastName, IsActive = true }, new { IsActive = false }, actor.Id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
     {
+        await RequireAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         return await db.Departments.AsNoTracking()
@@ -210,6 +266,7 @@ public sealed class EmployeeService(
     /// <inheritdoc />
     public async Task<IReadOnlyList<Position>> GetPositionsAsync(Guid? departmentId, CancellationToken cancellationToken = default)
     {
+        await RequireAdministrationAsync(cancellationToken);
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
 
@@ -245,5 +302,94 @@ public sealed class EmployeeService(
     {
         if (pin.Length != 4 || !pin.All(char.IsDigit))
             throw new ValidationException("El PIN debe tener exactamente 4 dígitos.");
+    }
+
+    private async Task<AuthorizedEmployee> RequireAdministrationAsync(
+        CancellationToken cancellationToken,
+        Guid? actingEmployeeId = null)
+    {
+        return await _authorizationGuard.RequireAsync(
+            PosPermission.AdministrarUsuarios,
+            actingEmployeeId,
+            cancellationToken);
+    }
+
+    private static async Task EnsurePinAvailableAsync(
+        FerreteriaDbContext db,
+        string pin,
+        Guid? employeeId,
+        CancellationToken cancellationToken)
+    {
+        // El lock de transacción serializa altas y cambios de PIN entre procesos POS concurrentes.
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({SalesDomainConstants.PinUniquenessAdvisoryLockKey})",
+            cancellationToken);
+        var hashes = await db.Employees.AsNoTracking()
+            .Where(employee => employee.PinHash != null && (employeeId == null || employee.Id != employeeId.Value))
+            .Select(employee => employee.PinHash!)
+            .ToListAsync(cancellationToken);
+
+        if (hashes.Any(hash => BCrypt.Net.BCrypt.Verify(pin, hash)))
+        {
+            throw new ValidationException("Ese PIN no está disponible. Elija otro.");
+        }
+    }
+
+    private static HashSet<string> CreateAdministrationPositions(IOptions<AuthorizationOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.Value.PuestosAdministracion
+            .Where(position => !string.IsNullOrWhiteSpace(position))
+            .Select(position => position.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool IsAdministrationPosition(string? positionName) =>
+        positionName is not null && _administrationPositions.Contains(positionName.Trim());
+
+    private async Task LockAdministratorStateAsync(FerreteriaDbContext db, CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({SalesDomainConstants.ActiveAdministratorAdvisoryLockKey})",
+            cancellationToken);
+    }
+
+    private async Task<bool> WouldRemoveLastActiveAdministratorAsync(
+        FerreteriaDbContext db,
+        Guid? currentPositionId,
+        Guid? resultingPositionId,
+        bool employeeIsActive,
+        bool deactivating,
+        CancellationToken cancellationToken)
+    {
+        if (!employeeIsActive)
+        {
+            return false;
+        }
+
+        if (currentPositionId is not Guid currentPosition || resultingPositionId is not Guid resultingPosition)
+        {
+            return false;
+        }
+
+        var currentPositionName = await db.Positions
+            .Where(position => position.Id == currentPosition)
+            .Select(position => position.Name)
+            .SingleAsync(cancellationToken);
+        var resultingPositionName = await db.Positions
+            .Where(position => position.Id == resultingPosition)
+            .Select(position => position.Name)
+            .SingleAsync(cancellationToken);
+        if (!IsAdministrationPosition(currentPositionName)
+            || (!deactivating && IsAdministrationPosition(resultingPositionName)))
+        {
+            return false;
+        }
+
+        var activeAdministrators = await db.Employees
+            .Where(item => item.IsActive)
+            .Join(db.Positions, item => item.PositionId, position => position.Id, (item, position) => position.Name)
+            .CountAsync(name => _administrationPositions.Contains(name), cancellationToken);
+        return activeAdministrators <= 1;
     }
 }

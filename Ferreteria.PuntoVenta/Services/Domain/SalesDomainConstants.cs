@@ -6,6 +6,15 @@ namespace Ferreteria.PuntoVenta.Services.Domain;
 /// </summary>
 public static class SalesDomainConstants
 {
+    /// <summary>Clave que serializa la unicidad global de PIN en una transacción PostgreSQL.</summary>
+    public const long PinUniquenessAdvisoryLockKey = 735928559L;
+
+    /// <summary>Clave que serializa los eventos persistentes de lockout de PIN.</summary>
+    public const long PinAttemptAdvisoryLockKey = 4815162342L;
+
+    /// <summary>Clave que serializa cambios que podrían dejar al POS sin administrador activo.</summary>
+    public const long ActiveAdministratorAdvisoryLockKey = 918273645L;
+
     /// <summary>
     /// IVA general de El Salvador (13%). Referencia fiscal: Ley de IVA y plan Ferreteria (Fase 3 / DTE).
     /// Usar vía <see cref="TaxAmountCalculator"/> al calcular <c>Order.TaxAmount</c>.
@@ -192,6 +201,19 @@ public static class SalesDomainConstants
 
         /// <summary>Nombre lógico de la tabla de impresoras.</summary>
         public const string PrintersTableName = "system.Printers";
+    }
+
+    /// <summary>Códigos cortos de auditoría usados por el lockout persistente de PIN.</summary>
+    public static class PinAuditActions
+    {
+        /// <summary>Tabla lógica que agrupa los eventos del terminal.</summary>
+        public const string TableName = "pos.PinAttempts";
+
+        /// <summary>Fallo de validación de PIN.</summary>
+        public const string PinFail = "PIN_FAIL";
+
+        /// <summary>PIN correcto que reinicia la racha de fallos.</summary>
+        public const string PinOk = "PIN_OK";
     }
 
     /// <summary>Códigos de unidades de venta usados por el dominio.</summary>

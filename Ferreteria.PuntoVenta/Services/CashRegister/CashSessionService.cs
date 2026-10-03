@@ -296,8 +296,10 @@ public sealed class CashSessionService : ICashSessionService
 
         var closer = await LoadAuthorizedEmployeeAsync(dbContext, closedByEmployeeId, cancellationToken);
 
+        // El cierre debe tomar el mismo bloqueo de fila padre que las ventas toman en FOR SHARE.
         var session = await dbContext.CashSessions
-            .SingleOrDefaultAsync(item => item.Id == sessionId, cancellationToken);
+            .FromSqlInterpolated($"SELECT * FROM sales.\"CashSessions\" WHERE \"id\" = {sessionId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
         if (session is null)
         {
             throw new CashSessionException("La sesión de caja no existe.");

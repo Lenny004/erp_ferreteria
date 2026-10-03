@@ -23,6 +23,10 @@ public sealed class BusinessCalendar
     /// <returns>Fecha local de negocio.</returns>
     public DateOnly Today() => ToLocalDate(_clock.GetUtcNow().UtcDateTime);
 
+    /// <summary>Obtiene el instante UTC actual del reloj de negocio inyectado.</summary>
+    /// <returns>Instante UTC usado por operaciones fiscales y recibos.</returns>
+    public DateTime UtcNow() => _clock.GetUtcNow().UtcDateTime;
+
     /// <summary>Obtiene la zona horaria validada usada por el calendario.</summary>
     public BusinessTimeZone TimeZone => _timeZone;
 
