@@ -1,4 +1,5 @@
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.SalesHistory;
 
@@ -30,7 +31,7 @@ public sealed record SalesHistoryRow(
     int Reprints)
 {
     /// <summary>Fecha de la venta en la zona local del POS.</summary>
-    public string DateText => TimeZoneSupport.ToElSalvadorTime(CreatedAtUtc).ToString("dd/MM HH:mm");
+    public string DateText => TimeZoneSupport.ToLocalTime(CreatedAtUtc).ToString("dd/MM HH:mm");
 
     /// <summary>Total formateado para la vista.</summary>
     public string TotalText => Total.ToString("C2");

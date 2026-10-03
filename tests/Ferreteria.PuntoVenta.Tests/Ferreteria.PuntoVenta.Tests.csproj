@@ -13,6 +13,9 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2"><PrivateAssets>all</PrivateAssets></PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.8" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
@@ -49,10 +52,14 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryFilter.cs" Link="SalesHistory/SalesHistoryFilter.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryContracts.cs" Link="SalesHistory/SalesHistoryContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/SalesHistory/SalesHistoryService.cs" Link="SalesHistory/SalesHistoryService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/ReportService.cs" Link="Services/ReportService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IReportService.cs" Link="Services/IReportService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Time/*.cs" LinkBase="Services/Time" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SalesDomainConstants.cs" Link="Domain/SalesDomainConstants.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterContracts.cs" Link="CashRegister/CashRegisterContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashSessionService.cs" Link="CashRegister/ICashSessionService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashSessionService.cs" Link="CashRegister/CashSessionService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/ICashMovementReader.cs" Link="CashRegister/ICashMovementReader.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterCalculator.cs" Link="CashRegister/CashRegisterCalculator.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterInputRules.cs" Link="CashRegister/CashRegisterInputRules.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CashRegister/CashRegisterReportComposer.cs" Link="CashRegister/CashRegisterReportComposer.cs" />
@@ -66,6 +73,9 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderExceptions.cs" Link="Services/OrderExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderService.cs" Link="Services/OrderService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAuthService.cs" Link="Services/PinAuthService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IPinAttemptService.cs" Link="Services/IPinAttemptService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAttemptService.cs" Link="Services/PinAttemptService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Returns/*.cs" LinkBase="Returns" />
     <Compile Include="../../Ferreteria.PuntoVenta/Data/FerreteriaDbContext.cs" Link="Data/FerreteriaDbContext.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Models/**/*.cs" LinkBase="Models" />
     <None Include="../../Ferreteria.PuntoVenta/Squema.sql" Link="Data/Squema.sql" CopyToOutputDirectory="PreserveNewest" />

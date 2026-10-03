@@ -6,6 +6,7 @@ using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
 using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 using Microsoft.Extensions.Logging;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
@@ -18,6 +19,7 @@ public partial class HistorialFacturasView : UserControl
     private readonly ISaleReceiptPrinter _printer;
     private readonly ICurrentSessionService _session;
     private readonly ILogger<HistorialFacturasView> _logger;
+    private readonly BusinessCalendar _calendar;
     private readonly AsyncSearchCoordinator _searchCoordinator = new();
     private SalesHistoryPage? _currentPage;
     private SalesHistoryDateShortcut _shortcut = SalesHistoryDateShortcut.Today;
@@ -30,16 +32,19 @@ public partial class HistorialFacturasView : UserControl
     /// <param name="printer">Servicio de impresión de comprobantes.</param>
     /// <param name="session">Sesión del empleado actual.</param>
     /// <param name="logger">Registrador de errores de la vista.</param>
+    /// <param name="calendar">Calendario de negocio configurado.</param>
     public HistorialFacturasView(
         ISalesHistoryService history,
         ISaleReceiptPrinter printer,
         ICurrentSessionService session,
-        ILogger<HistorialFacturasView> logger)
+        ILogger<HistorialFacturasView> logger,
+        BusinessCalendar calendar)
     {
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _printer = printer ?? throw new ArgumentNullException(nameof(printer));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         InitializeComponent();
         InitializeFilters();
         UpdateDateSelection(TodayButton);
@@ -117,10 +122,10 @@ public partial class HistorialFacturasView : UserControl
 
     private async void OnRangeClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new SalesHistoryRangeDialog { Owner = Window.GetWindow(this) };
+        var dialog = new SalesHistoryRangeDialog(_calendar.Today()) { Owner = Window.GetWindow(this) };
         if (dialog.ShowDialog() == true)
         {
-            var range = SalesHistoryFilter.CreateLocalDateRange(dialog.From, dialog.To);
+            var range = SalesHistoryFilter.CreateLocalDateRange(dialog.From, dialog.To, _calendar);
             _fromUtc = range.FromUtc;
             _toUtc = range.ToUtc;
             _shortcut = SalesHistoryDateShortcut.None;
@@ -267,7 +272,7 @@ public partial class HistorialFacturasView : UserControl
 
             var (fromUtc, toUtc) = _shortcut == SalesHistoryDateShortcut.None
                 ? (_fromUtc, _toUtc)
-                : SalesHistoryFilter.CreateShortcutRange(_shortcut);
+                : SalesHistoryFilter.CreateShortcutRange(_shortcut, _calendar);
             var filter = new SalesHistoryFilter(
                 FromUtc: fromUtc,
                 ToUtc: toUtc,

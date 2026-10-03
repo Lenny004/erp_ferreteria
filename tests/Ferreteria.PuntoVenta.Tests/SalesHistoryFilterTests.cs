@@ -4,6 +4,7 @@ using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Printing;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 using Xunit;
 
 namespace Ferreteria.PuntoVenta.Tests;
@@ -11,12 +12,18 @@ namespace Ferreteria.PuntoVenta.Tests;
 /// <summary>Pruebas unitarias de reglas puras del historial e impresión.</summary>
 public sealed class SalesHistoryFilterTests
 {
+    private static BusinessCalendar CreateCalendar(DateTimeOffset now)
+    {
+        var timeZone = BusinessTimeZone.Create(new BusinessTimeOptions { ZonaHoraria = "America/El_Salvador" });
+        return new BusinessCalendar(timeZone, new FixedTimeProvider(now));
+    }
+
     /// <summary>Verifica los límites locales de hoy cerca de medianoche.</summary>
     [Fact]
     public void TodayRange_UsesElSalvadorMidnight()
     {
         var clock = new FixedTimeProvider(new DateTimeOffset(2026, 9, 27, 6, 30, 0, TimeSpan.Zero));
-        var range = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Today, clock);
+        var range = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Today, CreateCalendar(clock.GetUtcNow()));
         Assert.Equal(new DateTime(2026, 9, 27, 6, 0, 0, DateTimeKind.Utc), range.FromUtc);
         Assert.Equal(new DateTime(2026, 9, 28, 6, 0, 0, DateTimeKind.Utc), range.ToUtc);
     }
@@ -26,9 +33,10 @@ public sealed class SalesHistoryFilterTests
     public void Shortcuts_CreateExpectedBoundaries()
     {
         var clock = new FixedTimeProvider(new DateTimeOffset(2026, 9, 16, 18, 0, 0, TimeSpan.Zero));
-        var yesterday = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Yesterday, clock);
-        var week = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Week, clock);
-        var month = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Month, clock);
+        var calendar = CreateCalendar(clock.GetUtcNow());
+        var yesterday = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Yesterday, calendar);
+        var week = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Week, calendar);
+        var month = SalesHistoryFilter.CreateShortcutRange(SalesHistoryDateShortcut.Month, calendar);
         Assert.Equal(new DateTime(2026, 9, 15, 6, 0, 0, DateTimeKind.Utc), yesterday.FromUtc);
         Assert.Equal(new DateTime(2026, 9, 16, 6, 0, 0, DateTimeKind.Utc), yesterday.ToUtc);
         Assert.Equal(new DateTime(2026, 9, 14, 6, 0, 0, DateTimeKind.Utc), week.FromUtc);
@@ -41,7 +49,10 @@ public sealed class SalesHistoryFilterTests
     [Fact]
     public void CreateLocalDateRange_IsInclusiveAtBothEnds()
     {
-        var range = SalesHistoryFilter.CreateLocalDateRange(new DateOnly(2026, 9, 16), new DateOnly(2026, 9, 16));
+        var range = SalesHistoryFilter.CreateLocalDateRange(
+            new DateOnly(2026, 9, 16),
+            new DateOnly(2026, 9, 16),
+            CreateCalendar(new DateTimeOffset(2026, 9, 16, 18, 0, 0, TimeSpan.Zero)));
         Assert.Equal(new DateTime(2026, 9, 16, 6, 0, 0, DateTimeKind.Utc), range.FromUtc);
         Assert.Equal(new DateTime(2026, 9, 17, 6, 0, 0, DateTimeKind.Utc), range.ToUtc);
     }

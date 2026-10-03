@@ -1,5 +1,6 @@
 using System.Windows;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -26,7 +27,7 @@ public partial class SalesHistoryDetailWindow : Window
         /// <param name="detail">Detalle persistido que se convertirá a columnas.</param>
         public SalesHistoryDetailDisplay(SalesHistoryDetail detail)
         {
-            HeaderText = $"Fecha: {TimeZoneSupport.ToElSalvadorTime(detail.CreatedAtUtc):dd/MM/yyyy HH:mm} | Estado: {detail.Status} | "
+            HeaderText = $"Fecha: {TimeZoneSupport.ToLocalTime(detail.CreatedAtUtc):dd/MM/yyyy HH:mm} | Estado: {detail.Status} | "
                 + $"Tipo: {detail.OrderType} | Cajero: {detail.EmployeeDisplayName} | Cliente: {detail.CustomerDisplayName}";
             Lines = detail.Lines.Select(line => new SalesHistoryLineDisplay(
                 line.Product,

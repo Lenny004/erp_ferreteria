@@ -1,5 +1,6 @@
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
+using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Services.CashRegister;
 
@@ -68,8 +69,7 @@ public sealed record CashRegisterSaleSnapshot(
 /// <param name="Sales">Ventas y pagos asociados.</param>
 /// <param name="CashRefunds">Devoluciones en efectivo registradas.</param>
 /// <remarks>
-/// Actualmente <paramref name="CashRefunds"/> debe ser cero porque el esquema no tiene un movimiento
-/// de caja para devoluciones; el módulo de devoluciones queda como dependencia futura.
+/// El lector de movimientos suma los reintegros persistidos en CashMovements.
 /// </remarks>
 public sealed record CashRegisterSnapshot(
     Guid SessionId,
@@ -93,7 +93,7 @@ public sealed record CashRegisterMovement(
     string Status)
 {
     /// <summary>Hora local de El Salvador para la tabla de caja.</summary>
-    public string LocalTimeText => TimeZoneSupport.ToElSalvadorTime(CreatedAtUtc).ToString("HH:mm");
+    public string LocalTimeText => TimeZoneSupport.ToLocalTime(CreatedAtUtc).ToString("HH:mm");
 }
 
 /// <summary>Resumen calculado de una sesión abierta o cerrada.</summary>
