@@ -81,6 +81,7 @@ public partial class App : Application
                 services.AddSingleton<IConnectivityService, ConnectivityService>();
                 services.AddSingleton<IAuditService, AuditService>();
                 services.AddSingleton<IPinAttemptService, PinAttemptService>();
+                services.AddSingleton<IPinUnlockService, PinUnlockService>();
                 services.AddSingleton<IInventoryService, InventoryService>();
                 services.AddSingleton<IOrderService, OrderService>();
                 services.AddSingleton<IProductCatalogService, ProductCatalogService>();

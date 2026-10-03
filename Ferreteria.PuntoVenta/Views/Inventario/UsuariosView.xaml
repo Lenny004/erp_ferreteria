@@ -195,6 +195,25 @@
                             Click="OnDesactivarClick" Margin="0,10,0,0" Visibility="Collapsed">
                         <TextBlock Text="DESACTIVAR" Foreground="{StaticResource AppError}" FontWeight="Bold" />
                     </Button>
+
+                    <Border Margin="0,18,0,0" Padding="12"
+                            Background="{StaticResource AppAzulOscuro}"
+                            BorderBrush="{StaticResource AppAzulClaro}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Desbloquear terminal" Style="{StaticResource AppCardLabelStyle}" />
+                            <TextBlock Text="Requiere permiso de administrador y registra la acción." Foreground="{StaticResource AppGrisClaro}" TextWrapping="Wrap" Margin="0,4,0,10" />
+                            <TextBlock Text="Código de caja" Style="{StaticResource AppCardLabelStyle}" />
+                            <TextBox x:Name="CashRegisterCodeBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                            <TextBlock Text="Motivo (opcional)" Style="{StaticResource AppCardLabelStyle}" />
+                            <TextBox x:Name="UnlockReasonBox" MaxLength="300" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                            <Button Style="{StaticResource AppSecondaryWideButtonStyle}" Click="OnUnlockTerminalClick">
+                                <TextBlock Text="DESBLOQUEAR" Foreground="{StaticResource AppBlanco}" FontWeight="Bold" />
+                            </Button>
+                            <TextBlock x:Name="UnlockStatusText" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </Border>

@@ -1,7 +1,9 @@
+using Ferreteria.PuntoVenta.Services.Domain;
+
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>Evento mínimo utilizado para calcular el lockout sin consultar infraestructura.</summary>
-/// <param name="Action">PIN_FAIL o PIN_OK.</param>
+/// <param name="Action">PIN_FAIL, PIN_OK o PIN_UNLOCK.</param>
 /// <param name="CreatedAtUtc">Fecha UTC del evento.</param>
 public sealed record PinLockoutEvent(string Action, DateTimeOffset CreatedAtUtc);
 
@@ -40,12 +42,24 @@ public static class PinLockoutPolicy
         ValidateOptions(options);
 
         var windowStart = nowUtc - TimeSpan.FromMinutes(options.WindowMinutes);
+        var lastUnlock = events
+            .Where(item => string.Equals(
+                item.Action,
+                SalesDomainConstants.PinAuditActions.PinUnlock,
+                StringComparison.Ordinal)
+                && item.CreatedAtUtc <= nowUtc)
+            .Select(item => (DateTimeOffset?)item.CreatedAtUtc)
+            .Max();
         var failedAttempts = 0;
         var lockoutCount = 0;
         DateTimeOffset? lockedUntil = null;
 
         foreach (var pinEvent in events
-            .Where(item => string.Equals(item.Action, "PIN_FAIL", StringComparison.Ordinal)
+            .Where(item => string.Equals(
+                    item.Action,
+                    SalesDomainConstants.PinAuditActions.PinFail,
+                    StringComparison.Ordinal)
+                && (lastUnlock is null || item.CreatedAtUtc > lastUnlock.Value)
                 && item.CreatedAtUtc >= windowStart
                 && item.CreatedAtUtc <= nowUtc)
             .OrderBy(item => item.CreatedAtUtc))

@@ -1,4 +1,4 @@
-# POS — QA de seguridad, fase 3
+# POS — QA de seguridad, fase 5b
 
 Esta fase endurece la autorización de la fase 1 y cubre ventas/devoluciones concurrentes, idempotencia por intento, reloj del negocio, configuración de conexión y el rol de base de datos. Las operaciones sensibles reciben `IAuthorizationGuard` obligatorio y fallan cerradas; no existe un camino de compatibilidad que conceda permisos cuando falta el guard.
 
@@ -34,7 +34,20 @@ El cierre toma `FOR UPDATE` sobre la fila padre de la sesión; la venta toma `FO
 
 ## Rol mínimo y lockout
 
-`DatabaseRoleIntegrationTests.PosAppRole_ExecutesCompletePosFlowAndPersistsPinAudit` ejecuta apertura, venta, devolución, cierre y `PIN_FAIL`/lockout/`PIN_OK` autenticado como `pos_app`. La conexión usa `docs/pos/pos_app_rol_minimo.sql`, que otorga solo DML de las tablas POS y el `EXECUTE` de la función advisory concreta requerida. Los datos fiscales de devolución y emisión siguen marcados a verificar con contador/MH.
+`DatabaseRoleIntegrationTests.PosAppRole_ExecutesCompletePosFlowAndPersistsPinAudit` ejecuta apertura, venta, devolución, cierre, `PIN_FAIL`/lockout/`PIN_OK` y `PIN_UNLOCK` autenticado como `pos_app`. La conexión usa `docs/pos/pos_app_rol_minimo.sql`, que otorga solo DML de las tablas POS y el `EXECUTE` de la función advisory concreta requerida. Los datos fiscales de devolución y emisión siguen marcados a verificar con contador/MH.
+
+## Orden opcional de casos xUnit
+
+El proyecto de tests registra `EnvironmentTestCaseOrderer` como ordenador de casos xUnit 2. Sin variable de entorno devuelve la secuencia predeterminada de xUnit. Para detectar dependencias de orden:
+
+```powershell
+$env:FERRETERIA_TEST_ORDER = 'reverse'
+dotnet test tests/Ferreteria.PuntoVenta.Tests/Ferreteria.PuntoVenta.Tests.csproj
+$env:FERRETERIA_TEST_ORDER = 'random:20261003'
+dotnet test tests/Ferreteria.PuntoVenta.Tests/Ferreteria.PuntoVenta.Tests.csproj
+```
+
+`reverse` invierte los casos de cada clase y `random:<semilla>` aplica un barajado reproducible dentro de cada clase. xUnit 2 no reordena las clases dentro de una colección; por eso esta herramienta no sustituye el aislamiento de datos ni garantiza un orden global entre clases.
 
 ## Riesgos y verificaciones externas
 

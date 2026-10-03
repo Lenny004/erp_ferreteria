@@ -91,10 +91,9 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
             await using (var scope = provider.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-                var product = await db.Products.AsNoTracking().OrderBy(item => item.Code).FirstAsync();
+                var product = (await TestDataFactory.CreateProductsAsync(db, 1, 3m)).Single();
                 productId = product.Id;
                 originalStock = product.CurrentStock;
-                await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE public.\"Products\" SET \"CurrentStock\" = \"CurrentStock\" + 3 WHERE \"id\" = {productId}");
             }
 
             var cash = provider.GetRequiredService<ICashSessionService>();
@@ -123,6 +122,10 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
             await pinAttempts.ResetAsync();
             Assert.True((await pinAttempts.GetStatusAsync()).IsLocked);
 
+            await provider.GetRequiredService<IPinUnlockService>()
+                .UnlockTerminalAsync(code, fixture.ManagerId, "Desbloqueo QA pos_app");
+            Assert.False((await pinAttempts.GetStatusAsync()).IsLocked);
+
             await cash.CloseAsync(sessionId, total, "QA cierre pos_app", fixture.ManagerId);
 
             await using var verifyScope = provider.CreateAsyncScope();
@@ -131,6 +134,7 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
             Assert.Equal(1, await verifyDb.Returns.CountAsync(item => item.Id == returnResult.ReturnId));
             Assert.True(await verifyDb.AuditLogs.CountAsync(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName && item.Action == SalesDomainConstants.PinAuditActions.PinFail) >= PinLockoutPolicy.MaxAttempts);
             Assert.True(await verifyDb.AuditLogs.AnyAsync(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName && item.Action == SalesDomainConstants.PinAuditActions.PinOk));
+            Assert.True(await verifyDb.AuditLogs.AnyAsync(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName && item.Action == SalesDomainConstants.PinAuditActions.PinUnlock && item.RecordId == $"Caja:{code}" && item.UserId == fixture.ManagerId));
         }
         finally
         {
@@ -171,6 +175,8 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
         services.AddSingleton<IReturnFiscalPolicy, DefaultReturnFiscalPolicy>();
         services.AddSingleton<ILogger<PinAttemptService>>(_ => NullLogger<PinAttemptService>.Instance);
         services.AddSingleton<IPinAttemptService, PinAttemptService>();
+        services.AddSingleton<ILogger<PinUnlockService>>(_ => NullLogger<PinUnlockService>.Instance);
+        services.AddSingleton<IPinUnlockService, PinUnlockService>();
         services.AddSingleton<PinAuthService>();
         services.AddSingleton<ICashSessionService, CashSessionService>();
         services.AddSingleton<OrderService>();
@@ -218,7 +224,7 @@ public sealed class DatabaseRoleIntegrationTests(PostgreSqlFixture fixture)
         if (productId != Guid.Empty)
         {
             var product = await db.Products.SingleOrDefaultAsync(item => item.Id == productId);
-            if (product is not null) product.CurrentStock = originalStock;
+            if (product is not null) db.Products.Remove(product);
         }
         await db.SaveChangesAsync();
     }

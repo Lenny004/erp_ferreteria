@@ -531,7 +531,7 @@ public sealed class ReturnServiceIntegrationTests
         var ownSession = session ?? await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 10m, "Venta de devolución");
         await using var scope = _fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var product = await db.Products.OrderBy(item => item.Id).FirstAsync();
+        var product = (await TestDataFactory.CreateProductsAsync(db, 1, 20m)).Single();
         var stockBeforeSale = product.CurrentStock;
         var subtotal = Math.Round(product.SalePrice * quantity, 2, MidpointRounding.AwayFromZero);
         var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
@@ -553,18 +553,16 @@ public sealed class ReturnServiceIntegrationTests
         var session = await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 10m, "Venta de redondeo");
         await using var scope = _fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var products = await db.Products.OrderBy(item => item.Id).Take(3).ToListAsync();
+        var products = await TestDataFactory.CreateProductsAsync(
+            db,
+            3,
+            20m,
+            new[] { 3.33m, 7.77m, 1.01m });
         var originalPrices = products.Select(item => item.SalePrice).ToArray();
         var quantities = new[] { 3m, 1m, 7m };
-        var prices = new[] { 3.33m, 7.77m, 1.01m };
-        for (var index = 0; index < products.Count; index++)
-        {
-            products[index].SalePrice = prices[index];
-        }
-        await db.SaveChangesAsync();
         try
         {
-            var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * prices[index], 2, MidpointRounding.AwayFromZero)).Sum();
+            var subtotal = quantities.Select((quantity, index) => Math.Round(quantity * originalPrices[index], 2, MidpointRounding.AwayFromZero)).Sum();
             var result = await _fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
                 _fixture.CashierId, session.Id, null, Guid.NewGuid(),
                 products.Select((product, index) => new CashSaleLineRequest(product.Id, quantities[index])).ToArray(),
@@ -578,11 +576,7 @@ public sealed class ReturnServiceIntegrationTests
         }
         finally
         {
-            for (var index = 0; index < products.Count; index++)
-            {
-                products[index].SalePrice = originalPrices[index];
-            }
-            await db.SaveChangesAsync();
+            // Los productos son exclusivos del caso y se eliminan con la limpieza de la venta.
         }
     }
 

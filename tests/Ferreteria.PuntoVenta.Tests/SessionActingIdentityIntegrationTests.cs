@@ -71,7 +71,7 @@ public sealed class SessionActingIdentityIntegrationTests(PostgreSqlFixture fixt
             await using (var seedScope = fixture.Services.CreateAsyncScope())
             {
                 var db = seedScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-                var product = await db.Products.OrderBy(item => item.Code).FirstAsync();
+                var product = (await TestDataFactory.CreateProductsAsync(db, 1, 10m)).Single();
                 productId = product.Id;
                 var sale = await fixture.Orders.CreateCashSaleAsync(new CreateCashSaleRequest(
                     fixture.CashierId,
@@ -177,10 +177,7 @@ public sealed class SessionActingIdentityIntegrationTests(PostgreSqlFixture fixt
         }
 
         var product = await db.Products.SingleOrDefaultAsync(item => item.Id == productId);
-        if (product is not null)
-        {
-            product.CurrentStock += 1m;
-        }
+        if (product is not null) db.Products.Remove(product);
 
         db.CashSessions.RemoveRange(await db.CashSessions.Where(item => item.Id == sessionId).ToListAsync());
         await db.SaveChangesAsync();

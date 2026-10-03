@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.CashRegister;
 using Ferreteria.PuntoVenta.Services.Security;
+using Microsoft.Extensions.Options;
 
 namespace Ferreteria.PuntoVenta.Views.Inventario;
 
@@ -15,14 +17,24 @@ public partial class UsuariosView : UserControl
 {
     private readonly IEmployeeService _employees;
     private readonly ICurrentSessionService _currentSession;
+    private readonly IPinUnlockService _pinUnlock;
+    private readonly string _defaultCashRegisterCode;
     private Guid? _selectedId;
 
     /// <summary>Inicializa la vista e hidrata departamentos/puestos al Loaded.</summary>
-    public UsuariosView(IEmployeeService employees, ICurrentSessionService currentSession)
+    public UsuariosView(
+        IEmployeeService employees,
+        ICurrentSessionService currentSession,
+        IPinUnlockService pinUnlock,
+        IOptions<CashRegisterOptions> cashRegisterOptions)
     {
         _employees = employees;
         _currentSession = currentSession;
+        _pinUnlock = pinUnlock;
+        ArgumentNullException.ThrowIfNull(cashRegisterOptions);
+        _defaultCashRegisterCode = cashRegisterOptions.Value.Codigo;
         InitializeComponent();
+        CashRegisterCodeBox.Text = _defaultCashRegisterCode;
         Loaded += async (_, _) => await InitializeAsync();
     }
 
@@ -227,6 +239,39 @@ public partial class UsuariosView : UserControl
         }
     }
 
+    /// <summary>Desbloquea una terminal y deja constancia del motivo en la auditoría.</summary>
+    private async void OnUnlockTerminalClick(object sender, RoutedEventArgs e)
+    {
+        HideUnlockMessage();
+
+        try
+        {
+            await _pinUnlock.UnlockTerminalAsync(
+                CashRegisterCodeBox.Text,
+                CurrentUserId,
+                NullIfEmpty(UnlockReasonBox.Text));
+            UnlockStatusText.Text = "Terminal desbloqueada correctamente.";
+            UnlockStatusText.Foreground = FindResource("AppSuccess") as System.Windows.Media.Brush;
+            UnlockStatusText.Visibility = Visibility.Visible;
+        }
+        catch (ArgumentException ex)
+        {
+            ShowUnlockError(ex.Message);
+        }
+        catch (UnauthorizedOperationException ex)
+        {
+            ShowUnlockError(ex.Message);
+        }
+        catch (PinLockoutUnavailableException ex)
+        {
+            ShowUnlockError(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            ShowUnlockError($"No se pudo desbloquear la terminal: {ex.Message}");
+        }
+    }
+
     /// <summary>Limpia el formulario y vuelve al modo "nuevo usuario".</summary>
     private void ClearForm()
     {
@@ -273,6 +318,18 @@ public partial class UsuariosView : UserControl
 
     /// <summary>Oculta el mensaje de error.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
+
+    /// <summary>Muestra un error de la operación de desbloqueo.</summary>
+    /// <param name="message">Mensaje claro para el usuario.</param>
+    private void ShowUnlockError(string message)
+    {
+        UnlockStatusText.Text = message;
+        UnlockStatusText.Foreground = FindResource("AppError") as System.Windows.Media.Brush;
+        UnlockStatusText.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Oculta el resultado anterior del desbloqueo.</summary>
+    private void HideUnlockMessage() => UnlockStatusText.Visibility = Visibility.Collapsed;
 
     /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
     private static bool TryParseDecimal(string? text, out decimal value) =>

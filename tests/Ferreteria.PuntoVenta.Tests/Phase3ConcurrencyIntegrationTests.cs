@@ -195,10 +195,7 @@ public sealed class Phase3ConcurrencyIntegrationTests(PostgreSqlFixture fixture)
     {
         await using var scope = fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        var products = await db.Products.OrderBy(item => item.Code).Take(2).ToListAsync();
-        foreach (var product in products) product.CurrentStock = stock;
-        await db.SaveChangesAsync();
-        return products;
+        return await TestDataFactory.CreateProductsAsync(db, 2, stock);
     }
 
     private ServiceProvider BuildReturnProvider(string code)
@@ -236,7 +233,7 @@ public sealed class Phase3ConcurrencyIntegrationTests(PostgreSqlFixture fixture)
         db.Orders.RemoveRange(await db.Orders.Where(item => orderIds.Contains(item.Id)).ToListAsync());
         var session = await db.CashSessions.SingleOrDefaultAsync(item => item.Id == sessionId); if (session is not null) db.CashSessions.Remove(session);
         var products = await db.Products.Where(item => productIds.Contains(item.Id)).ToListAsync();
-        for (var index = 0; index < products.Count; index++) products[index].CurrentStock = originalStock[index];
+        db.Products.RemoveRange(products);
         await db.SaveChangesAsync();
     }
 

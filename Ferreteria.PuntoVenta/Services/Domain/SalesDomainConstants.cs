@@ -214,6 +214,9 @@ public static class SalesDomainConstants
 
         /// <summary>PIN correcto que reinicia la racha de fallos.</summary>
         public const string PinOk = "PIN_OK";
+
+        /// <summary>Desbloqueo administrativo que reinicia la progresión del terminal.</summary>
+        public const string PinUnlock = "PIN_UNLOCK";
     }
 
     /// <summary>Códigos de unidades de venta usados por el dominio.</summary>

@@ -170,15 +170,6 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
-    /// <summary>Obtiene el id de un producto semilla para líneas y movimientos.</summary>
-    /// <returns>Id de un producto existente.</returns>
-    public async Task<Guid> GetAnyProductIdAsync()
-    {
-        await using var scope = Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
-        return await db.Products.OrderBy(product => product.Id).Select(product => product.Id).FirstAsync();
-    }
-
     /// <summary>Convierte una hora local de El Salvador en UTC para sembrar datos.</summary>
     /// <param name="year">Año.</param>
     /// <param name="month">Mes.</param>
@@ -713,7 +704,7 @@ public sealed class SalesHistoryIntegrationTests
     [Fact]
     public async Task GetDetailAsync_ReturnsLinesPaymentsDteCreditNotesMovementsAndNotes()
     {
-        var productId = await _fixture.GetAnyProductIdAsync();
+        var productId = await CreateOwnProductAsync();
         var order = PostgreSqlFixture.NewOrder(_fixture.ManagerId, PostgreSqlFixture.Local(2026, 6, 1, 10), SalesDomainConstants.OrderStatuses.Completed);
         order.Notes = "Nota de prueba del detalle";
         var dte = PostgreSqlFixture.NewDte(order.Id, "01", DteConstants.EstadosMh.Procesado, "DET");
@@ -834,5 +825,14 @@ public sealed class SalesHistoryIntegrationTests
             Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(1),
                 $"La página {pageNumber} tardó {stopwatch.Elapsed.TotalMilliseconds:0} ms (criterio: < 1000 ms).");
         }
+    }
+
+    /// <summary>Crea el producto exclusivo usado por el detalle de historial.</summary>
+    /// <returns>Id del producto recién persistido.</returns>
+    private async Task<Guid> CreateOwnProductAsync()
+    {
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        return (await TestDataFactory.CreateProductsAsync(db, 1, 10m)).Single().Id;
     }
 }

@@ -48,17 +48,48 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
             dte.EmitCreditNoteAsync("QA-SUPLANTADO", "QA", fixture.CashierId));
     }
 
-    /// <summary>Una nota de crédito autorizada supera el guard y llega a la validación del DTE original.</summary>
+    /// <summary>Una nota de crédito propia se emite contra un DTE propio y queda enlazada al original.</summary>
     [Fact]
-    public async Task EmitCreditNote_Authorized_ReachesBusinessValidation()
+    public async Task EmitCreditNote_Authorized_UsesOwnAcceptedOriginal()
     {
-        await using var provider = BuildProvider(fixture.ManagerId, new FakeMhApiClient());
-        // Según el estado del fixture puede faltar la configuración del emisor (DteConfigurationException) o el DTE original;
-        // ambas son DteException posteriores al guard, nunca UnauthorizedOperationException.
-        var exception = await Assert.ThrowsAnyAsync<DteException>(() =>
-            provider.GetRequiredService<IDteService>().EmitCreditNoteAsync("QA-INEXISTENTE", "QA", fixture.ManagerId));
+        var orderId = Guid.NewGuid();
+        var configId = Guid.NewGuid();
+        var customerId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var previousActiveConfigIds = await PrepareCreditNoteDataAsync(orderId, configId, customerId, productId);
+        try
+        {
+            var fakeMh = new FakeMhApiClient();
+            await using var provider = BuildProvider(fixture.ManagerId, fakeMh);
+            var dte = provider.GetRequiredService<IDteService>();
+            var original = await dte.EmitForOrderAsync(
+                new EmitDteRequest(orderId, DteConstants.TiposDte.CreditoFiscal, customerId));
 
-        Assert.Contains("DTE", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(original.IsAccepted);
+            Assert.Equal(DteConstants.TiposDte.CreditoFiscal, original.DteType);
+
+            var note = await dte.EmitCreditNoteAsync(original.NumeroControl, "QA nota autorizada", fixture.ManagerId);
+
+            Assert.True(note.IsAccepted);
+            Assert.Equal(DteConstants.TiposDte.NotaCredito, note.DteType);
+            Assert.Equal(orderId, note.OrderId);
+            Assert.Equal(2, fakeMh.SendCount);
+
+            await using var scope = fixture.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            var rows = await db.DteIssued.Where(item => item.OrderId == orderId).ToListAsync();
+            var persistedOriginal = Assert.Single(rows, item => item.Id == original.DteIssuedId);
+            var persistedNote = Assert.Single(rows, item => item.Id == note.DteIssuedId);
+            Assert.Equal(DteConstants.TiposDte.CreditoFiscal, persistedOriginal.DteType);
+            Assert.Equal(DteConstants.TiposDte.NotaCredito, persistedNote.DteType);
+            Assert.Equal(persistedOriginal.Id, persistedNote.RelatedDteId);
+            Assert.Equal(SalesDomainConstants.OrderStatuses.Cancelled,
+                await db.Orders.Where(item => item.Id == orderId).Select(item => item.Status).SingleAsync());
+        }
+        finally
+        {
+            await CleanupCreditNoteDataAsync(orderId, configId, customerId, productId, previousActiveConfigIds);
+        }
     }
 
     /// <summary>El reproceso autorizado supera el guard aunque no haya contingencias pendientes.</summary>
@@ -97,9 +128,10 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
         var orderId = Guid.NewGuid();
         var configId = Guid.NewGuid();
         var fakeMh = new FakeMhApiClient();
+        IReadOnlyList<Guid> previousActiveConfigIds = Array.Empty<Guid>();
         try
         {
-            await SeedEmissionDataAsync(orderId, configId);
+            previousActiveConfigIds = await SeedEmissionDataAsync(orderId, configId);
             await using var provider = BuildProvider(fixture.ManagerId, fakeMh);
             var result = await provider.GetRequiredService<IDteService>().EmitForOrderAsync(
                 new EmitDteRequest(orderId, DteConstants.TiposDte.Factura, null));
@@ -113,7 +145,7 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
         }
         finally
         {
-            await CleanupEmissionDataAsync(orderId, configId);
+            await CleanupEmissionDataAsync(orderId, configId, previousActiveConfigIds);
         }
     }
 
@@ -144,11 +176,23 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
         return services.BuildServiceProvider();
     }
 
-    private async Task SeedEmissionDataAsync(Guid orderId, Guid configId)
+    private async Task<IReadOnlyList<Guid>> SeedEmissionDataAsync(Guid orderId, Guid configId)
     {
         await using var scope = fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         var now = PostgreSqlFixture.Now.UtcDateTime;
+        var previousActiveConfigIds = await db.DteConfigs
+            .Where(item => item.IsActive)
+            .Select(item => item.Id)
+            .ToListAsync();
+        var previousActiveConfigs = await db.DteConfigs
+            .Where(item => previousActiveConfigIds.Contains(item.Id))
+            .ToListAsync();
+        foreach (var previousActiveConfig in previousActiveConfigs)
+        {
+            previousActiveConfig.IsActive = false;
+        }
+
         db.DteConfigs.Add(new DteConfig
         {
             Id = configId,
@@ -175,6 +219,90 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
             UpdatedAt = now
         });
         await db.SaveChangesAsync();
+        return previousActiveConfigIds;
+    }
+
+    private async Task<IReadOnlyList<Guid>> PrepareCreditNoteDataAsync(
+        Guid orderId,
+        Guid configId,
+        Guid customerId,
+        Guid productId)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        var now = PostgreSqlFixture.Now.UtcDateTime;
+        var activeConfigIds = await db.DteConfigs.Where(item => item.IsActive).Select(item => item.Id).ToListAsync();
+        var activeConfigs = await db.DteConfigs.Where(item => activeConfigIds.Contains(item.Id)).ToListAsync();
+        foreach (var activeConfig in activeConfigs)
+        {
+            activeConfig.IsActive = false;
+        }
+
+        var familyId = await db.Families.Select(item => item.Id).FirstAsync();
+        var measurementTypeId = await db.MeasurementTypes.Select(item => item.Id).FirstAsync();
+        db.DteConfigs.Add(new DteConfig
+        {
+            Id = configId,
+            EmisorNit = "00000000000000",
+            EmisorNrc = "0000000",
+            EmisorName = "Emisor QA Nota",
+            ActividadEconomica = "000000",
+            AddressLine = "Dirección QA",
+            Municipality = "Municipio QA",
+            Department = "Departamento QA",
+            Ambiente = "00",
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.Customers.Add(new Customer
+        {
+            Id = customerId,
+            CustomerType = "CCF",
+            Name = "Cliente QA Nota",
+            Nit = "06140000000000",
+            Nrc = "0000000",
+            IsActive = true
+        });
+        db.Products.Add(new Product
+        {
+            Id = productId,
+            Code = $"QA-DTE-{Guid.NewGuid():N}"[..30],
+            Description = "Producto propio DTE QA",
+            FamilyId = familyId,
+            MeasurementTypeId = measurementTypeId,
+            SalePrice = 10m,
+            CostPrice = 5m,
+            CurrentStock = 10m,
+            IsActive = true
+        });
+        db.Orders.Add(new Order
+        {
+            Id = orderId,
+            EmployeeId = fixture.ManagerId,
+            CustomerId = customerId,
+            ClientRequestId = Guid.NewGuid(),
+            OrderType = SalesDomainConstants.OrderTypes.CashRegisterSale,
+            Status = SalesDomainConstants.OrderStatuses.Completed,
+            Subtotal = 10m,
+            TaxAmount = 1.30m,
+            Total = 11.30m,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.OrderDetails.Add(new OrderDetail
+        {
+            Id = Guid.NewGuid(),
+            OrderId = orderId,
+            ProductId = productId,
+            Quantity = 1m,
+            UnitsPerPackage = 1m,
+            UnitPrice = 10m,
+            UnitCost = 5m,
+            Subtotal = 10m
+        });
+        await db.SaveChangesAsync();
+        return activeConfigIds;
     }
 
     private async Task SetEmployeeActiveAsync(Guid employeeId, bool isActive)
@@ -196,13 +324,47 @@ public sealed class DteServiceAuthorizationIntegrationTests(PostgreSqlFixture fi
             await db.Orders.CountAsync());
     }
 
-    private async Task CleanupEmissionDataAsync(Guid orderId, Guid configId)
+    private async Task CleanupEmissionDataAsync(
+        Guid orderId,
+        Guid configId,
+        IReadOnlyList<Guid> previousActiveConfigIds)
     {
         await using var scope = fixture.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
         db.DteIssued.RemoveRange(await db.DteIssued.Where(item => item.OrderId == orderId).ToListAsync());
         db.Orders.RemoveRange(await db.Orders.Where(item => item.Id == orderId).ToListAsync());
         db.DteConfigs.RemoveRange(await db.DteConfigs.Where(item => item.Id == configId).ToListAsync());
+        var previousActiveConfigs = await db.DteConfigs
+            .Where(item => previousActiveConfigIds.Contains(item.Id))
+            .ToListAsync();
+        foreach (var previousActiveConfig in previousActiveConfigs)
+        {
+            previousActiveConfig.IsActive = true;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task CleanupCreditNoteDataAsync(
+        Guid orderId,
+        Guid configId,
+        Guid customerId,
+        Guid productId,
+        IReadOnlyList<Guid> previousActiveConfigIds)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        db.DteIssued.RemoveRange(await db.DteIssued.Where(item => item.OrderId == orderId).ToListAsync());
+        db.OrderDetails.RemoveRange(await db.OrderDetails.Where(item => item.OrderId == orderId).ToListAsync());
+        db.Orders.RemoveRange(await db.Orders.Where(item => item.Id == orderId).ToListAsync());
+        db.Products.RemoveRange(await db.Products.Where(item => item.Id == productId).ToListAsync());
+        db.Customers.RemoveRange(await db.Customers.Where(item => item.Id == customerId).ToListAsync());
+        db.DteConfigs.RemoveRange(await db.DteConfigs.Where(item => item.Id == configId).ToListAsync());
+        var previousConfigs = await db.DteConfigs.Where(item => previousActiveConfigIds.Contains(item.Id)).ToListAsync();
+        foreach (var previousConfig in previousConfigs)
+        {
+            previousConfig.IsActive = true;
+        }
+
         await db.SaveChangesAsync();
     }
 

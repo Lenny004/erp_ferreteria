@@ -1,4 +1,5 @@
 using Ferreteria.PuntoVenta.Services;
+using Ferreteria.PuntoVenta.Services.Domain;
 using Xunit;
 
 namespace Ferreteria.PuntoVenta.Tests;
@@ -86,6 +87,74 @@ public sealed class PinLockoutPolicyTests
 
         Assert.False(status.IsLocked);
         Assert.Equal(0, status.FailedAttempts);
+    }
+
+    /// <summary>Los fallos durante horas nunca producen un bloqueo mayor que el tope.</summary>
+    [Fact]
+    public void Evaluate_FallosContinuosDuranteHoras_NoSuperaElTope()
+    {
+        var options = new PinLockoutOptions
+        {
+            MaxAttempts = 2,
+            WindowMinutes = 15,
+            InitialLockoutMinutes = 4,
+            ProgressiveMultiplier = 3,
+            MaxLockoutMinutes = 7
+        };
+        var events = new List<PinLockoutEvent>();
+
+        for (var minute = 0; minute < 240; minute++)
+        {
+            var now = Start.AddMinutes(minute);
+            events.Add(new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, now));
+            var status = PinLockoutPolicy.Evaluate(events, now, options);
+
+            if (status.IsLocked)
+            {
+                Assert.True(status.LockedUntilUtc <= now.AddMinutes(options.MaxLockoutMinutes).UtcDateTime);
+            }
+        }
+    }
+
+    /// <summary>Los fallos recibidos durante un bloqueo no extienden su vencimiento ni se cuentan.</summary>
+    [Fact]
+    public void Evaluate_FallosDuranteBloqueoActivo_NoExtiendenNiCuentan()
+    {
+        var options = new PinLockoutOptions
+        {
+            MaxAttempts = 2,
+            WindowMinutes = 30,
+            InitialLockoutMinutes = 2,
+            ProgressiveMultiplier = 2,
+            MaxLockoutMinutes = 5
+        };
+        var events = new[]
+        {
+            new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, Start),
+            new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, Start.AddSeconds(1)),
+            new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, Start.AddSeconds(30)),
+            new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, Start.AddMinutes(1))
+        };
+
+        var status = PinLockoutPolicy.Evaluate(events, Start.AddMinutes(1), options);
+
+        Assert.True(status.IsLocked);
+        Assert.Equal(Start.AddMinutes(2).AddSeconds(1).UtcDateTime, status.LockedUntilUtc);
+        Assert.Equal(options.MaxAttempts, status.FailedAttempts);
+    }
+
+    /// <summary>El último desbloqueo administrativo descarta fallos anteriores.</summary>
+    [Fact]
+    public void Evaluate_DesbloqueoAdministrativo_ReiniciaContadorYProgresion()
+    {
+        var events = Fails(5)
+            .Append(new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinUnlock, Start.AddMinutes(1)))
+            .Append(new PinLockoutEvent(SalesDomainConstants.PinAuditActions.PinFail, Start.AddMinutes(1).AddSeconds(1)));
+
+        var status = PinLockoutPolicy.Evaluate(events, Start.AddMinutes(1).AddSeconds(1));
+
+        Assert.False(status.IsLocked);
+        Assert.Equal(1, status.FailedAttempts);
     }
 
     private static IEnumerable<PinLockoutEvent> Fails(int count) =>

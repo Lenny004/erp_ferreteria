@@ -122,9 +122,10 @@ public sealed class PinAttemptService : IPinAttemptService
         var rows = await db.AuditLogs.AsNoTracking()
             .Where(item => item.TableName == SalesDomainConstants.PinAuditActions.TableName
                 && item.RecordId == $"Caja:{_cashRegisterCode}"
-                && item.CreatedAt >= windowStartUtc
-                && (item.Action == SalesDomainConstants.PinAuditActions.PinFail
-                    || item.Action == SalesDomainConstants.PinAuditActions.PinOk))
+                && (item.Action == SalesDomainConstants.PinAuditActions.PinUnlock
+                    || (item.CreatedAt >= windowStartUtc
+                        && (item.Action == SalesDomainConstants.PinAuditActions.PinFail
+                            || item.Action == SalesDomainConstants.PinAuditActions.PinOk))))
             .OrderByDescending(item => item.CreatedAt)
             .Select(item => new { item.Action, item.CreatedAt })
             .ToListAsync(cancellationToken);

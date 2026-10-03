@@ -89,6 +89,8 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinAttemptService.cs" Link="Services/PinAttemptService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinLockoutPolicy.cs" Link="Services/PinLockoutPolicy.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/PinLockoutOptions.cs" Link="Services/PinLockoutOptions.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/IPinUnlockService.cs" Link="Services/IPinUnlockService.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/PinUnlockService.cs" Link="Services/PinUnlockService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Security/*.cs" LinkBase="Services/Security" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/CrudExceptions.cs" Link="Services/CrudExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/IEmployeeService.cs" Link="Services/IEmployeeService.cs" />
