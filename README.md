@@ -671,6 +671,15 @@ dotnet user-secrets set "ConnectionStrings:FerreteriaDB" "Host=localhost;Port=55
 
 En una caja instalada, configure `ConnectionStrings__FerreteriaDB` en el ámbito del proceso con una credencial de `pos_app`; no coloque secretos en `appsettings.json`. Si falta la cadena o sus credenciales, el POS muestra qué configurar y termina de forma ordenada. Consulte [`docs/pos/POS_ROL_BD.md`](docs/pos/POS_ROL_BD.md) para el rol y sus permisos. La credencial que estuvo versionada debe considerarse expuesta y ROTARSE donde se haya usado; no se reproduce aquí.
 
+#### Escaneo de secretos
+
+CI ejecuta gitleaks mediante [`.github/workflows/secretos.yml`](.github/workflows/secretos.yml). Para ejecutarlo localmente:
+
+```bash
+gitleaks dir . --config .gitleaks.toml --redact
+gitleaks git . --config .gitleaks.toml --log-opts=--all --redact
+```
+
 ### 2. App de Escritorio (WPF)
 
 ```bash
