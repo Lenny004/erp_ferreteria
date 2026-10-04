@@ -2,6 +2,10 @@
 
 Esta fase endurece la autorización de la fase 1 y cubre ventas/devoluciones concurrentes, idempotencia por intento, reloj del negocio, configuración de conexión y el rol de base de datos. Las operaciones sensibles reciben `IAuthorizationGuard` obligatorio y fallan cerradas; no existe un camino de compatibilidad que conceda permisos cuando falta el guard.
 
+## Cadena de conexión del POS
+
+Si la caja POS corre en otra máquina de la LAN distinta a la del contenedor, defina `POSTGRES_BIND` en el `.env` del backend (por ejemplo, la IP LAN del servidor o `0.0.0.0`, idealmente limitando el puerto con el firewall) y recree el contenedor. Con el valor por defecto solo se conecta la misma máquina.
+
 ## Decisiones principales
 
 - `ClientRequestId` identifica el intento lógico de venta o devolución. Una repetición idéntica devuelve el mismo resultado; cualquier diferencia de empleado, caja, líneas, cantidades, reingreso, método o monto se rechaza con un mensaje de nueva operación.

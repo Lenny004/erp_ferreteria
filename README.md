@@ -671,6 +671,8 @@ dotnet user-secrets set "ConnectionStrings:FerreteriaDB" "Host=localhost;Port=55
 
 En una caja instalada, configure `ConnectionStrings__FerreteriaDB` en el ámbito del proceso con una credencial de `pos_app`; no coloque secretos en `appsettings.json`. Si falta la cadena o sus credenciales, el POS muestra qué configurar y termina de forma ordenada. Consulte [`docs/pos/POS_ROL_BD.md`](docs/pos/POS_ROL_BD.md) para el rol y sus permisos. La credencial que estuvo versionada debe considerarse expuesta y ROTARSE donde se haya usado; no se reproduce aquí.
 
+Si la caja POS corre en otra máquina de la LAN distinta a la del contenedor, defina `POSTGRES_BIND` en el `.env` del backend (por ejemplo, la IP LAN del servidor o `0.0.0.0`, idealmente limitando el puerto con el firewall) y recree el contenedor. Con el valor por defecto solo se conecta la misma máquina.
+
 #### Escaneo de secretos
 
 CI ejecuta gitleaks mediante [`.github/workflows/secretos.yml`](.github/workflows/secretos.yml). Para ejecutarlo localmente:
