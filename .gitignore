@@ -39,10 +39,24 @@ artifacts/
 *_wpftmp.csproj
 
 ## Secrets y configuración local
+# El POS lee la cadena de conexión de ConnectionStrings__FerreteriaDB o de User Secrets;
+# ningún archivo con credenciales debe versionarse.
 appsettings.Development.json
 appsettings.Local.json
+appsettings.*.Local.json
+appsettings.Production.json
 **/secrets.json
+.env
+.env.*
+!.env.example
+# Certificado del emisor MH (.crt/.p12 del Firmador DTE) y llaves privadas
 *.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+.pgpass
 
 ## OS
 Thumbs.db

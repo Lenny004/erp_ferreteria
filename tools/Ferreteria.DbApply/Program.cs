@@ -1,6 +1,7 @@
 // Ferreteria.DbApply — aplica schema/migraciones SQL legacy contra PostgreSQL del POS.
 // Preferir Prisma (ferreteria_backend) como fuente de verdad del esquema.
 // Uso: dotnet run --project tools/Ferreteria.DbApply [--connection "..."] [--force-legacy-sql]
+// Alternativa: defina ConnectionStrings__FerreteriaDB para no exponer la credencial en el historial del shell.
 using System.Text.Json;
 using Npgsql;
 
@@ -9,12 +10,12 @@ var appsettingsPath = Path.Combine(root, "Ferreteria.PuntoVenta", "Config", "app
 var schemaPath = Path.Combine(root, "Ferreteria.PuntoVenta", "Squema.sql");
 var migrationsPath = Path.Combine(root, "..", "ferreteria_backend", "database", "migrations");
 var prismaSchemaPath = Path.Combine(root, "..", "ferreteria_backend", "prisma", "schema.prisma");
-var connectionString = GetArg(args, "--connection") ?? ReadConnectionString(appsettingsPath);
+var connectionString = GetArg(args, "--connection") ?? Environment.GetEnvironmentVariable("ConnectionStrings__FerreteriaDB") ?? ReadConnectionString(appsettingsPath);
 var forceLegacySql = HasFlag(args, "--force-legacy-sql");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    Console.Error.WriteLine("No se encontro ConnectionStrings:FerreteriaDB ni se envio --connection.");
+    Console.Error.WriteLine("No se encontró una cadena de conexión: defina ConnectionStrings__FerreteriaDB, envíe --connection o configure ConnectionStrings:FerreteriaDB en appsettings.json.");
     return 2;
 }
 

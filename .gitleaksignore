@@ -1,0 +1,6 @@
+# Hallazgos históricos ya expuestos en repositorio público. NO es una excepción de seguridad:
+# las credenciales correspondientes deben estar ROTADAS (ver la nota de rotación del README.md).
+# Formato: commit:archivo:regla:línea. No agregar entradas nuevas sin rotar la credencial.
+7047cfc95e899ee4aaa2bf81e503cecbb05665b0:Ferreteria.PuntoVenta/Config/appsettings.json:cadena-conexion-password:3
+515cc283da2064e0b359c9a37ce99d32bae38c38:FlexoCableSV.PuntoVenta/Config/appsettings.json:cadena-conexion-password:3
+f966cfe614030424db6563c23a0cb04eb6246005:FlexoCableSV.PuntoVenta/Config/appsettings.json:cadena-conexion-password:3
