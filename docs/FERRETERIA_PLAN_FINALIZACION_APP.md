@@ -797,8 +797,8 @@ Orden `orderType = 'VENTA_CAJA'` creada y completada en el mismo acto (cliente p
 
 **Implementar:**
 
-- **Libro de ventas a consumidor final:** agregar desde dte.DteIssued tipo  1 del mes.
-- **Libro de ventas a contribuyentes (CCF):** desde dte.DteIssued tipo  3 del mes.
+- **Libro de ventas a consumidor final:** agregar desde dte.DteIssued tipo 01 del mes.
+- **Libro de ventas a contribuyentes (CCF):** desde dte.DteIssued tipo 03 del mes.
 - **Libro de compras:** desde purchasing.PurchaseOrders recibidas con documento del proveedor.
 - Cuadre automatico entre DTEs emitidos/recibidos y los libros (verificacion de totales).
 - Generacion de archivo Excel en formato compatible con declaracion mensual Hacienda.

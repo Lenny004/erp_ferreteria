@@ -68,3 +68,25 @@ Desktop.ini
 .idea/
 *.swp
 *~
+
+# Sistema operativo y editores (configuración compartida de VS Code permitida)
+[Dd]esktop.ini
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs, temporales y respaldos
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Volcados y respaldos de base de datos (nunca se versionan)
+*.dump
+*.backup
+
+# Salidas de publicación, vista previa de tickets y resultados de pruebas
+publish/
+ticket-preview/
+TestResults/
