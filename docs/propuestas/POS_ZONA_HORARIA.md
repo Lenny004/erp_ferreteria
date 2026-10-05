@@ -1,3 +1,4 @@
+> **Estado: implementada en `ferreteria_backend` PR #15**, mediante la migración `prisma/migrations/3_pos_vkpistoday_zona_horaria`.
 # Propuesta: día de negocio del POS y `VKpisToday`
 
 ## Problema
