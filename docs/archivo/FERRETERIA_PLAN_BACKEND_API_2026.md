@@ -1,3 +1,5 @@
+> **Documento histórico (archivado el 2026-10-04):** plan de julio de 2026, ya superado por el backend actual; no refleja el estado vigente.
+
 # Plan de construcción — `ferreteria_backend` (API administrativa)
 
 > **Estado:** Fases 8–11 + refinamiento 8b ampliado (ficha/RRHH/clientes/edición planilla); futuro: tienda pública  
@@ -5,8 +7,7 @@
 > **Repos:** `ferreteria_backend`  
 > **Consumidor principal:** `ferreteria_adminweb`  
 > **BD compartida:** misma PostgreSQL que `erp_ferreteria` (caja WPF)  
-> **Documento de estado previo:** [`estado_ferreteria_backend_779de8a2.plan.md`](./estado_ferreteria_backend_779de8a2.plan.md)  
-> **Fuente técnica:** [`../../ferreteria_backend/README.md`](../../ferreteria_backend/README.md)
+> **Fuente técnica:** [`../../../ferreteria_backend/README.md`](../../../ferreteria_backend/README.md)
 
 ### Plantillas de referencia (proyectos propios)
 
