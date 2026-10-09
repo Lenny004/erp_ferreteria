@@ -18,6 +18,10 @@ public class Subfamily
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Descripción opcional de la subfamilia.</summary>
+    [MaxLength(300)]
+    public string? Description { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     [Column(TypeName = "timestamptz")]

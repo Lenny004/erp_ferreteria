@@ -5,14 +5,6 @@
     xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers"
     xmlns:local="clr-namespace:Ferreteria.PuntoVenta.Views.Caja"
     Loaded="OnLoaded">
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary
-                    Source="/Resources/Styles/AppStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
     <ScrollViewer
         VerticalScrollBarVisibility="Auto">
         <Grid
@@ -222,6 +214,9 @@
                             Margin="0,12,0,4" />
                         <local:NumericKeypad
                             x:Name="CashCountKeypad"
+                            Precision="{x:Static helpers:FieldConstraints.CashSessionsClosingDeclaredAmountPrecision}"
+                            Scale="{x:Static helpers:FieldConstraints.CashSessionsClosingDeclaredAmountScale}"
+                            AllowNegative="False"
                             Margin="0,0,0,8" />
                         <TextBox
                             x:Name="NotesTextBox"

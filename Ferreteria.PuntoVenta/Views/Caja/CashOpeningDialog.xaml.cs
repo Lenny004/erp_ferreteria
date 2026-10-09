@@ -16,12 +16,24 @@ public partial class CashOpeningDialog : Window
     /// <summary>Fondo inicial validado al confirmar.</summary>
     public decimal OpeningAmount { get; private set; }
 
+    /// <summary>Código de la caja física que se abrirá.</summary>
+    public string CashRegisterCode { get; set; } = string.Empty;
+
     /// <summary>Observación capturada para la apertura.</summary>
     public string? Notes { get; private set; }
 
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        OpeningKeypad.FocusInput();
+    }
+
     private void OnConfirmClick(object sender, RoutedEventArgs e)
     {
-        var amountResult = DecimalInputParser.Parse(OpeningKeypad.Text, precision: 12, scale: 2, allowNegative: false);
+        var amountResult = DecimalInputParser.Parse(
+            OpeningKeypad.Text,
+            FieldConstraints.CashSessionsOpeningAmountPrecision,
+            FieldConstraints.CashSessionsOpeningAmountScale,
+            allowNegative: false);
         if (!amountResult.IsValid)
         {
             ErrorText.Text = amountResult.ErrorMessage!;

@@ -173,6 +173,7 @@ public class FerreteriaDbContext : DbContext
             entity.Property(s => s.Id).HasColumnName("id");
             entity.Property(s => s.Code).HasColumnName("code");
             entity.Property(s => s.Name).HasColumnName("name");
+            entity.Property(s => s.Description).HasColumnName("description");
 
             // Relación N:1 con Family. Una subfamilia pertenece a exactamente una familia.
             // DeleteBehavior.NoAction evita borrados en cascada no deseados desde el ORM;

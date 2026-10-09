@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Ferreteria.PuntoVenta.Helpers;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -14,6 +15,27 @@ namespace Ferreteria.PuntoVenta.Views.Caja;
 public partial class NumericKeypad : UserControl
 {
     private bool _updatingText;
+
+    /// <summary>Propiedad de dependencia de la precisión total del valor capturado.</summary>
+    public static readonly DependencyProperty PrecisionProperty = DependencyProperty.Register(
+        nameof(Precision),
+        typeof(int),
+        typeof(NumericKeypad),
+        new PropertyMetadata(12));
+
+    /// <summary>Propiedad de dependencia de la escala decimal del valor capturado.</summary>
+    public static readonly DependencyProperty ScaleProperty = DependencyProperty.Register(
+        nameof(Scale),
+        typeof(int),
+        typeof(NumericKeypad),
+        new PropertyMetadata(2));
+
+    /// <summary>Propiedad de dependencia que permite valores negativos.</summary>
+    public static readonly DependencyProperty AllowNegativeProperty = DependencyProperty.Register(
+        nameof(AllowNegative),
+        typeof(bool),
+        typeof(NumericKeypad),
+        new PropertyMetadata(false));
 
     /// <summary>Propiedad de dependencia con el texto monetario capturado.</summary>
     public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
@@ -32,6 +54,27 @@ public partial class NumericKeypad : UserControl
         set => SetValue(TextProperty, value);
     }
 
+    /// <summary>Precisión total máxima del valor capturado; por defecto, 12 dígitos.</summary>
+    public int Precision
+    {
+        get => (int)GetValue(PrecisionProperty);
+        set => SetValue(PrecisionProperty, value);
+    }
+
+    /// <summary>Escala decimal máxima del valor capturado; por defecto, 2 decimales.</summary>
+    public int Scale
+    {
+        get => (int)GetValue(ScaleProperty);
+        set => SetValue(ScaleProperty, value);
+    }
+
+    /// <summary>Indica si se aceptan valores negativos; por defecto, <see langword="false"/>.</summary>
+    public bool AllowNegative
+    {
+        get => (bool)GetValue(AllowNegativeProperty);
+        set => SetValue(AllowNegativeProperty, value);
+    }
+
     /// <summary>Se produce cuando cambia el texto monetario capturado.</summary>
     public event DependencyPropertyChangedEventHandler? TextChanged;
 
@@ -44,6 +87,13 @@ public partial class NumericKeypad : UserControl
         InputTextBox.KeyDown += OnInputKeyDown;
     }
 
+    /// <summary>Coloca el foco de teclado en el campo decimal interno.</summary>
+    public void FocusInput()
+    {
+        InputTextBox.Focus();
+        InputTextBox.SelectAll();
+    }
+
     private static void OnTextPropertyChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
     {
         if (dependencyObject is not NumericKeypad keypad || keypad.InputTextBox is null)
@@ -51,7 +101,7 @@ public partial class NumericKeypad : UserControl
             return;
         }
 
-        keypad.SetInputText(NormalizeText(e.NewValue as string));
+        keypad.SetInputText(keypad.NormalizeText(e.NewValue as string));
         keypad.TextChanged?.Invoke(keypad, e);
     }
 
@@ -73,7 +123,7 @@ public partial class NumericKeypad : UserControl
         switch (command)
         {
             case "DECIMAL":
-                if (!Text.Contains('.', StringComparison.Ordinal))
+                if (Scale > 0 && !Text.Contains('.', StringComparison.Ordinal))
                 {
                     AppendText(".");
                 }
@@ -90,7 +140,14 @@ public partial class NumericKeypad : UserControl
 
     private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        e.Handled = e.Text.Any(character => !char.IsDigit(character) && character != '.');
+        e.Handled = !NumericInputTextRules.IsAllowed(
+            InputTextBox.Text,
+            InputTextBox.SelectionStart,
+            InputTextBox.SelectionLength,
+            e.Text,
+            Precision,
+            Scale,
+            AllowNegative);
     }
 
     private void OnInputTextChanged(object sender, TextChangedEventArgs e)
@@ -124,11 +181,26 @@ public partial class NumericKeypad : UserControl
             return;
         }
 
-        if (Text == "0" && value != ".")
+        var replacingInitialZero = Text == "0" && value != ".";
+        var selectionStart = replacingInitialZero ? 0 : Text.Length;
+        var selectionLength = replacingInitialZero ? Text.Length : 0;
+        if (!NumericInputTextRules.IsAllowed(
+                Text,
+                selectionStart,
+                selectionLength,
+                value,
+                Precision,
+                Scale,
+                AllowNegative))
+        {
+            return;
+        }
+
+        if (replacingInitialZero)
         {
             SetInputText(value);
         }
-        else if (Text.Length < 12)
+        else
         {
             SetInputText(Text + value);
         }
@@ -154,11 +226,28 @@ public partial class NumericKeypad : UserControl
         }
     }
 
-    private static string NormalizeText(string? value)
+    private string NormalizeText(string? value)
     {
         var normalized = new string((value ?? string.Empty)
-            .Where(character => char.IsDigit(character) || character == '.')
+            .Replace(',', '.')
+            .Where(character => char.IsDigit(character) || character is '.' or '-')
             .ToArray());
+        if (!AllowNegative)
+        {
+            normalized = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
+        }
+        else
+        {
+            var minusIndex = normalized.IndexOf('-', StringComparison.Ordinal);
+            if (minusIndex > 0)
+            {
+                normalized = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
+            }
+            else if (minusIndex == 0)
+            {
+                normalized = "-" + normalized[1..].Replace("-", string.Empty, StringComparison.Ordinal);
+            }
+        }
         var decimalIndex = normalized.IndexOf('.', StringComparison.Ordinal);
         if (decimalIndex >= 0)
         {
@@ -166,11 +255,16 @@ public partial class NumericKeypad : UserControl
                 + normalized[(decimalIndex + 1)..].Replace(".", string.Empty, StringComparison.Ordinal);
         }
 
-        if (normalized.Length > 12)
+        var maximumLength = Math.Max(1, Precision)
+            + (normalized.Contains('.', StringComparison.Ordinal) ? 1 : 0)
+            + (normalized.StartsWith("-", StringComparison.Ordinal) ? 1 : 0);
+        if (normalized.Length > maximumLength)
         {
-            normalized = normalized[..12];
+            normalized = normalized[..maximumLength];
         }
 
-        return normalized.Length == 0 || normalized == "." ? "0" : normalized;
+        return normalized.Length == 0 || normalized == "." || (!AllowNegative && normalized == "-")
+            ? "0"
+            : normalized;
     }
 }

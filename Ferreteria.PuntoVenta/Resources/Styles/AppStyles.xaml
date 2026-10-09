@@ -162,6 +162,10 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Disabled}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AppAccent}"/>
+                            <Setter TargetName="Root" Property="BorderThickness" Value="2"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -464,6 +468,10 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="{StaticResource AppOpacity_Disabled}"/>
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AppAccent}"/>
+                            <Setter TargetName="Root" Property="BorderThickness" Value="2"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -473,11 +481,55 @@
     <Style x:Key="AppActionButtonStyle" TargetType="Button"
            BasedOn="{StaticResource AppActionButtonBaseStyle}">
         <Setter Property="Background" Value="{StaticResource AppSuccess}"/>
+        <Setter Property="Foreground" Value="{StaticResource AppNegro}"/>
     </Style>
 
     <Style x:Key="AppActionButtonSecondaryStyle" TargetType="Button"
            BasedOn="{StaticResource AppActionButtonBaseStyle}">
         <Setter Property="Background" Value="{StaticResource AppAzulClaro}"/>
+    </Style>
+
+    <!-- Botón destructivo y estructura común de diálogos. -->
+    <Style x:Key="AppDangerButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource AppActionButtonBaseStyle}">
+        <Setter Property="Background" Value="{StaticResource AppRojoDark}"/>
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+    </Style>
+
+    <Style x:Key="AppDialogWindowStyle" TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource AppAzulOscuro}"/>
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="WindowStartupLocation" Value="CenterOwner"/>
+        <Setter Property="ResizeMode" Value="NoResize"/>
+        <Setter Property="ShowInTaskbar" Value="False"/>
+    </Style>
+
+    <Style x:Key="AppDialogFooterStyle" TargetType="Grid">
+        <Setter Property="Margin" Value="0,16,0,0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style x:Key="RequiredLabelStyle" TargetType="Label">
+        <Setter Property="Foreground" Value="{StaticResource AppBlanco}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize_MD}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Label">
+                    <StackPanel Orientation="Horizontal">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          VerticalAlignment="Center"/>
+                        <TextBlock Text=" *"
+                                   Foreground="{StaticResource AppAccent}"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.Name="Campo obligatorio"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ════════════════════════════════════════════
@@ -739,7 +791,7 @@
 		   BasedOn="{StaticResource AppActionButtonStyle}">
         <Setter Property="Width" Value="150"/>
         <Setter Property="Height" Value="40"/>
-        <Setter Property="Background" Value="{StaticResource AppRojo}"/>
+        <Setter Property="Background" Value="{StaticResource AppRojoDark}"/>
     </Style>
 
     <Style x:Key="AppSecondaryWideButtonStyle" TargetType="Button"
