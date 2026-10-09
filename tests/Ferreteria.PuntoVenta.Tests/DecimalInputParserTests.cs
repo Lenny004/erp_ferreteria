@@ -15,10 +15,35 @@ public sealed class DecimalInputParserTests
     [InlineData("1,234,567", 1234567)]
     public void Parse_AcceptsSupportedForms(string input, double expected)
     {
-        var result = DecimalInputParser.Parse(input, maxDecimals: 4, allowNegative: false);
+        var result = DecimalInputParser.Parse(input, precision: 12, scale: 4, allowNegative: false);
 
         Assert.True(result.IsValid, result.ErrorMessage);
         Assert.Equal((decimal)expected, result.Value);
+    }
+
+    /// <summary>Comprueba que un separador decimal final se interprete como un número entero.</summary>
+    [Theory]
+    [InlineData("20.", 20)]
+    [InlineData("20,", 20)]
+    [InlineData("-20.", -20)]
+    [InlineData("-20,", -20)]
+    public void Parse_AcceptsTrailingDecimalSeparator(string input, double expected)
+    {
+        var result = DecimalInputParser.Parse(input, precision: 12, scale: 2, allowNegative: true);
+
+        Assert.True(result.IsValid, result.ErrorMessage);
+        Assert.Equal((decimal)expected, result.Value);
+    }
+
+    /// <summary>Rechaza un separador decimal sin dígitos enteros.</summary>
+    [Theory]
+    [InlineData(".")]
+    [InlineData(",")]
+    public void Parse_RejectsSeparatorWithoutInteger(string input)
+    {
+        var result = DecimalInputParser.Parse(input, precision: 12, scale: 2, allowNegative: false);
+
+        Assert.False(result.IsValid);
     }
 
     /// <summary>Comprueba que las combinaciones que no permiten distinguir miles y decimales fallen.</summary>
@@ -27,11 +52,11 @@ public sealed class DecimalInputParserTests
     [InlineData("1,234")]
     public void Parse_RejectsAmbiguousForms(string input)
     {
-        var result = DecimalInputParser.Parse(input, maxDecimals: 4, allowNegative: false);
+        var result = DecimalInputParser.Parse(input, precision: 12, scale: 4, allowNegative: false);
 
         Assert.False(result.IsValid);
         Assert.Equal(
-            "Valor ambiguo: use punto para decimales (ej. 1.5) y no use separador de miles.",
+            "Valor ambiguo: escriba los decimales con punto o coma (ej. 1.5 o 1,5) y los miles sin separador o como 1,234.5.",
             result.ErrorMessage);
     }
 
@@ -43,7 +68,7 @@ public sealed class DecimalInputParserTests
     [InlineData("abc")]
     public void Parse_RejectsInvalidInput(string input)
     {
-        var result = DecimalInputParser.Parse(input, maxDecimals: 2, allowNegative: false);
+        var result = DecimalInputParser.Parse(input, precision: 12, scale: 2, allowNegative: false);
 
         Assert.False(result.IsValid);
     }
@@ -52,10 +77,41 @@ public sealed class DecimalInputParserTests
     [Fact]
     public void Parse_ReturnsSpecificMessagesForNegativeAndScale()
     {
-        var negative = DecimalInputParser.Parse("-1", maxDecimals: 2, allowNegative: false);
-        var excessiveScale = DecimalInputParser.Parse("1.234", maxDecimals: 2, allowNegative: false);
+        var negative = DecimalInputParser.Parse("-1", precision: 12, scale: 2, allowNegative: false);
+        var excessiveScale = DecimalInputParser.Parse("1.234", precision: 12, scale: 2, allowNegative: false);
 
         Assert.Equal("El valor no puede ser negativo.", negative.ErrorMessage);
         Assert.Equal("Máximo 2 decimales.", excessiveScale.ErrorMessage);
+    }
+
+    /// <summary>Comprueba la precisión total, la escala y el conteo de enteros significativos.</summary>
+    [Fact]
+    public void Parse_EnforcesPrecisionAndScale()
+    {
+        var valid = DecimalInputParser.Parse("999.99", precision: 5, scale: 2, allowNegative: false);
+        var leadingZeros = DecimalInputParser.Parse("000999.99", precision: 5, scale: 2, allowNegative: false);
+        var tooManyIntegerDigits = DecimalInputParser.Parse("1000", precision: 5, scale: 2, allowNegative: false);
+        var tooManyIntegerDigitsWithScale = DecimalInputParser.Parse("1000.5", precision: 5, scale: 2, allowNegative: false);
+        var tooManyIntegerDigitsWithThousands = DecimalInputParser.Parse("1,234.5", precision: 5, scale: 2, allowNegative: false);
+        var tooManyDecimals = DecimalInputParser.Parse("1.234", precision: 5, scale: 2, allowNegative: false);
+
+        Assert.True(valid.IsValid, valid.ErrorMessage);
+        Assert.True(leadingZeros.IsValid, leadingZeros.ErrorMessage);
+        Assert.Equal("Máximo 3 dígitos enteros.", tooManyIntegerDigits.ErrorMessage);
+        Assert.Equal("Máximo 3 dígitos enteros.", tooManyIntegerDigitsWithScale.ErrorMessage);
+        Assert.Equal("Máximo 3 dígitos enteros.", tooManyIntegerDigitsWithThousands.ErrorMessage);
+        Assert.Equal("Máximo 2 decimales.", tooManyDecimals.ErrorMessage);
+    }
+
+    /// <summary>Rechaza precisiones y escalas incompatibles con Decimal(p,s).</summary>
+    [Fact]
+    public void Parse_RejectsInvalidPrecisionAndScaleArguments()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            DecimalInputParser.Parse("1", precision: 0, scale: 0, allowNegative: false));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            DecimalInputParser.Parse("1", precision: 5, scale: -1, allowNegative: false));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            DecimalInputParser.Parse("1", precision: 5, scale: 6, allowNegative: false));
     }
 }

@@ -171,28 +171,28 @@ public partial class ProductosView : UserControl
             return;
         }
 
-        var salePriceResult = DecimalInputParser.Parse(SalePriceBox.Text, maxDecimals: 2, allowNegative: false);
+        var salePriceResult = DecimalInputParser.Parse(SalePriceBox.Text, precision: 12, scale: 2, allowNegative: false);
         if (!salePriceResult.IsValid)
         {
             ShowError(salePriceResult.ErrorMessage!);
             return;
         }
 
-        var costPriceResult = DecimalInputParser.Parse(CostPriceBox.Text, maxDecimals: 4, allowNegative: false);
+        var costPriceResult = DecimalInputParser.Parse(CostPriceBox.Text, precision: 12, scale: 4, allowNegative: false);
         if (!costPriceResult.IsValid)
         {
             ShowError(costPriceResult.ErrorMessage!);
             return;
         }
 
-        var stockResult = DecimalInputParser.Parse(StockBox.Text, maxDecimals: 3, allowNegative: false);
+        var stockResult = DecimalInputParser.Parse(StockBox.Text, precision: 12, scale: 3, allowNegative: false);
         if (!stockResult.IsValid)
         {
             ShowError(stockResult.ErrorMessage!);
             return;
         }
 
-        var minStockResult = DecimalInputParser.Parse(MinStockBox.Text, maxDecimals: 3, allowNegative: false);
+        var minStockResult = DecimalInputParser.Parse(MinStockBox.Text, precision: 12, scale: 3, allowNegative: false);
         if (!minStockResult.IsValid)
         {
             ShowError(minStockResult.ErrorMessage!);

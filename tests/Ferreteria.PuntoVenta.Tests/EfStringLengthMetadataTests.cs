@@ -20,6 +20,8 @@ public sealed class EfStringLengthMetadataTests
         Assert.Equal(40, GetMaxLength(db, typeof(DteIssued), nameof(DteIssued.ControlNumber)));
         Assert.Equal(5, GetMaxLength(db, typeof(DteIssued), nameof(DteIssued.DteType)));
         Assert.Equal(10, GetMaxLength(db, typeof(Family), nameof(Family.Code)));
+        Assert.Equal(300, GetMaxLength(db, typeof(Family), nameof(Family.Description)));
+        Assert.Equal(300, GetMaxLength(db, typeof(Setting), nameof(Setting.Description)));
     }
 
     private static int? GetMaxLength(FerreteriaDbContext db, Type entityType, string propertyName)

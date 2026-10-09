@@ -17,7 +17,8 @@ public class Setting
     [Required]
     public string Value { get; set; } = string.Empty;
 
-    [MaxLength(200)]
+    /// <summary>Descripción opcional del parámetro.</summary>
+    [MaxLength(300)]
     public string? Description { get; set; }
 
     [Column(TypeName = "timestamptz")]

@@ -31,27 +31,34 @@ public readonly record struct DecimalInputResult
 /// </summary>
 /// <remarks>
 /// Acepta punto o coma como separador decimal, pero solo acepta comas de miles en la forma
-/// canónica de es-SV cuando también existe un punto decimal.
+/// canónica de es-SV cuando también existe un punto decimal. Un separador final representa
+/// un número entero, por ejemplo <c>20.</c> o <c>20,</c>.
 /// </remarks>
 public static class DecimalInputParser
 {
     private const string AmbiguousMessage =
-        "Valor ambiguo: use punto para decimales (ej. 1.5) y no use separador de miles.";
+        "Valor ambiguo: escriba los decimales con punto o coma (ej. 1.5 o 1,5) y los miles sin separador o como 1,234.5.";
     private const string InvalidFormatMessage = "Formato numérico no válido.";
 
     /// <summary>
     /// Analiza un texto decimal y devuelve el valor o un mensaje de validación en español.
     /// </summary>
     /// <param name="input">Texto introducido por el usuario.</param>
-    /// <param name="maxDecimals">Cantidad máxima de decimales permitida.</param>
+    /// <param name="precision">Cantidad total máxima de dígitos permitida.</param>
+    /// <param name="scale">Cantidad máxima de dígitos decimales permitida.</param>
     /// <param name="allowNegative">Indica si se permiten valores negativos.</param>
     /// <returns>Resultado con el valor decimal o el mensaje de error correspondiente.</returns>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Se lanza cuando <paramref name="maxDecimals"/> es negativo.
+    /// Se lanza cuando <paramref name="precision"/> no es positivo o
+    /// <paramref name="scale"/> está fuera del rango de cero a <paramref name="precision"/>.
     /// </exception>
-    public static DecimalInputResult Parse(string? input, int maxDecimals, bool allowNegative)
+    public static DecimalInputResult Parse(string? input, int precision, int scale, bool allowNegative)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(maxDecimals);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(precision);
+        if (scale < 0 || scale > precision)
+        {
+            throw new ArgumentOutOfRangeException(nameof(scale), "La escala debe estar entre cero y la precisión.");
+        }
 
         var text = input?.Trim() ?? string.Empty;
         if (text.Length == 0)
@@ -92,12 +99,12 @@ public static class DecimalInputParser
         }
         else if (hasPoint)
         {
-            if (!IsDecimalForm(text, '.'))
+            if (!IsDecimalFormOrTrailingSeparator(text, '.'))
             {
                 return Error(InvalidFormatMessage);
             }
 
-            normalized = text;
+            normalized = text.Length > 0 && text[^1] == '.' ? text[..^1] : text;
         }
         else if (hasComma)
         {
@@ -113,18 +120,26 @@ public static class DecimalInputParser
             }
             else
             {
-                if (!IsDecimalForm(text, ','))
+                if (!IsDecimalFormOrTrailingSeparator(text, ','))
                 {
                     return Error(InvalidFormatMessage);
                 }
 
-                var decimalDigits = text.Length - text.IndexOf(',') - 1;
-                if (decimalDigits == 3)
+                var commaIndex = text.IndexOf(',');
+                var decimalDigits = text.Length - commaIndex - 1;
+                if (decimalDigits == 0)
                 {
-                    return Error(AmbiguousMessage);
+                    normalized = text[..commaIndex];
                 }
+                else
+                {
+                    if (decimalDigits == 3)
+                    {
+                        return Error(AmbiguousMessage);
+                    }
 
-                normalized = text.Replace(',', '.');
+                    normalized = text.Replace(',', '.');
+                }
             }
         }
         else
@@ -138,9 +153,16 @@ public static class DecimalInputParser
         }
 
         var separatorIndex = normalized.IndexOf('.');
-        if (separatorIndex >= 0 && normalized.Length - separatorIndex - 1 > maxDecimals)
+        if (separatorIndex >= 0 && normalized.Length - separatorIndex - 1 > scale)
         {
-            return Error($"Máximo {maxDecimals} decimales.");
+            return Error($"Máximo {scale} decimales.");
+        }
+
+        var integerPart = separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
+        var integerDigits = integerPart.TrimStart('0').Length;
+        if (integerDigits > precision - scale)
+        {
+            return Error($"Máximo {precision - scale} dígitos enteros.");
         }
 
         var parseText = hasNegativeSign ? $"-{normalized}" : normalized;
@@ -176,13 +198,13 @@ public static class DecimalInputParser
         return true;
     }
 
-    private static bool IsDecimalForm(string text, char separator)
+    private static bool IsDecimalFormOrTrailingSeparator(string text, char separator)
     {
         var separatorIndex = text.IndexOf(separator);
         return separatorIndex > 0
             && separatorIndex == text.LastIndexOf(separator)
             && IsAsciiDigits(text[..separatorIndex])
-            && IsAsciiDigits(text[(separatorIndex + 1)..]);
+            && (separatorIndex == text.Length - 1 || IsAsciiDigits(text[(separatorIndex + 1)..]));
     }
 
     private static bool IsThousandsForm(string text)

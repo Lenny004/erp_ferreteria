@@ -105,7 +105,7 @@ public partial class MovimientosView : UserControl
             return;
         }
 
-        var quantityResult = DecimalInputParser.Parse(QuantityBox.Text, maxDecimals: 3, allowNegative: false);
+        var quantityResult = DecimalInputParser.Parse(QuantityBox.Text, precision: 12, scale: 3, allowNegative: false);
         if (!quantityResult.IsValid)
         {
             ShowError(quantityResult.ErrorMessage!);
@@ -123,7 +123,7 @@ public partial class MovimientosView : UserControl
             }
             else
             {
-                var unitCostResult = DecimalInputParser.Parse(UnitCostBox.Text, maxDecimals: 4, allowNegative: false);
+                var unitCostResult = DecimalInputParser.Parse(UnitCostBox.Text, precision: 12, scale: 4, allowNegative: false);
                 if (!unitCostResult.IsValid)
                 {
                     ShowError(unitCostResult.ErrorMessage!);

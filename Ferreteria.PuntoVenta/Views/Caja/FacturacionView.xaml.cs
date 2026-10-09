@@ -105,7 +105,7 @@ public partial class FacturacionView : UserControl
             return;
         }
 
-        var quantityResult = DecimalInputParser.Parse(QuantityTextBox.Text, maxDecimals: 3, allowNegative: false);
+        var quantityResult = DecimalInputParser.Parse(QuantityTextBox.Text, precision: 12, scale: 3, allowNegative: false);
         if (!quantityResult.IsValid)
         {
             SetStatusMessage(quantityResult.ErrorMessage!, isError: true);

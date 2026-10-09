@@ -230,7 +230,7 @@ public partial class CorteCajaView : UserControl
     /// <returns><c>true</c> cuando la entrada es válida.</returns>
     private bool TryReadDeclaredCash(out decimal declaredCash)
     {
-        var amountResult = DecimalInputParser.Parse(CashCountKeypad.Text, maxDecimals: 2, allowNegative: false);
+        var amountResult = DecimalInputParser.Parse(CashCountKeypad.Text, precision: 12, scale: 2, allowNegative: false);
         if (!amountResult.IsValid)
         {
             declaredCash = 0m;

@@ -138,7 +138,7 @@ public partial class UsuariosView : UserControl
             return;
         }
 
-        var salaryResult = DecimalInputParser.Parse(SalaryBox.Text, maxDecimals: 2, allowNegative: false);
+        var salaryResult = DecimalInputParser.Parse(SalaryBox.Text, precision: 10, scale: 2, allowNegative: false);
         if (!salaryResult.IsValid)
         {
             ShowError(salaryResult.ErrorMessage!);

@@ -684,7 +684,7 @@
                         <Popup x:Name="PART_Popup"
                                AllowsTransparency="True"
                                Focusable="False"
-                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                                Placement="Bottom"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                StaysOpen="False">

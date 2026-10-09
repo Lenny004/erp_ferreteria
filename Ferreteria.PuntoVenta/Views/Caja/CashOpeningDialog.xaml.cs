@@ -21,7 +21,7 @@ public partial class CashOpeningDialog : Window
 
     private void OnConfirmClick(object sender, RoutedEventArgs e)
     {
-        var amountResult = DecimalInputParser.Parse(OpeningKeypad.Text, maxDecimals: 2, allowNegative: false);
+        var amountResult = DecimalInputParser.Parse(OpeningKeypad.Text, precision: 12, scale: 2, allowNegative: false);
         if (!amountResult.IsValid)
         {
             ErrorText.Text = amountResult.ErrorMessage!;
