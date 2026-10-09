@@ -17,7 +17,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.IO;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Markup;
 
 namespace Ferreteria.PuntoVenta;
 
@@ -131,6 +133,15 @@ public partial class App : Application
     /// <summary>Arranca el host, verifica PostgreSQL y muestra <see cref="InicioWindow"/>.</summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        var culture = CultureInfo.GetCultureInfo("es-SV");
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        FrameworkElement.LanguageProperty.OverrideMetadata(
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(XmlLanguage.GetLanguage("es-SV")));
+
         try
         {
             await _host.StartAsync();

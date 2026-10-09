@@ -1,4 +1,5 @@
 using System.Windows;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
 using Ferreteria.PuntoVenta.Services.Time;
 
@@ -57,7 +58,7 @@ public partial class SalesHistoryDetailWindow : Window
                 movement.Quantity,
                 movement.Reason ?? "N/D")).ToList();
             NoDteText = Dtes.Count == 0 ? "SIN DTE — comprobante interno" : string.Empty;
-            TotalsText = $"Subtotal: {detail.Subtotal:C2} | IVA: {detail.Tax:C2} | Descuento: {detail.Discount:C2} | Total: {detail.Total:C2}";
+            TotalsText = $"Subtotal: {NumberFormatter.Currency(detail.Subtotal)} | IVA: {NumberFormatter.Currency(detail.Tax)} | Descuento: {NumberFormatter.Currency(detail.Discount)} | Total: {NumberFormatter.Currency(detail.Total)}";
             Notes = string.IsNullOrWhiteSpace(detail.Notes) ? "Sin notas." : detail.Notes;
         }
 

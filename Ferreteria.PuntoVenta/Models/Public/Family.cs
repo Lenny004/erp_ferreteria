@@ -9,13 +9,15 @@ public class Family
     [Key]
     public Guid Id { get; set; }
 
-    /// <summary>Código corto de catálogo (máx. 5 caracteres, único en familia).</summary>
-    [Required, MaxLength(5)]
+    /// <summary>Código corto de catálogo (máx. 10 caracteres, único en familia).</summary>
+    [Required, MaxLength(10)]
     public string Code { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Descripción opcional de la familia.</summary>
+    [MaxLength(300)]
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
 

@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Security;
 using Ferreteria.PuntoVenta.Services.CashRegister;
@@ -105,11 +105,14 @@ public partial class FacturacionView : UserControl
             return;
         }
 
-        if (!decimal.TryParse(QuantityTextBox.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var quantity))
+        var quantityResult = DecimalInputParser.Parse(QuantityTextBox.Text, precision: 12, scale: 3, allowNegative: false);
+        if (!quantityResult.IsValid)
         {
-            SetStatusMessage("Ingrese una cantidad valida.", isError: true);
+            SetStatusMessage(quantityResult.ErrorMessage!, isError: true);
             return;
         }
+
+        var quantity = quantityResult.Value!.Value;
 
         if (quantity <= 0)
         {
@@ -314,10 +317,10 @@ public partial class FacturacionView : UserControl
         var taxAmount = TaxAmountCalculator.CalculateTaxAmount(subtotal);
         var grandTotal = TaxAmountCalculator.CalculateGrandTotal(subtotal);
 
-        HeaderTotalText.Text = grandTotal.ToString("C2");
-        SubtotalText.Text = $"Subtotal: {subtotal:C2}";
-        TaxText.Text = $"IVA: {taxAmount:C2}";
-        TotalText.Text = $"Total: {grandTotal:C2}";
+        HeaderTotalText.Text = NumberFormatter.Currency(grandTotal);
+        SubtotalText.Text = $"Subtotal: {NumberFormatter.Currency(subtotal)}";
+        TaxText.Text = $"IVA: {NumberFormatter.Currency(taxAmount)}";
+        TotalText.Text = $"Total: {NumberFormatter.Currency(grandTotal)}";
     }
 
     /// <summary>Escribe un mensaje de estado (éxito o error) en la barra inferior.</summary>

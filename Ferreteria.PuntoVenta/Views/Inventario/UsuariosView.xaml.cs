@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.CashRegister;
@@ -137,11 +138,14 @@ public partial class UsuariosView : UserControl
             return;
         }
 
-        if (!TryParseDecimal(SalaryBox.Text, out var salary) || salary < 0)
+        var salaryResult = DecimalInputParser.Parse(SalaryBox.Text, precision: 10, scale: 2, allowNegative: false);
+        if (!salaryResult.IsValid)
         {
-            ShowError("El salario base debe ser un numero valido.");
+            ShowError(salaryResult.ErrorMessage!);
             return;
         }
+
+        var salary = salaryResult.Value!.Value;
 
         if (PositionCombo.SelectedValue is not Guid)
         {
@@ -330,11 +334,6 @@ public partial class UsuariosView : UserControl
 
     /// <summary>Oculta el resultado anterior del desbloqueo.</summary>
     private void HideUnlockMessage() => UnlockStatusText.Visibility = Visibility.Collapsed;
-
-    /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
-    private static bool TryParseDecimal(string? text, out decimal value) =>
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) ||
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
 
     /// <summary>Convierte cadena vacía en null para campos opcionales.</summary>
     private static string? NullIfEmpty(string? value) =>

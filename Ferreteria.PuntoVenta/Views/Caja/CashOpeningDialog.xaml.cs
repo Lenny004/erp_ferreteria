@@ -1,6 +1,6 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
+using Ferreteria.PuntoVenta.Helpers;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -21,12 +21,14 @@ public partial class CashOpeningDialog : Window
 
     private void OnConfirmClick(object sender, RoutedEventArgs e)
     {
-        if (!decimal.TryParse(OpeningKeypad.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount)
-            || amount < 0m)
+        var amountResult = DecimalInputParser.Parse(OpeningKeypad.Text, precision: 12, scale: 2, allowNegative: false);
+        if (!amountResult.IsValid)
         {
-            ErrorText.Text = "Ingrese un fondo inicial válido.";
+            ErrorText.Text = amountResult.ErrorMessage!;
             return;
         }
+
+        var amount = amountResult.Value!.Value;
 
         var confirmation = MessageBox.Show(
             $"¿Confirma abrir la caja con ${amount:0.00}?",
