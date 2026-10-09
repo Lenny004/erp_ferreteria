@@ -26,6 +26,10 @@
                     Text="Resumen de turno, conciliación e impresión de cierre"
                     Style="{StaticResource AppPanelSubtitleStyle}" />
                 <TextBlock
+                    Text="Atajos: F5 actualizar · Esc cancelar/cerrar"
+                    Style="{StaticResource AppPanelSubtitleStyle}"
+                    AutomationProperties.HelpText="F5 actualiza el corte y Escape cancela o cierra la pantalla." />
+                <TextBlock
                     x:Name="StatusText"
                     Style="{StaticResource AppPanelSubtitleStyle}"
                     Margin="0,8,0,0" />
@@ -188,7 +192,7 @@
                                                 Style="{StaticResource AppTableCellStyle}" />
                                             <TextBlock
                                                 Grid.Column="3"
-                                                Text="{Binding Amount, StringFormat={}{0:C2}}"
+                                                Text="{Binding AmountText}"
                                                 Style="{StaticResource AppTableCellStyle}" />
                                             <TextBlock
                                                 Grid.Column="4"
@@ -218,10 +222,14 @@
                             Scale="{x:Static helpers:FieldConstraints.CashSessionsClosingDeclaredAmountScale}"
                             AllowNegative="False"
                             Margin="0,0,0,8" />
+                        <Label
+                            Content="Observaciones"
+                            Target="{Binding ElementName=NotesTextBox}"
+                            Style="{StaticResource AppFieldLabelStyle}" />
                         <TextBox
                             x:Name="NotesTextBox"
                             Style="{StaticResource AppFieldTextBoxStyle}"
-                            helpers:WatermarkService.Watermark="Observaciones"
+                            helpers:WatermarkService.Watermark="Observaciones del cierre (opcional)"
                             Height="72"
                             TextWrapping="Wrap"
                             Margin="0,0,0,16" />

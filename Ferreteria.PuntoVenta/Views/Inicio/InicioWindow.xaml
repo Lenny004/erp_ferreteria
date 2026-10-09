@@ -14,7 +14,7 @@
         <ResourceDictionary>
             <!-- Botón de módulo principal -->
             <Style
-                x:Key="EstiloBotonModulo"
+                x:Key="LegacyEstiloBotonModulo"
                 TargetType="Button">
                 <Setter
                     Property="Width"
@@ -89,7 +89,7 @@
             </Style>
             <!-- Etiqueta de botón de módulo -->
             <Style
-                x:Key="EstiloEtiquetaBoton"
+                x:Key="LegacyEstiloEtiquetaBoton"
                 TargetType="TextBlock">
                 <Setter
                     Property="FontFamily"
@@ -198,7 +198,7 @@
                     Margin="0,0,32,0">
                     <Button
                         Name="BtnVentas"
-                        Style="{StaticResource EstiloBotonModulo}"
+                        Style="{StaticResource AppModuleButtonStyle}"
                         Click="OnVentasClick"
                         Height="124">
                         <StackPanel>
@@ -208,7 +208,7 @@
                                 Height="48"
                                 Margin="0,0,0,8" />
                             <TextBlock
-                                Style="{StaticResource EstiloEtiquetaBoton}"
+                                Style="{StaticResource AppModuleLabelStyle}"
                                 Text="VENTAS" />
                         </StackPanel>
                     </Button>
@@ -223,7 +223,7 @@
                 <StackPanel>
                     <Button
                         Name="BtnInventario"
-                        Style="{StaticResource EstiloBotonModulo}"
+                        Style="{StaticResource AppModuleButtonStyle}"
                         Click="OnInventarioClick"
                         Height="124">
                         <StackPanel>
@@ -233,7 +233,7 @@
                                 Height="48"
                                 Margin="0,0,0,8" />
                             <TextBlock
-                                Style="{StaticResource EstiloEtiquetaBoton}"
+                                Style="{StaticResource AppModuleLabelStyle}"
                                 Text="INVENTARIO" />
                         </StackPanel>
                     </Button>

@@ -9,7 +9,8 @@
     WindowStyle="None"
     AllowsTransparency="True"
     Background="Transparent"
-    ResizeMode="CanResize">
+    ResizeMode="CanResize"
+    KeyDown="OnShortcutKeyDown">
     <Grid
         Background="{StaticResource AppAzulOscuro}">
         <Grid.ColumnDefinitions>
@@ -369,6 +370,13 @@
                     x:Name="HeaderTitle"
                     Text="Consultar Stock"
                     Style="{StaticResource AppHeaderTitleStyle}" />
+                <TextBlock
+                    Text="Atajos: Ctrl+1…9 navegar · F5 actualizar"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Margin="0,0,150,0"
+                    Style="{StaticResource AppPanelSubtitleStyle}"
+                    AutomationProperties.HelpText="Use Ctrl más un número para navegar y F5 para actualizar la conectividad." />
                 <StackPanel
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -411,7 +419,7 @@
                     VerticalAlignment="Center"
                     Margin="0,0,16,0">
                     <TextBlock
-                        Text="Technical Support"
+                        Text="Soporte técnico"
                         Foreground="{StaticResource AppGris}"
                         FontSize="{StaticResource AppFontSize_XS}"
                         Margin="0,0,16,0"
@@ -424,7 +432,7 @@
                         Margin="0,0,16,0"
                         Cursor="Hand" />
                     <TextBlock
-                        Text="Privacy Policy"
+                        Text="Política de privacidad"
                         Foreground="{StaticResource AppGris}"
                         FontSize="{StaticResource AppFontSize_XS}"
                         Cursor="Hand" />

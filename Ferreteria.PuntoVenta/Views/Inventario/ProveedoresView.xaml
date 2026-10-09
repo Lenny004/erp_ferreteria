@@ -69,9 +69,8 @@
                             <ItemsControl x:Name="ItemsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Style="{StaticResource AppDataGridRowStyle}"
-                                                Cursor="Hand"
-                                                MouseLeftButtonUp="OnRowClick"
+                                        <Button Style="{StaticResource AppDataGridRowButtonStyle}"
+                                                Click="OnRowClick"
                                                 Tag="{Binding Id}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -79,11 +78,11 @@
                                                     <ColumnDefinition Width="120" />
                                                     <ColumnDefinition Width="130" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Name}" Style="{StaticResource AppTableCellStyle}" />
+                                                <TextBlock Text="{Binding Name}" ToolTip="{Binding Name}" TextTrimming="CharacterEllipsis" Style="{StaticResource AppTableCellStyle}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Nit}" Style="{StaticResource AppTableCellStyle}" />
                                                 <TextBlock Grid.Column="2" Text="{Binding Phone}" Style="{StaticResource AppTableCellStyle}" />
                                             </Grid>
-                                        </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -105,36 +104,39 @@
                 <StackPanel>
                     <TextBlock x:Name="FormTitle" Text="Nuevo proveedor" Style="{StaticResource AppPanelTitleStyle}" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Nombre / Razon social *" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="NameBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Nombre / Razón social" Target="{Binding ElementName=NameBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                    <TextBox x:Name="NameBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.NameMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Razón social" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Nombre comercial" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="TradeNameBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Nombre comercial" Target="{Binding ElementName=TradeNameBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="TradeNameBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.TradeNameMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Nombre comercial (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="NIT" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="NitBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="NIT" Target="{Binding ElementName=NitBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="NitBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.NitMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="NIT (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="NRC" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="NrcBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="NRC" Target="{Binding ElementName=NrcBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="NrcBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.NrcMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="NRC (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Contacto" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="ContactBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Contacto" Target="{Binding ElementName=ContactBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="ContactBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.ContactNameMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Persona de contacto" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Telefono" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="PhoneBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Teléfono" Target="{Binding ElementName=PhoneBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="PhoneBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.PhoneMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Teléfono (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Correo" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="EmailBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Correo" Target="{Binding ElementName=EmailBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="EmailBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.EmailMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="correo@ejemplo.com" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Direccion" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="AddressBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Dirección" Target="{Binding ElementName=AddressBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="AddressBox" MaxLength="{x:Static helpers:FieldConstraints.Suppliers.AddressMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Dirección (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Dias de credito" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="CreditDaysBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="País" Target="{Binding ElementName=CountryBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                    <TextBox x:Name="CountryBox" Text="SV — asignado automáticamente" IsReadOnly="True" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" AutomationProperties.Name="País del proveedor" />
 
-                    <TextBlock Text="Notas" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Días de crédito" Target="{Binding ElementName=CreditDaysBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="CreditDaysBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" helpers:NumericInput.IsEnabled="True" helpers:NumericInput.Precision="9" helpers:NumericInput.Scale="0" helpers:WatermarkService.Watermark="0" Margin="0,4,0,10" />
+
+                    <Label Content="Notas" Target="{Binding ElementName=NotesBox}" Style="{StaticResource AppFieldLabelStyle}" />
                     <TextBox x:Name="NotesBox" Style="{StaticResource AppFieldTextBoxStyle}"
-                             TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="0,4,0,10" />
+                             helpers:WatermarkService.Watermark="Notas internas (opcional)" TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="0,4,0,10" />
 
                     <TextBlock x:Name="FormErrorText" Foreground="{StaticResource AppError}"
                                TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,8" />

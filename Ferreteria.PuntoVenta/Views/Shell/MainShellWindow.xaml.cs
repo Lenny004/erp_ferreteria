@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Security;
@@ -196,6 +197,51 @@ public partial class MainShellWindow : Window
         if (sender is Button { Tag: string sectionKey })
         {
             ShowSection(sectionKey);
+        }
+    }
+
+    /// <summary>Procesa atajos visibles del shell sin saltarse permisos de navegación.</summary>
+    private async void OnShortcutKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F5)
+        {
+            await RefreshConnectivityStatusAsync();
+            e.Handled = true;
+            return;
+        }
+
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            return;
+        }
+
+        var shortcutIndex = e.Key switch
+        {
+            Key.D1 or Key.NumPad1 => 0,
+            Key.D2 or Key.NumPad2 => 1,
+            Key.D3 or Key.NumPad3 => 2,
+            Key.D4 or Key.NumPad4 => 3,
+            Key.D5 or Key.NumPad5 => 4,
+            Key.D6 or Key.NumPad6 => 5,
+            Key.D7 or Key.NumPad7 => 6,
+            Key.D8 or Key.NumPad8 => 7,
+            Key.D9 or Key.NumPad9 => 8,
+            _ => -1
+        };
+
+        if (shortcutIndex < 0)
+        {
+            return;
+        }
+
+        var visibleSections = _sections.Values
+            .Where(section => section.Button.Visibility == Visibility.Visible)
+            .ToList();
+        if (shortcutIndex < visibleSections.Count)
+        {
+            ShowSection(_sections.First(pair => pair.Value.Button == visibleSections[shortcutIndex].Button).Key);
+            visibleSections[shortcutIndex].Button.Focus();
+            e.Handled = true;
         }
     }
 

@@ -61,7 +61,7 @@
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="1"
-                                    Text="{Binding Quantity, StringFormat={}{0:0.###}}"
+                                    Text="{Binding QuantityText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock
@@ -71,22 +71,22 @@
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="3"
-                                    Text="{Binding UnitsPerPackage, StringFormat={}{0:0.###}}"
+                                    Text="{Binding UnitsPerPackageText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="4"
-                                    Text="{Binding UnitPrice, StringFormat={}{0:C2}}"
+                                    Text="{Binding UnitPriceText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="5"
-                                    Text="{Binding Discount, StringFormat={}{0:C2}}"
+                                    Text="{Binding DiscountText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="5"
-                                    Text="{Binding Subtotal, StringFormat={}{0:C2}}"
+                                    Text="{Binding SubtotalText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                             </Grid>
@@ -117,7 +117,7 @@
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="1"
-                                    Text="{Binding Amount, StringFormat={}{0:C2}}"
+                                    Text="{Binding AmountText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock
@@ -258,7 +258,7 @@
                                     FontSize="16" />
                                 <TextBlock
                                     Grid.Column="2"
-                                    Text="{Binding Quantity, StringFormat={}{0:0.###}}"
+                                    Text="{Binding QuantityText}"
                                     Foreground="{StaticResource AppBlanco}"
                                     FontSize="16" />
                                 <TextBlock

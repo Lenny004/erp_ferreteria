@@ -110,9 +110,11 @@
                 </Grid.ColumnDefinitions>
                 <TextBox
                     x:Name="SearchTextBox"
+                    MaxLength="200"
                     Style="{StaticResource AppFieldTextBoxStyle}"
                     helpers:WatermarkService.Watermark="Buscar codigo, descripcion o familia"
-                    TextChanged="OnSearchChanged" />
+                    TextChanged="OnSearchChanged"
+                    AutomationProperties.Name="Buscar producto" />
                 <ComboBox
                     x:Name="StatusFilterCombo"
                     Grid.Column="1"

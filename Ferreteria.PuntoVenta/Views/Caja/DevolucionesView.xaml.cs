@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Returns;
 using Microsoft.Extensions.Logging;
@@ -325,7 +326,7 @@ public partial class DevolucionesView : UserControl
         }
     }
 
-    private string QuantityText(Guid lineId) => _quantities.TryGetValue(lineId, out var quantity) ? quantity.ToString("0.###") : "0";
+    private string QuantityText(Guid lineId) => _quantities.TryGetValue(lineId, out var quantity) ? NumberFormatter.Quantity(quantity) : "0";
 
     private void ResetAssistant()
     {

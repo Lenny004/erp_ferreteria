@@ -32,7 +32,9 @@
   -->
   <ItemGroup>
     <Compile Include="../../Ferreteria.PuntoVenta/Helpers/DecimalInputParser.cs" Link="Helpers/DecimalInputParser.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Helpers/NumberFormatter.cs" Link="Helpers/NumberFormatter.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Helpers/FieldConstraints.cs" Link="Helpers/FieldConstraints.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Helpers/FieldConstraints.Pantallas.cs" Link="Helpers/FieldConstraints.Pantallas.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Helpers/NumericInputTextRules.cs" Link="Helpers/NumericInputTextRules.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptContracts.cs" Link="Printing/ReceiptContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosCommands.cs" Link="Printing/EscPosCommands.cs" />

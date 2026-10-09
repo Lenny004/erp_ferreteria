@@ -71,7 +71,7 @@
                                                     <ColumnDefinition Width="80" />
                                                     <ColumnDefinition Width="80" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding CreatedAt, StringFormat='dd/MM HH:mm'}" Style="{StaticResource AppTableCellStyle}" />
+                                                <TextBlock Text="{Binding CreatedAtText}" Style="{StaticResource AppTableCellStyle}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding ProductCode}" Style="{StaticResource AppTableCellStyle}" Foreground="{StaticResource AppRojo}" />
                                                 <TextBlock Grid.Column="2" Text="{Binding MovementType}" Style="{StaticResource AppTableCellStyle}" />
                                                 <TextBlock Grid.Column="3" Text="{Binding ProductDescription}" Style="{StaticResource AppTableCellStyle}" />
@@ -100,7 +100,7 @@
                 <StackPanel>
                     <TextBlock Text="Registrar movimiento" Style="{StaticResource AppPanelTitleStyle}" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Producto *" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Producto" Target="{Binding ElementName=ProductCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                     <ComboBox x:Name="ProductCombo" Style="{StaticResource AppFieldComboBoxStyle}"
                               DisplayMemberPath="Display" SelectedValuePath="Id"
                               IsEditable="True" IsTextSearchEnabled="True"
@@ -109,7 +109,7 @@
                     <TextBlock x:Name="CurrentStockText" Text="Stock actual: -"
                                Foreground="{StaticResource AppInfo}" Margin="0,0,0,10" />
 
-                    <TextBlock Text="Tipo de movimiento *" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Tipo de movimiento" Target="{Binding ElementName=TypeCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                     <ComboBox x:Name="TypeCombo" Style="{StaticResource AppFieldComboBoxStyle}"
                               SelectedIndex="0" SelectionChanged="OnTypeChanged" Margin="0,4,0,10">
                         <ComboBoxItem Content="Entrada por compra" Tag="ENTRADA_COMPRA" />
@@ -117,17 +117,17 @@
                         <ComboBoxItem Content="Ajuste (fijar stock)" Tag="AJUSTE" />
                     </ComboBox>
 
-                    <TextBlock x:Name="QuantityLabel" Text="Cantidad a ingresar *" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="QuantityBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label x:Name="QuantityLabel" Content="Cantidad a ingresar" Target="{Binding ElementName=QuantityBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                    <TextBox x:Name="QuantityBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" helpers:NumericInput.IsEnabled="True" helpers:NumericInput.Precision="{x:Static helpers:FieldConstraints.InventoryMovements.QuantityPrecision}" helpers:NumericInput.Scale="{x:Static helpers:FieldConstraints.InventoryMovements.QuantityScale}" helpers:WatermarkService.Watermark="0,000" Margin="0,4,0,10" />
 
                     <StackPanel x:Name="CostPanel">
-                        <TextBlock Text="Costo unitario" Style="{StaticResource AppCardLabelStyle}" />
-                        <TextBox x:Name="UnitCostBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                        <Label Content="Costo unitario" Target="{Binding ElementName=UnitCostBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                        <TextBox x:Name="UnitCostBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" helpers:NumericInput.IsEnabled="True" helpers:NumericInput.Precision="{x:Static helpers:FieldConstraints.InventoryMovements.UnitCostPrecision}" helpers:NumericInput.Scale="{x:Static helpers:FieldConstraints.InventoryMovements.UnitCostScale}" helpers:WatermarkService.Watermark="0,0000" Margin="0,4,0,10" />
                     </StackPanel>
 
-                    <TextBlock Text="Motivo" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Motivo" Target="{Binding ElementName=ReasonBox}" Style="{StaticResource AppFieldLabelStyle}" />
                     <TextBox x:Name="ReasonBox" Style="{StaticResource AppFieldTextBoxStyle}"
-                             TextWrapping="Wrap" AcceptsReturn="True" Height="50" Margin="0,4,0,10" />
+                             MaxLength="{x:Static helpers:FieldConstraints.InventoryMovements.ReasonMaxLength}" helpers:WatermarkService.Watermark="Motivo del movimiento (opcional)" TextWrapping="Wrap" AcceptsReturn="True" Height="50" Margin="0,4,0,10" />
 
                     <TextBlock x:Name="FormErrorText" Foreground="{StaticResource AppError}"
                                TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,8" />

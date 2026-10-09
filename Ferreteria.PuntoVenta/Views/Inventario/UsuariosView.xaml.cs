@@ -90,7 +90,7 @@ public partial class UsuariosView : UserControl
     /// Selecciona un Employee y rellena el formulario.
     /// El PasswordBox de PIN queda vacío a propósito (no se recupera el hash).
     /// </summary>
-    private async void OnRowClick(object sender, MouseButtonEventArgs e)
+    private async void OnRowClick(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: Guid id })
         {
@@ -120,7 +120,7 @@ public partial class UsuariosView : UserControl
         CanCashierCheck.IsChecked = employee.CanCashier;
         CanSellCheck.IsChecked = employee.CanSell;
         PinBox.Password = string.Empty;
-        PinLabel.Text = "Nuevo PIN (dejar vacio para no cambiar)";
+        PinLabel.Content = "Nuevo PIN (dejar vacío para no cambiar)";
         DeactivateButton.Visibility = Visibility.Visible;
         HideError();
     }
@@ -221,7 +221,7 @@ public partial class UsuariosView : UserControl
             return;
         }
 
-        if (MessageBox.Show("Desactivar este usuario?", "Usuarios",
+        if (MessageBox.Show("¿Desea desactivar este usuario?", "Usuarios",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
         {
             return;
@@ -291,7 +291,7 @@ public partial class UsuariosView : UserControl
         CanCashierCheck.IsChecked = false;
         CanSellCheck.IsChecked = false;
         PinBox.Password = string.Empty;
-        PinLabel.Text = "PIN de acceso (4 digitos) *";
+        PinLabel.Content = "PIN de acceso (4 dígitos)";
         DeactivateButton.Visibility = Visibility.Collapsed;
         HideError();
     }

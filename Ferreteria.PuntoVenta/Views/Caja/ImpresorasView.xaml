@@ -1,7 +1,8 @@
 <UserControl
     x:Class="Ferreteria.PuntoVenta.Views.Caja.ImpresorasView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers">
     <ScrollViewer
         VerticalScrollBarVisibility="Auto">
         <Grid
@@ -137,20 +138,14 @@
                         <TextBlock
                             Text="Configuración"
                             Style="{StaticResource AppCardLabelStyle}" />
-                        <TextBlock
-                            Text="Nombre de la impresora"
-                            FontSize="{StaticResource AppFontSize_LG}"
-                            Foreground="{StaticResource AppBlanco}"
-                            Margin="0,8,0,4" />
+                        <Label Content="Nombre de la impresora" Target="{Binding ElementName=NameTextBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                         <TextBox
                             x:Name="NameTextBox"
+                            MaxLength="{x:Static helpers:FieldConstraints.Printers.NameMaxLength}"
                             Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="Nombre visible"
                             FontSize="{StaticResource AppFontSize_LG}" />
-                        <TextBlock
-                            Text="Tipo de conexión"
-                            FontSize="{StaticResource AppFontSize_LG}"
-                            Foreground="{StaticResource AppBlanco}"
-                            Margin="0,8,0,4" />
+                        <Label Content="Tipo de conexión" Target="{Binding ElementName=ConnectionCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                         <ComboBox
                             x:Name="ConnectionCombo"
                             Style="{StaticResource AppFieldComboBoxStyle}"
@@ -167,30 +162,23 @@
                                 Content="Bluetooth"
                                 Tag="BLUETOOTH" />
                         </ComboBox>
-                        <TextBlock
-                            Text="Dirección IP (solo red)"
-                            FontSize="{StaticResource AppFontSize_LG}"
-                            Foreground="{StaticResource AppBlanco}"
-                            Margin="0,8,0,4" />
+                        <Label Content="Dirección IP (solo red)" Target="{Binding ElementName=IpTextBox}" Style="{StaticResource AppFieldLabelStyle}" />
                         <TextBox
                             x:Name="IpTextBox"
+                            MaxLength="{x:Static helpers:FieldConstraints.Printers.IpAddressMaxLength}"
                             Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:WatermarkService.Watermark="192.168.1.100"
                             FontSize="{StaticResource AppFontSize_LG}" />
-                        <TextBlock
-                            Text="Puerto (solo red)"
-                            FontSize="{StaticResource AppFontSize_LG}"
-                            Foreground="{StaticResource AppBlanco}"
-                            Margin="0,8,0,4" />
+                        <Label Content="Puerto (solo red)" Target="{Binding ElementName=PortTextBox}" Style="{StaticResource AppFieldLabelStyle}" />
                         <TextBox
                             x:Name="PortTextBox"
                             Style="{StaticResource AppFieldTextBoxStyle}"
+                            helpers:NumericInput.IsEnabled="True"
+                            helpers:NumericInput.Precision="5"
+                            helpers:NumericInput.Scale="0"
                             FontSize="{StaticResource AppFontSize_LG}"
                             Text="9100" />
-                        <TextBlock
-                            Text="Ancho de papel"
-                            FontSize="{StaticResource AppFontSize_LG}"
-                            Foreground="{StaticResource AppBlanco}"
-                            Margin="0,8,0,4" />
+                        <Label Content="Ancho de papel" Target="{Binding ElementName=PaperCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                         <ComboBox
                             x:Name="PaperCombo"
                             Style="{StaticResource AppFieldComboBoxStyle}"

@@ -23,7 +23,7 @@
                 <StackPanel>
                     <TextBlock Text="Buscar venta" Style="{StaticResource AppCardLabelStyle}" />
                     <DockPanel Margin="0,8,0,8">
-                        <Button x:Name="SearchButton" DockPanel.Dock="Right" Content="BUSCAR" Width="120" Height="90" FontSize="16" Click="OnSearchClick" />
+                        <Button x:Name="SearchButton" DockPanel.Dock="Right" Content="BUSCAR" Style="{StaticResource AppSecondaryWideButtonStyle}" Width="120" Height="90" FontSize="16" Click="OnSearchClick" AutomationProperties.Name="Buscar venta" />
                         <TextBox x:Name="SearchTextBox" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Número de control, cliente, NIT o id corto" VerticalContentAlignment="Center" />
                     </DockPanel>
                     <ListBox x:Name="SalesList" Height="150" SelectionChanged="OnSaleSelected" DisplayMemberPath="CustomerDisplayName" />
@@ -43,17 +43,19 @@
                 </Border>
                 <Border Grid.Column="1" Style="{StaticResource AppStatCardStyle}">
                     <StackPanel>
-                        <TextBlock Text="Motivo y reintegro" Style="{StaticResource AppCardLabelStyle}" />
-                        <ComboBox x:Name="ReasonCombo" DisplayMemberPath="Label" SelectedValuePath="Code" Height="44" FontSize="16" Margin="0,8,0,8" SelectionChanged="OnInputChanged" />
-                        <TextBox x:Name="NotesBox" Height="82" FontSize="16" TextWrapping="Wrap" AcceptsReturn="True" helpers:WatermarkService.Watermark="Observación (obligatoria para Anulación total)" TextChanged="OnNotesChanged" />
-                        <ComboBox x:Name="RefundCombo" Height="44" FontSize="16" Margin="0,12,0,12" SelectionChanged="OnInputChanged" />
+                        <Label Content="Motivo de devolución" Target="{Binding ElementName=ReasonCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                        <ComboBox x:Name="ReasonCombo" DisplayMemberPath="Label" SelectedValuePath="Code" MaxDropDownHeight="260" Style="{StaticResource AppFieldComboBoxStyle}" Margin="0,8,0,8" SelectionChanged="OnInputChanged" />
+                        <Label Content="Observación (obligatoria para anulación total)" Target="{Binding ElementName=NotesBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                        <TextBox x:Name="NotesBox" Height="82" Style="{StaticResource AppFieldTextBoxStyle}" TextWrapping="Wrap" AcceptsReturn="True" helpers:WatermarkService.Watermark="Explique el motivo de la anulación" TextChanged="OnNotesChanged" />
+                        <Label Content="Método de reintegro" Target="{Binding ElementName=RefundCombo}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                        <ComboBox x:Name="RefundCombo" Style="{StaticResource AppFieldComboBoxStyle}" Margin="0,12,0,12" SelectionChanged="OnInputChanged" />
                         <TextBlock Text="Resumen del crédito" Style="{StaticResource AppCardLabelStyle}" />
                         <TextBlock x:Name="SubtotalText" Margin="0,8,0,0" />
                         <TextBlock x:Name="DiscountText" />
                         <TextBlock x:Name="TaxText" />
                         <TextBlock x:Name="TotalText" FontSize="22" FontWeight="Bold" Foreground="{StaticResource AppWarning}" Margin="0,4,0,4" />
                         <TextBlock x:Name="FiscalText" TextWrapping="Wrap" Margin="0,4,0,12" />
-                        <Button x:Name="ConfirmButton" Content="CONFIRMAR DEVOLUCIÓN" Width="230" Height="90" FontSize="16" IsEnabled="False" Click="OnConfirmClick" />
+                        <Button x:Name="ConfirmButton" Content="CONFIRMAR DEVOLUCIÓN" Style="{StaticResource AppDangerButtonStyle}" Width="230" Height="90" FontSize="16" IsEnabled="False" Click="OnConfirmClick" />
                         <TextBlock x:Name="TechnicalMessageText" TextWrapping="Wrap" Foreground="{StaticResource AppError}" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>

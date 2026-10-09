@@ -1,7 +1,6 @@
 using System.Windows;
 using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services.SalesHistory;
-using Ferreteria.PuntoVenta.Services.Time;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -28,7 +27,7 @@ public partial class SalesHistoryDetailWindow : Window
         /// <param name="detail">Detalle persistido que se convertirá a columnas.</param>
         public SalesHistoryDetailDisplay(SalesHistoryDetail detail)
         {
-            HeaderText = $"Fecha: {TimeZoneSupport.ToLocalTime(detail.CreatedAtUtc):dd/MM/yyyy HH:mm} | Estado: {detail.Status} | "
+            HeaderText = $"Fecha: {NumberFormatter.DateTimeUtc(detail.CreatedAtUtc)} | Estado: {detail.Status} | "
                 + $"Tipo: {detail.OrderType} | Cajero: {detail.EmployeeDisplayName} | Cliente: {detail.CustomerDisplayName}";
             Lines = detail.Lines.Select(line => new SalesHistoryLineDisplay(
                 line.Product,
@@ -94,7 +93,14 @@ public partial class SalesHistoryDetailWindow : Window
         decimal UnitsPerPackage,
         decimal UnitPrice,
         decimal Discount,
-        decimal Subtotal);
+        decimal Subtotal)
+    {
+        public string QuantityText => NumberFormatter.Quantity(Quantity);
+        public string UnitsPerPackageText => NumberFormatter.Quantity(UnitsPerPackage);
+        public string UnitPriceText => NumberFormatter.Currency(UnitPrice);
+        public string DiscountText => NumberFormatter.Currency(Discount);
+        public string SubtotalText => NumberFormatter.Currency(Subtotal);
+    }
 
     /// <summary>Columnas visibles de un pago.</summary>
     /// <param name="Method">Método de pago.</param>
@@ -103,7 +109,10 @@ public partial class SalesHistoryDetailWindow : Window
     private sealed record SalesHistoryPaymentDisplay(
         string Method,
         decimal Amount,
-        string Reference);
+        string Reference)
+    {
+        public string AmountText => NumberFormatter.Currency(Amount);
+    }
 
     /// <summary>Columnas visibles de un DTE y sus notas de crédito.</summary>
     /// <param name="Type">Tipo de DTE.</param>
@@ -138,5 +147,8 @@ public partial class SalesHistoryDetailWindow : Window
         string Product,
         string Type,
         decimal Quantity,
-        string Reason);
+        string Reason)
+    {
+        public string QuantityText => NumberFormatter.Quantity(Quantity);
+    }
 }

@@ -61,7 +61,7 @@ internal sealed class FieldConstraintAttribute : Attribute
 /// <c>TextBox.MaxLength="{x:Static helpers:FieldConstraints.Products.DescriptionMaxLength}"</c>.
 /// La prueba de deriva comprueba cada constante contra <c>Squema.sql</c> y el metamodelo EF.
 /// </remarks>
-public static class FieldConstraints
+public static partial class FieldConstraints
 {
     /// <summary>Expone la precisión de apertura para el enlazado XAML.</summary>
     public static int CashSessionsOpeningAmountPrecision => CashSessions.OpeningAmountPrecision;

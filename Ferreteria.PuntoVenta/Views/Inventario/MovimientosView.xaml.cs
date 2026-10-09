@@ -60,7 +60,7 @@ public partial class MovimientosView : UserControl
     private async Task ReloadAsync()
     {
         var items = await _inventory.GetRecentMovementsAsync(null, 150);
-        ItemsList.ItemsSource = items;
+        ItemsList.ItemsSource = items.Select(item => new MovementDisplay(item)).ToList();
         EmptyStateText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -88,7 +88,7 @@ public partial class MovimientosView : UserControl
         }
 
         var isAdjustment = SelectedType() == "AJUSTE";
-        QuantityLabel.Text = isAdjustment ? "Nuevo stock (valor final) *" : "Cantidad a ingresar *";
+        QuantityLabel.Content = isAdjustment ? "Nuevo stock (valor final)" : "Cantidad a ingresar";
         CostPanel.Visibility = isAdjustment ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -170,4 +170,14 @@ public partial class MovimientosView : UserControl
 
     /// <summary>Ítem del combo de productos (Id, texto visible y stock).</summary>
     private sealed record ProductPickItem(Guid Id, string Display, decimal Stock);
+
+    private sealed record MovementDisplay(InventoryMovementResult Movement)
+    {
+        public string CreatedAtText => NumberFormatter.DateTimeUtc(Movement.CreatedAt);
+        public string ProductCode => Movement.ProductCode;
+        public string ProductDescription => Movement.ProductDescription;
+        public string MovementType => Movement.MovementType;
+        public string Quantity => NumberFormatter.Quantity(Movement.Quantity);
+        public string StockAfter => NumberFormatter.Quantity(Movement.StockAfter);
+    }
 }

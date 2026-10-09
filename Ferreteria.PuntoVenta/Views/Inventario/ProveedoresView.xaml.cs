@@ -57,7 +57,7 @@ public partial class ProveedoresView : UserControl
     private void OnCancelarClick(object sender, RoutedEventArgs e) => ClearForm();
 
     /// <summary>Selecciona un proveedor de la lista y rellena el formulario.</summary>
-    private async void OnRowClick(object sender, MouseButtonEventArgs e)
+    private async void OnRowClick(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: Guid id })
         {
@@ -153,7 +153,7 @@ public partial class ProveedoresView : UserControl
             return;
         }
 
-        if (MessageBox.Show("Desactivar este proveedor?", "Proveedores",
+        if (MessageBox.Show("¿Desea desactivar este proveedor?", "Proveedores",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
         {
             return;

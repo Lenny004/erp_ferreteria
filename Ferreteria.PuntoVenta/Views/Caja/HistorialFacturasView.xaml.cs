@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Dte;
@@ -299,8 +300,8 @@ public partial class HistorialFacturasView : UserControl
             }
             EmptyStateText.Visibility = _currentPage.Rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             SalesCountText.Text = _currentPage.Summary.Sales.ToString();
-            TotalBilledText.Text = _currentPage.Summary.Total.ToString("C2");
-            TaxText.Text = _currentPage.Summary.Tax.ToString("C2");
+            TotalBilledText.Text = NumberFormatter.Currency(_currentPage.Summary.Total);
+            TaxText.Text = NumberFormatter.Currency(_currentPage.Summary.Tax);
             ContingencyText.Text = _currentPage.Summary.Contingencies.ToString();
             ReprintsText.Text = _currentPage.Summary.Reprints.ToString();
             PageText.Text = $"Página {_page}";

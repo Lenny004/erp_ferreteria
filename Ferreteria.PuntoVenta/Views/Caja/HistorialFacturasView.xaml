@@ -132,9 +132,11 @@
                     Margin="0,0,0,8" />
                 <TextBox
                     x:Name="SearchTextBox"
+                    MaxLength="200"
                     Style="{StaticResource AppFieldTextBoxStyle}"
                     helpers:WatermarkService.Watermark="Buscar cliente, NIT, control u orden"
-                    TextChanged="OnSearchChanged" />
+                    TextChanged="OnSearchChanged"
+                    AutomationProperties.Name="Buscar factura" />
                 <WrapPanel
                     Margin="0,10,0,0">
                     <Button
@@ -183,21 +185,25 @@
                         x:Name="OrderStatusCombo"
                         Width="190"
                         Style="{StaticResource AppFieldComboBoxStyle}"
+                        AutomationProperties.Name="Filtrar por estado de orden"
                         SelectionChanged="OnFilterChanged" />
                     <ComboBox
                         x:Name="MhStatusCombo"
                         Width="180"
                         Style="{StaticResource AppFieldComboBoxStyle}"
+                        AutomationProperties.Name="Filtrar por estado de Hacienda"
                         SelectionChanged="OnFilterChanged" />
                     <ComboBox
                         x:Name="DteTypeCombo"
                         Width="180"
                         Style="{StaticResource AppFieldComboBoxStyle}"
+                        AutomationProperties.Name="Filtrar por tipo de DTE"
                         SelectionChanged="OnFilterChanged" />
                     <ComboBox
                         x:Name="PaymentMethodCombo"
                         Width="190"
                         Style="{StaticResource AppFieldComboBoxStyle}"
+                        AutomationProperties.Name="Filtrar por método de pago"
                         SelectionChanged="OnFilterChanged" />
                 </WrapPanel>
             </StackPanel>

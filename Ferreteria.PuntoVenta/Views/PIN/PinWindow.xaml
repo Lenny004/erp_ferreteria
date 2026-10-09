@@ -15,7 +15,7 @@
 
     <Window.Resources>
         <ResourceDictionary>
-            <Style x:Key="PinKeyStyle" TargetType="Button">
+            <Style x:Key="LegacyPinKeyStyle" TargetType="Button">
                 <Setter Property="Width" Value="80" />
                 <Setter Property="Height" Value="56" />
                 <Setter Property="Margin" Value="6" />
@@ -55,17 +55,17 @@
             </Style>
 
             <Style
-                x:Key="PinDeleteStyle"
+                x:Key="LegacyPinDeleteStyle"
                 TargetType="Button"
-                BasedOn="{StaticResource PinKeyStyle}">
+                BasedOn="{StaticResource LegacyPinKeyStyle}">
                 <Setter Property="Background" Value="{StaticResource AppGrisOscuro}" />
                 <Setter Property="FontSize" Value="{StaticResource AppFontSize_LG}" />
             </Style>
 
             <Style
-                x:Key="PinConfirmStyle"
+                x:Key="LegacyPinConfirmStyle"
                 TargetType="Button"
-                BasedOn="{StaticResource PinKeyStyle}">
+                BasedOn="{StaticResource LegacyPinKeyStyle}">
                 <Setter Property="Background" Value="{StaticResource AppRojo}" />
                 <Setter Property="Template">
                     <Setter.Value>
@@ -189,22 +189,22 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Row="0" Grid.Column="0" Content="1" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="1" />
-                <Button Grid.Row="0" Grid.Column="1" Content="2" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="2" />
-                <Button Grid.Row="0" Grid.Column="2" Content="3" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="3" />
+                <Button Grid.Row="0" Grid.Column="0" Content="1" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="1" />
+                <Button Grid.Row="0" Grid.Column="1" Content="2" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="2" />
+                <Button Grid.Row="0" Grid.Column="2" Content="3" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="3" />
 
-                <Button Grid.Row="1" Grid.Column="0" Content="4" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="4" />
-                <Button Grid.Row="1" Grid.Column="1" Content="5" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="5" />
-                <Button Grid.Row="1" Grid.Column="2" Content="6" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="6" />
+                <Button Grid.Row="1" Grid.Column="0" Content="4" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="4" />
+                <Button Grid.Row="1" Grid.Column="1" Content="5" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="5" />
+                <Button Grid.Row="1" Grid.Column="2" Content="6" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="6" />
 
-                <Button Grid.Row="2" Grid.Column="0" Content="7" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="7" />
-                <Button Grid.Row="2" Grid.Column="1" Content="8" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="8" />
-                <Button Grid.Row="2" Grid.Column="2" Content="9" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="9" />
+                <Button Grid.Row="2" Grid.Column="0" Content="7" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="7" />
+                <Button Grid.Row="2" Grid.Column="1" Content="8" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="8" />
+                <Button Grid.Row="2" Grid.Column="2" Content="9" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="9" />
 
                 <Button
                     Grid.Row="3"
                     Grid.Column="0"
-                    Style="{StaticResource PinDeleteStyle}"
+                    Style="{StaticResource AppPinDeleteStyle}"
                     Click="OnBorrarClick"
                     ToolTip="Borrar ultimo digito">
                     <TextBlock
@@ -214,11 +214,11 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" />
                 </Button>
-                <Button Grid.Row="3" Grid.Column="1" Content="0" Style="{StaticResource PinKeyStyle}" Click="OnDigitoClick" Tag="0" />
+                <Button Grid.Row="3" Grid.Column="1" Content="0" Style="{StaticResource AppPinKeyStyle}" Click="OnDigitoClick" Tag="0" />
                 <Button
                     Grid.Row="3"
                     Grid.Column="2"
-                    Style="{StaticResource PinConfirmStyle}"
+                    Style="{StaticResource AppPinConfirmStyle}"
                     Click="OnConfirmarClick"
                     ToolTip="Confirmar PIN">
                     <TextBlock

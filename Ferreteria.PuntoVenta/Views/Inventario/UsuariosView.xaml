@@ -69,9 +69,8 @@
                             <ItemsControl x:Name="ItemsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Style="{StaticResource AppDataGridRowStyle}"
-                                                Cursor="Hand"
-                                                MouseLeftButtonUp="OnRowClick"
+                                        <Button Style="{StaticResource AppDataGridRowButtonStyle}"
+                                                Click="OnRowClick"
                                                 Tag="{Binding Id}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -80,13 +79,13 @@
                                                     <ColumnDefinition Width="90" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding FirstName}" Style="{StaticResource AppTableCellStyle}" />
+                                                    <TextBlock Text="{Binding FirstName}" ToolTip="{Binding FirstName}" TextTrimming="CharacterEllipsis" Style="{StaticResource AppTableCellStyle}" />
                                                     <TextBlock Text="{Binding LastName}" Foreground="{StaticResource AppGrisClaro}" FontSize="{StaticResource AppFontSize_XS}" Margin="8,0,0,4" />
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="{Binding CanCashier}" Style="{StaticResource AppTableCellStyle}" />
                                                 <TextBlock Grid.Column="2" Text="{Binding CanSell}" Style="{StaticResource AppTableCellStyle}" />
                                             </Grid>
-                                        </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -108,31 +107,31 @@
                 <StackPanel>
                     <TextBlock x:Name="FormTitle" Text="Nuevo usuario" Style="{StaticResource AppPanelTitleStyle}" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Nombre *" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="FirstNameBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Nombre" Target="{Binding ElementName=FirstNameBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                    <TextBox x:Name="FirstNameBox" MaxLength="{x:Static helpers:FieldConstraints.Employees.FirstNameMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Nombre" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Apellido *" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="LastNameBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Apellido" Target="{Binding ElementName=LastNameBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
+                    <TextBox x:Name="LastNameBox" MaxLength="{x:Static helpers:FieldConstraints.Employees.LastNameMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Apellido" Margin="0,4,0,10" />
 
-                    <TextBlock Text="DUI" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="DuiBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="DUI" Target="{Binding ElementName=DuiBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="DuiBox" MaxLength="{x:Static helpers:FieldConstraints.Employees.DuiMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="00000000-0" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Departamento" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Departamento" Target="{Binding ElementName=DepartmentCombo}" Style="{StaticResource AppFieldLabelStyle}" />
                     <ComboBox x:Name="DepartmentCombo" Style="{StaticResource AppFieldComboBoxStyle}"
                               DisplayMemberPath="Name" SelectedValuePath="Id"
                               SelectionChanged="OnDepartmentChanged" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Cargo" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Cargo" Target="{Binding ElementName=PositionCombo}" Style="{StaticResource AppFieldLabelStyle}" />
                     <ComboBox x:Name="PositionCombo" Style="{StaticResource AppFieldComboBoxStyle}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Fecha de ingreso" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Fecha de ingreso" Target="{Binding ElementName=HireDatePicker}" Style="{StaticResource AppFieldLabelStyle}" />
                     <DatePicker x:Name="HireDatePicker" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Salario base" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="SalaryBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Salario base" Target="{Binding ElementName=SalaryBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="SalaryBox" Text="0" Style="{StaticResource AppFieldTextBoxStyle}" helpers:NumericInput.IsEnabled="True" helpers:NumericInput.Precision="{x:Static helpers:FieldConstraints.Employees.BaseSalaryPrecision}" helpers:NumericInput.Scale="{x:Static helpers:FieldConstraints.Employees.BaseSalaryScale}" helpers:WatermarkService.Watermark="0,00" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Tipo de contrato" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Tipo de contrato" Target="{Binding ElementName=ContractCombo}" Style="{StaticResource AppFieldLabelStyle}" />
                     <ComboBox x:Name="ContractCombo" Style="{StaticResource AppFieldComboBoxStyle}" SelectedIndex="0" Margin="0,4,0,10">
                         <ComboBoxItem Content="Plazo fijo" Tag="PLAZO_FIJO" />
                         <ComboBoxItem Content="Tiempo parcial" Tag="TIEMPO_PARCIAL" />
@@ -140,23 +139,23 @@
                         <ComboBoxItem Content="Pasante" Tag="PASANTE" />
                     </ComboBox>
 
-                    <TextBlock Text="Tipo de salario" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label Content="Tipo de salario" Target="{Binding ElementName=SalaryTypeCombo}" Style="{StaticResource AppFieldLabelStyle}" />
                     <ComboBox x:Name="SalaryTypeCombo" Style="{StaticResource AppFieldComboBoxStyle}" SelectedIndex="0" Margin="0,4,0,10">
                         <ComboBoxItem Content="Mensual" Tag="MENSUAL" />
                         <ComboBoxItem Content="Quincenal" Tag="QUINCENAL" />
                         <ComboBoxItem Content="Semanal" Tag="SEMANAL" />
                     </ComboBox>
 
-                    <TextBlock Text="Telefono" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="PhoneBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Teléfono" Target="{Binding ElementName=PhoneBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="PhoneBox" MaxLength="{x:Static helpers:FieldConstraints.Employees.PhoneMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="Teléfono (opcional)" Margin="0,4,0,10" />
 
-                    <TextBlock Text="Correo" Style="{StaticResource AppCardLabelStyle}" />
-                    <TextBox x:Name="EmailBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                    <Label Content="Correo" Target="{Binding ElementName=EmailBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                    <TextBox x:Name="EmailBox" MaxLength="{x:Static helpers:FieldConstraints.Employees.EmailMaxLength}" Style="{StaticResource AppFieldTextBoxStyle}" helpers:WatermarkService.Watermark="correo@ejemplo.com" Margin="0,4,0,10" />
 
                     <CheckBox x:Name="CanCashierCheck" Content="Puede operar Caja" Foreground="{StaticResource AppBlanco}" Margin="0,4,0,6" />
                     <CheckBox x:Name="CanSellCheck" Content="Puede gestionar Inventario" Foreground="{StaticResource AppBlanco}" Margin="0,0,0,10" />
 
-                    <TextBlock x:Name="PinLabel" Text="PIN de acceso (4 digitos) *" Style="{StaticResource AppCardLabelStyle}" />
+                    <Label x:Name="PinLabel" Content="PIN de acceso (4 dígitos)" Target="{Binding ElementName=PinBox}" Style="{StaticResource RequiredLabelStyle}" helpers:FieldHelper.IsRequired="True" />
                     <!-- PasswordBox: el PIN no debe mostrarse en claro (antes era TextBox). -->
                     <PasswordBox x:Name="PinBox" MaxLength="4" Height="36" Padding="12,7"
                                  Background="{StaticResource AppAzulOscuro}"
@@ -198,8 +197,8 @@
                             <TextBlock Text="Requiere permiso de administrador y registra la acción." Foreground="{StaticResource AppGrisClaro}" TextWrapping="Wrap" Margin="0,4,0,10" />
                             <TextBlock Text="Código de caja" Style="{StaticResource AppCardLabelStyle}" />
                             <TextBox x:Name="CashRegisterCodeBox" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
-                            <TextBlock Text="Motivo (opcional)" Style="{StaticResource AppCardLabelStyle}" />
-                            <TextBox x:Name="UnlockReasonBox" MaxLength="300" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
+                            <Label Content="Motivo (opcional)" Target="{Binding ElementName=UnlockReasonBox}" Style="{StaticResource AppFieldLabelStyle}" />
+                            <TextBox x:Name="UnlockReasonBox" MaxLength="300" helpers:WatermarkService.Watermark="Motivo de desbloqueo" Style="{StaticResource AppFieldTextBoxStyle}" Margin="0,4,0,10" />
                             <Button Style="{StaticResource AppSecondaryWideButtonStyle}" Click="OnUnlockTerminalClick">
                                 <TextBlock Text="DESBLOQUEAR" Foreground="{StaticResource AppBlanco}" FontWeight="Bold" />
                             </Button>
