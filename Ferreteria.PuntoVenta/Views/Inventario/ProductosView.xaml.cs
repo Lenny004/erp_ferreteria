@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using System.Windows.Input;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
@@ -170,14 +171,38 @@ public partial class ProductosView : UserControl
             return;
         }
 
-        if (!TryParseDecimal(SalePriceBox.Text, out var salePrice) ||
-            !TryParseDecimal(CostPriceBox.Text, out var costPrice) ||
-            !TryParseDecimal(StockBox.Text, out var stock) ||
-            !TryParseDecimal(MinStockBox.Text, out var minStock))
+        var salePriceResult = DecimalInputParser.Parse(SalePriceBox.Text, maxDecimals: 2, allowNegative: false);
+        if (!salePriceResult.IsValid)
         {
-            ShowError("Revise los valores numericos (precio, costo, stock).");
+            ShowError(salePriceResult.ErrorMessage!);
             return;
         }
+
+        var costPriceResult = DecimalInputParser.Parse(CostPriceBox.Text, maxDecimals: 4, allowNegative: false);
+        if (!costPriceResult.IsValid)
+        {
+            ShowError(costPriceResult.ErrorMessage!);
+            return;
+        }
+
+        var stockResult = DecimalInputParser.Parse(StockBox.Text, maxDecimals: 3, allowNegative: false);
+        if (!stockResult.IsValid)
+        {
+            ShowError(stockResult.ErrorMessage!);
+            return;
+        }
+
+        var minStockResult = DecimalInputParser.Parse(MinStockBox.Text, maxDecimals: 3, allowNegative: false);
+        if (!minStockResult.IsValid)
+        {
+            ShowError(minStockResult.ErrorMessage!);
+            return;
+        }
+
+        var salePrice = salePriceResult.Value!.Value;
+        var costPrice = costPriceResult.Value!.Value;
+        var stock = stockResult.Value!.Value;
+        var minStock = minStockResult.Value!.Value;
 
         var input = new ProductInput(
             CodeBox.Text,
@@ -285,11 +310,6 @@ public partial class ProductosView : UserControl
 
     /// <summary>Oculta el mensaje de error del formulario.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
-
-    /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
-    private static bool TryParseDecimal(string? text, out decimal value) =>
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) ||
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
 
     /// <summary>Convierte cadena vacía en null para campos opcionales.</summary>
     private static string? NullIfEmpty(string? value) =>

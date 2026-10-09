@@ -12,10 +12,11 @@ public class DteIssued
     public Guid? OrderId { get; set; }
 
     /// <summary>01 factura, 03 CCF, 05 nota crédito, etc.</summary>
-    [Required, MaxLength(2)]
+    [Required, MaxLength(5)]
     public string DteType { get; set; } = string.Empty;
 
-    [Required, MaxLength(50)]
+    /// <summary>Número de control único asignado al DTE por el sistema fiscal.</summary>
+    [Required, MaxLength(40)]
     public string ControlNumber { get; set; } = string.Empty;
 
     public Guid GenerationCode { get; set; } = Guid.NewGuid();

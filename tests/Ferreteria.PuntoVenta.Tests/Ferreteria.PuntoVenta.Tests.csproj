@@ -31,6 +31,7 @@
     - Se enlazan los servicios CRUD, el guard de autorización y el lockout de PIN para probar permisos en el servicio, sin referenciar el proyecto WPF.
   -->
   <ItemGroup>
+    <Compile Include="../../Ferreteria.PuntoVenta/Helpers/DecimalInputParser.cs" Link="Helpers/DecimalInputParser.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/ReceiptContracts.cs" Link="Printing/ReceiptContracts.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosCommands.cs" Link="Printing/EscPosCommands.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Printing/EscPosDocumentBuilder.cs" Link="Printing/EscPosDocumentBuilder.cs" />

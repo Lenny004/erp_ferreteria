@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.CashRegister;
@@ -229,13 +230,15 @@ public partial class CorteCajaView : UserControl
     /// <returns><c>true</c> cuando la entrada es válida.</returns>
     private bool TryReadDeclaredCash(out decimal declaredCash)
     {
-        if (!decimal.TryParse(CashCountKeypad.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount)
-            && !decimal.TryParse(CashCountKeypad.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out amount))
+        var amountResult = DecimalInputParser.Parse(CashCountKeypad.Text, maxDecimals: 2, allowNegative: false);
+        if (!amountResult.IsValid)
         {
             declaredCash = 0m;
-            SetStatus("Ingrese un efectivo contado válido.", true);
+            SetStatus(amountResult.ErrorMessage!, true);
             return false;
         }
+
+        var amount = amountResult.Value!.Value;
 
         try
         {
@@ -259,12 +262,12 @@ public partial class CorteCajaView : UserControl
             return;
         }
 
-        SalesText.Text = _summary.TotalSold.ToString("C2");
-        CashText.Text = _summary.CashPayments.ToString("C2");
-        CardText.Text = _summary.CardPayments.ToString("C2");
-        TransferText.Text = _summary.TransferPayments.ToString("C2");
+        SalesText.Text = NumberFormatter.Currency(_summary.TotalSold);
+        CashText.Text = NumberFormatter.Currency(_summary.CashPayments);
+        CardText.Text = NumberFormatter.Currency(_summary.CardPayments);
+        TransferText.Text = NumberFormatter.Currency(_summary.TransferPayments);
         DteText.Text = _summary.DteCount.ToString(CultureInfo.InvariantCulture);
-        SessionText.Text = $"Esperado: {_summary.ExpectedCash:C2}";
+        SessionText.Text = $"Esperado: {NumberFormatter.Currency(_summary.ExpectedCash)}";
         MovementItemsControl.ItemsSource = _summary.Movements;
     }
 

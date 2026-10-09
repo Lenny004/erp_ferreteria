@@ -1,6 +1,6 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using Ferreteria.PuntoVenta.Helpers;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
 using Ferreteria.PuntoVenta.Services.Security;
@@ -105,11 +105,14 @@ public partial class MovimientosView : UserControl
             return;
         }
 
-        if (!TryParseDecimal(QuantityBox.Text, out var quantity) || quantity < 0)
+        var quantityResult = DecimalInputParser.Parse(QuantityBox.Text, maxDecimals: 3, allowNegative: false);
+        if (!quantityResult.IsValid)
         {
-            ShowError("Ingrese un valor numerico valido.");
+            ShowError(quantityResult.ErrorMessage!);
             return;
         }
+
+        var quantity = quantityResult.Value!.Value;
 
         try
         {
@@ -120,11 +123,14 @@ public partial class MovimientosView : UserControl
             }
             else
             {
-                if (!TryParseDecimal(UnitCostBox.Text, out var unitCost) || unitCost < 0)
+                var unitCostResult = DecimalInputParser.Parse(UnitCostBox.Text, maxDecimals: 4, allowNegative: false);
+                if (!unitCostResult.IsValid)
                 {
-                    ShowError("Ingrese un costo unitario valido.");
+                    ShowError(unitCostResult.ErrorMessage!);
                     return;
                 }
+
+                var unitCost = unitCostResult.Value!.Value;
 
                 await _inventory.RegisterEntryAsync(productId, quantity, unitCost, CurrentUserId, type, ReasonBox.Text);
             }
@@ -161,11 +167,6 @@ public partial class MovimientosView : UserControl
 
     /// <summary>Oculta el mensaje de error.</summary>
     private void HideError() => FormErrorText.Visibility = Visibility.Collapsed;
-
-    /// <summary>Parsea decimal aceptando cultura invariante o actual.</summary>
-    private static bool TryParseDecimal(string? text, out decimal value) =>
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) ||
-        decimal.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
 
     /// <summary>Ítem del combo de productos (Id, texto visible y stock).</summary>
     private sealed record ProductPickItem(Guid Id, string Display, decimal Stock);
