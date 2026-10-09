@@ -11,11 +11,14 @@
             <RowDefinition
                 Height="Auto" />
             <RowDefinition
+                Height="Auto" />
+            <RowDefinition
                 Height="90" />
         </Grid.RowDefinitions>
         <TextBox
             x:Name="InputTextBox"
             Style="{StaticResource AppFieldTextBoxStyle}"
+            helpers:NumericInput.IsEnabled="True"
             helpers:NumericInput.Precision="{Binding Precision, RelativeSource={RelativeSource AncestorType={x:Type local:NumericKeypad}}}"
             helpers:NumericInput.Scale="{Binding Scale, RelativeSource={RelativeSource AncestorType={x:Type local:NumericKeypad}}}"
             helpers:NumericInput.AllowNegative="{Binding AllowNegative, RelativeSource={RelativeSource AncestorType={x:Type local:NumericKeypad}}}"
@@ -23,8 +26,33 @@
             FontSize="28"
             Text="0"
             Margin="0,0,0,12" />
-        <UniformGrid
+        <TextBlock
             Grid.Row="1"
+            Text="{Binding (helpers:NumericInput.ErrorMessage), ElementName=InputTextBox}"
+            Foreground="{StaticResource AppError}"
+            TextWrapping="Wrap"
+            Margin="0,0,0,12"
+            AutomationProperties.LiveSetting="Assertive">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger
+                            Binding="{Binding (helpers:NumericInput.ErrorMessage), ElementName=InputTextBox}"
+                            Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger
+                            Binding="{Binding (helpers:NumericInput.ErrorMessage), ElementName=InputTextBox}"
+                            Value="">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+        <UniformGrid
+            Grid.Row="2"
             Columns="3"
             Margin="0,0,0,12">
             <Button
@@ -127,7 +155,7 @@
                 Content="BORRAR" />
         </UniformGrid>
         <Button
-            Grid.Row="2"
+            Grid.Row="3"
             MinHeight="90"
             FontSize="20"
             Click="OnCommandClick"

@@ -14,7 +14,7 @@ public static class NumericInput
             "Precision",
             typeof(int),
             typeof(NumericInput),
-            new PropertyMetadata(12, OnConfigurationChanged));
+            new PropertyMetadata(12));
 
     /// <summary>Propiedad de escala decimal del campo.</summary>
     public static readonly DependencyProperty ScaleProperty =
@@ -22,7 +22,7 @@ public static class NumericInput
             "Scale",
             typeof(int),
             typeof(NumericInput),
-            new PropertyMetadata(2, OnConfigurationChanged));
+            new PropertyMetadata(2));
 
     /// <summary>Propiedad que indica si se aceptan valores negativos.</summary>
     public static readonly DependencyProperty AllowNegativeProperty =
@@ -30,7 +30,17 @@ public static class NumericInput
             "AllowNegative",
             typeof(bool),
             typeof(NumericInput),
-            new PropertyMetadata(false, OnConfigurationChanged));
+            new PropertyMetadata(false));
+
+    /// <summary>
+    /// Propiedad que activa o desactiva los manejadores de escritura y pegado del campo.
+    /// </summary>
+    public static readonly DependencyProperty IsEnabledProperty =
+        DependencyProperty.RegisterAttached(
+            "IsEnabled",
+            typeof(bool),
+            typeof(NumericInput),
+            new PropertyMetadata(false, OnIsEnabledChanged));
 
     private static readonly DependencyProperty IsHookedProperty =
         DependencyProperty.RegisterAttached(
@@ -38,6 +48,16 @@ public static class NumericInput
             typeof(bool),
             typeof(NumericInput),
             new PropertyMetadata(false));
+
+    private static readonly DependencyPropertyKey ErrorMessagePropertyKey =
+        DependencyProperty.RegisterAttachedReadOnly(
+            "ErrorMessage",
+            typeof(string),
+            typeof(NumericInput),
+            new PropertyMetadata(null));
+
+    /// <summary>Propiedad adjunta de solo lectura con el último error de edición.</summary>
+    public static readonly DependencyProperty ErrorMessageProperty = ErrorMessagePropertyKey.DependencyProperty;
 
     /// <summary>Obtiene la precisión configurada.</summary>
     public static int GetPrecision(DependencyObject element) => (int)element.GetValue(PrecisionProperty);
@@ -57,16 +77,37 @@ public static class NumericInput
     /// <summary>Configura si el campo acepta valores negativos.</summary>
     public static void SetAllowNegative(DependencyObject element, bool value) => element.SetValue(AllowNegativeProperty, value);
 
-    private static void OnConfigurationChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
+    /// <summary>Obtiene si el filtrado numérico está habilitado.</summary>
+    public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
+
+    /// <summary>Habilita o deshabilita el filtrado numérico del campo.</summary>
+    public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
+
+    /// <summary>Obtiene el mensaje del último intento de edición rechazado.</summary>
+    public static string? GetErrorMessage(DependencyObject element) => (string?)element.GetValue(ErrorMessageProperty);
+
+    private static void OnIsEnabledChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
     {
-        if (dependencyObject is not TextBox textBox || (bool)textBox.GetValue(IsHookedProperty))
+        if (dependencyObject is not TextBox textBox)
         {
             return;
         }
 
-        textBox.SetValue(IsHookedProperty, true);
-        textBox.PreviewTextInput += OnPreviewTextInput;
-        DataObject.AddPastingHandler(textBox, OnPasting);
+        var isEnabled = (bool)args.NewValue;
+        var isHooked = (bool)textBox.GetValue(IsHookedProperty);
+        if (isEnabled && !isHooked)
+        {
+            textBox.SetValue(IsHookedProperty, true);
+            textBox.PreviewTextInput += OnPreviewTextInput;
+            DataObject.AddPastingHandler(textBox, OnPasting);
+        }
+        else if (!isEnabled && isHooked)
+        {
+            textBox.PreviewTextInput -= OnPreviewTextInput;
+            DataObject.RemovePastingHandler(textBox, OnPasting);
+            textBox.SetValue(IsHookedProperty, false);
+            SetErrorMessage(textBox, null);
+        }
     }
 
     private static void OnPreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
@@ -76,31 +117,50 @@ public static class NumericInput
             return;
         }
 
-        e.Handled = !IsAllowed(textBox, e.Text);
+        var result = NumericInputTextRules.Validate(
+            textBox.Text,
+            textBox.SelectionStart,
+            textBox.SelectionLength,
+            e.Text,
+            GetPrecision(textBox),
+            GetScale(textBox),
+            GetAllowNegative(textBox));
+        SetErrorMessage(textBox, result.IsAllowed ? null : result.ErrorMessage);
+        e.Handled = !result.IsAllowed;
     }
 
     private static void OnPasting(object sender, DataObjectPastingEventArgs e)
     {
-        if (sender is not TextBox textBox || !e.SourceDataObject.GetDataPresent(DataFormats.Text))
+        if (sender is not TextBox textBox)
         {
             e.CancelCommand();
             return;
         }
 
+        if (!e.SourceDataObject.GetDataPresent(DataFormats.Text))
+        {
+            SetErrorMessage(textBox, "Solo se puede pegar texto numérico.");
+            e.CancelCommand();
+            return;
+        }
+
         var pastedText = e.SourceDataObject.GetData(DataFormats.Text) as string;
-        if (!IsAllowed(textBox, pastedText))
+        var result = NumericInputTextRules.Validate(
+            textBox.Text,
+            textBox.SelectionStart,
+            textBox.SelectionLength,
+            pastedText,
+            GetPrecision(textBox),
+            GetScale(textBox),
+            GetAllowNegative(textBox),
+            allowIntermediate: false);
+        SetErrorMessage(textBox, result.IsAllowed ? null : result.ErrorMessage);
+        if (!result.IsAllowed)
         {
             e.CancelCommand();
         }
     }
 
-    private static bool IsAllowed(TextBox textBox, string? insertedText) =>
-        NumericInputTextRules.IsAllowed(
-            textBox.Text,
-            textBox.SelectionStart,
-            textBox.SelectionLength,
-            insertedText,
-            GetPrecision(textBox),
-            GetScale(textBox),
-            GetAllowNegative(textBox));
+    internal static void SetErrorMessage(DependencyObject element, string? message) =>
+        element.SetValue(ErrorMessagePropertyKey, message);
 }

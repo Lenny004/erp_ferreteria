@@ -82,7 +82,6 @@ public partial class NumericKeypad : UserControl
     public NumericKeypad()
     {
         InitializeComponent();
-        InputTextBox.PreviewTextInput += OnPreviewTextInput;
         InputTextBox.TextChanged += OnInputTextChanged;
         InputTextBox.KeyDown += OnInputKeyDown;
     }
@@ -138,18 +137,6 @@ public partial class NumericKeypad : UserControl
         }
     }
 
-    private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        e.Handled = !NumericInputTextRules.IsAllowed(
-            InputTextBox.Text,
-            InputTextBox.SelectionStart,
-            InputTextBox.SelectionLength,
-            e.Text,
-            Precision,
-            Scale,
-            AllowNegative);
-    }
-
     private void OnInputTextChanged(object sender, TextChangedEventArgs e)
     {
         if (_updatingText)
@@ -176,7 +163,8 @@ public partial class NumericKeypad : UserControl
 
     private void AppendText(string value)
     {
-        if (value == "." && Text.Contains('.', StringComparison.Ordinal))
+        if (value == "." && (Text.Contains('.', StringComparison.Ordinal)
+            || Text.Contains(',', StringComparison.Ordinal)))
         {
             return;
         }
@@ -184,14 +172,16 @@ public partial class NumericKeypad : UserControl
         var replacingInitialZero = Text == "0" && value != ".";
         var selectionStart = replacingInitialZero ? 0 : Text.Length;
         var selectionLength = replacingInitialZero ? Text.Length : 0;
-        if (!NumericInputTextRules.IsAllowed(
+        var result = NumericInputTextRules.Validate(
                 Text,
                 selectionStart,
                 selectionLength,
                 value,
                 Precision,
                 Scale,
-                AllowNegative))
+                AllowNegative);
+        NumericInput.SetErrorMessage(InputTextBox, result.IsAllowed ? null : result.ErrorMessage);
+        if (!result.IsAllowed)
         {
             return;
         }
@@ -209,6 +199,7 @@ public partial class NumericKeypad : UserControl
     private void SetInputText(string value)
     {
         var normalized = NormalizeText(value);
+        NumericInput.SetErrorMessage(InputTextBox, null);
         _updatingText = true;
         try
         {
@@ -228,43 +219,7 @@ public partial class NumericKeypad : UserControl
 
     private string NormalizeText(string? value)
     {
-        var normalized = new string((value ?? string.Empty)
-            .Replace(',', '.')
-            .Where(character => char.IsDigit(character) || character is '.' or '-')
-            .ToArray());
-        if (!AllowNegative)
-        {
-            normalized = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
-        }
-        else
-        {
-            var minusIndex = normalized.IndexOf('-', StringComparison.Ordinal);
-            if (minusIndex > 0)
-            {
-                normalized = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
-            }
-            else if (minusIndex == 0)
-            {
-                normalized = "-" + normalized[1..].Replace("-", string.Empty, StringComparison.Ordinal);
-            }
-        }
-        var decimalIndex = normalized.IndexOf('.', StringComparison.Ordinal);
-        if (decimalIndex >= 0)
-        {
-            normalized = normalized[..(decimalIndex + 1)]
-                + normalized[(decimalIndex + 1)..].Replace(".", string.Empty, StringComparison.Ordinal);
-        }
-
-        var maximumLength = Math.Max(1, Precision)
-            + (normalized.Contains('.', StringComparison.Ordinal) ? 1 : 0)
-            + (normalized.StartsWith("-", StringComparison.Ordinal) ? 1 : 0);
-        if (normalized.Length > maximumLength)
-        {
-            normalized = normalized[..maximumLength];
-        }
-
-        return normalized.Length == 0 || normalized == "." || (!AllowNegative && normalized == "-")
-            ? "0"
-            : normalized;
+        var normalized = value ?? string.Empty;
+        return normalized.Length == 0 ? "0" : normalized;
     }
 }

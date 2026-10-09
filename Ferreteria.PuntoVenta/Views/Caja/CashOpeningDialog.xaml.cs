@@ -7,6 +7,14 @@ namespace Ferreteria.PuntoVenta.Views.Caja;
 /// <summary>Diálogo táctil para capturar y confirmar el fondo inicial de caja.</summary>
 public partial class CashOpeningDialog : Window
 {
+    /// <summary>Propiedad de dependencia del código de la caja física configurada.</summary>
+    public static readonly DependencyProperty CashRegisterCodeProperty =
+        DependencyProperty.Register(
+            nameof(CashRegisterCode),
+            typeof(string),
+            typeof(CashOpeningDialog),
+            new PropertyMetadata(string.Empty));
+
     /// <summary>Inicializa el teclado numérico de apertura.</summary>
     public CashOpeningDialog()
     {
@@ -17,7 +25,11 @@ public partial class CashOpeningDialog : Window
     public decimal OpeningAmount { get; private set; }
 
     /// <summary>Código de la caja física que se abrirá.</summary>
-    public string CashRegisterCode { get; set; } = string.Empty;
+    public string CashRegisterCode
+    {
+        get => (string)GetValue(CashRegisterCodeProperty);
+        set => SetValue(CashRegisterCodeProperty, value);
+    }
 
     /// <summary>Observación capturada para la apertura.</summary>
     public string? Notes { get; private set; }
