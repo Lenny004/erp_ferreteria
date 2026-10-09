@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Ferreteria.PuntoVenta.Helpers;
 
 namespace Ferreteria.PuntoVenta.Views.Caja;
 
@@ -14,6 +15,27 @@ namespace Ferreteria.PuntoVenta.Views.Caja;
 public partial class NumericKeypad : UserControl
 {
     private bool _updatingText;
+
+    /// <summary>Propiedad de dependencia de la precisión total del valor capturado.</summary>
+    public static readonly DependencyProperty PrecisionProperty = DependencyProperty.Register(
+        nameof(Precision),
+        typeof(int),
+        typeof(NumericKeypad),
+        new PropertyMetadata(12));
+
+    /// <summary>Propiedad de dependencia de la escala decimal del valor capturado.</summary>
+    public static readonly DependencyProperty ScaleProperty = DependencyProperty.Register(
+        nameof(Scale),
+        typeof(int),
+        typeof(NumericKeypad),
+        new PropertyMetadata(2));
+
+    /// <summary>Propiedad de dependencia que permite valores negativos.</summary>
+    public static readonly DependencyProperty AllowNegativeProperty = DependencyProperty.Register(
+        nameof(AllowNegative),
+        typeof(bool),
+        typeof(NumericKeypad),
+        new PropertyMetadata(false));
 
     /// <summary>Propiedad de dependencia con el texto monetario capturado.</summary>
     public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
@@ -32,6 +54,27 @@ public partial class NumericKeypad : UserControl
         set => SetValue(TextProperty, value);
     }
 
+    /// <summary>Precisión total máxima del valor capturado; por defecto, 12 dígitos.</summary>
+    public int Precision
+    {
+        get => (int)GetValue(PrecisionProperty);
+        set => SetValue(PrecisionProperty, value);
+    }
+
+    /// <summary>Escala decimal máxima del valor capturado; por defecto, 2 decimales.</summary>
+    public int Scale
+    {
+        get => (int)GetValue(ScaleProperty);
+        set => SetValue(ScaleProperty, value);
+    }
+
+    /// <summary>Indica si se aceptan valores negativos; por defecto, <see langword="false"/>.</summary>
+    public bool AllowNegative
+    {
+        get => (bool)GetValue(AllowNegativeProperty);
+        set => SetValue(AllowNegativeProperty, value);
+    }
+
     /// <summary>Se produce cuando cambia el texto monetario capturado.</summary>
     public event DependencyPropertyChangedEventHandler? TextChanged;
 
@@ -39,9 +82,15 @@ public partial class NumericKeypad : UserControl
     public NumericKeypad()
     {
         InitializeComponent();
-        InputTextBox.PreviewTextInput += OnPreviewTextInput;
         InputTextBox.TextChanged += OnInputTextChanged;
         InputTextBox.KeyDown += OnInputKeyDown;
+    }
+
+    /// <summary>Coloca el foco de teclado en el campo decimal interno.</summary>
+    public void FocusInput()
+    {
+        InputTextBox.Focus();
+        InputTextBox.SelectAll();
     }
 
     private static void OnTextPropertyChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
@@ -51,7 +100,7 @@ public partial class NumericKeypad : UserControl
             return;
         }
 
-        keypad.SetInputText(NormalizeText(e.NewValue as string));
+        keypad.SetInputText(keypad.NormalizeText(e.NewValue as string));
         keypad.TextChanged?.Invoke(keypad, e);
     }
 
@@ -73,7 +122,7 @@ public partial class NumericKeypad : UserControl
         switch (command)
         {
             case "DECIMAL":
-                if (!Text.Contains('.', StringComparison.Ordinal))
+                if (Scale > 0 && !Text.Contains('.', StringComparison.Ordinal))
                 {
                     AppendText(".");
                 }
@@ -86,11 +135,6 @@ public partial class NumericKeypad : UserControl
                 SetInputText("0");
                 break;
         }
-    }
-
-    private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        e.Handled = e.Text.Any(character => !char.IsDigit(character) && character != '.');
     }
 
     private void OnInputTextChanged(object sender, TextChangedEventArgs e)
@@ -119,16 +163,34 @@ public partial class NumericKeypad : UserControl
 
     private void AppendText(string value)
     {
-        if (value == "." && Text.Contains('.', StringComparison.Ordinal))
+        if (value == "." && (Text.Contains('.', StringComparison.Ordinal)
+            || Text.Contains(',', StringComparison.Ordinal)))
         {
             return;
         }
 
-        if (Text == "0" && value != ".")
+        var replacingInitialZero = Text == "0" && value != ".";
+        var selectionStart = replacingInitialZero ? 0 : Text.Length;
+        var selectionLength = replacingInitialZero ? Text.Length : 0;
+        var result = NumericInputTextRules.Validate(
+                Text,
+                selectionStart,
+                selectionLength,
+                value,
+                Precision,
+                Scale,
+                AllowNegative);
+        NumericInput.SetErrorMessage(InputTextBox, result.IsAllowed ? null : result.ErrorMessage);
+        if (!result.IsAllowed)
+        {
+            return;
+        }
+
+        if (replacingInitialZero)
         {
             SetInputText(value);
         }
-        else if (Text.Length < 12)
+        else
         {
             SetInputText(Text + value);
         }
@@ -137,6 +199,7 @@ public partial class NumericKeypad : UserControl
     private void SetInputText(string value)
     {
         var normalized = NormalizeText(value);
+        NumericInput.SetErrorMessage(InputTextBox, null);
         _updatingText = true;
         try
         {
@@ -154,23 +217,9 @@ public partial class NumericKeypad : UserControl
         }
     }
 
-    private static string NormalizeText(string? value)
+    private string NormalizeText(string? value)
     {
-        var normalized = new string((value ?? string.Empty)
-            .Where(character => char.IsDigit(character) || character == '.')
-            .ToArray());
-        var decimalIndex = normalized.IndexOf('.', StringComparison.Ordinal);
-        if (decimalIndex >= 0)
-        {
-            normalized = normalized[..(decimalIndex + 1)]
-                + normalized[(decimalIndex + 1)..].Replace(".", string.Empty, StringComparison.Ordinal);
-        }
-
-        if (normalized.Length > 12)
-        {
-            normalized = normalized[..12];
-        }
-
-        return normalized.Length == 0 || normalized == "." ? "0" : normalized;
+        var normalized = value ?? string.Empty;
+        return normalized.Length == 0 ? "0" : normalized;
     }
 }

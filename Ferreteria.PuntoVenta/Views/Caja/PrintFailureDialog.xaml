@@ -8,14 +8,6 @@
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner"
     KeyDown="OnKeyDown">
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary
-                    Source="/Resources/Styles/AppStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
     <Grid
         Background="{StaticResource AppAzulOscuro}">
         <Grid

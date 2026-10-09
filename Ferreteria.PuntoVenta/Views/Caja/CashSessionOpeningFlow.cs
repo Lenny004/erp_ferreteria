@@ -101,7 +101,8 @@ public sealed class CashSessionOpeningFlow
 
             var openingDialog = new CashOpeningDialog
             {
-                Owner = owner
+                Owner = owner,
+                CashRegisterCode = cashRegisterCode
             };
             if (openingDialog.ShowDialog() != true)
             {

@@ -5,23 +5,28 @@
     xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers"
     xmlns:local="clr-namespace:Ferreteria.PuntoVenta.Views.Caja"
     Title="Abrir caja"
+    Style="{StaticResource AppDialogWindowStyle}"
     Width="620"
     SizeToContent="Height"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner"
+    Loaded="OnLoaded"
     KeyDown="OnKeyDown">
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary
-                    Source="/Resources/Styles/AppStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
     <Grid
         Margin="24"
-        Background="{StaticResource AppAzulOscuro}">
+        Background="{StaticResource AppAzulOscuro}"
+        FocusManager.FocusedElement="{Binding ElementName=OpeningKeypad}">
         <Grid.RowDefinitions>
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
+            <RowDefinition
+                Height="Auto" />
             <RowDefinition
                 Height="Auto" />
             <RowDefinition
@@ -42,17 +47,52 @@
             Text="Ingrese el fondo inicial en efectivo"
             Foreground="{StaticResource AppBlanco}"
             FontSize="{StaticResource AppFontSize_LG}" />
+        <Label
+            Grid.Row="2"
+            Content="Fondo inicial"
+            Target="{Binding ElementName=OpeningKeypad}"
+            Style="{StaticResource RequiredLabelStyle}"
+            helpers:FieldHelper.IsRequired="True"
+            Margin="0,0,0,4" />
         <local:NumericKeypad
             x:Name="OpeningKeypad"
-            Grid.Row="2"
+            Grid.Row="3"
+            Precision="{x:Static helpers:FieldConstraints.CashSessionsOpeningAmountPrecision}"
+            Scale="{x:Static helpers:FieldConstraints.CashSessionsOpeningAmountScale}"
+            AllowNegative="False"
             TextChanged="OnAmountChanged"
             Margin="0,0,0,12" />
-        <StackPanel
-            Grid.Row="3">
+        <Grid Grid.Row="4" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Label
+                Content="Caja física"
+                VerticalAlignment="Center"
+                Foreground="{StaticResource AppBlanco}" />
+            <!-- El código proviene de configuración; el límite permanece enlazado al esquema. -->
+            <TextBox
+                x:Name="CashRegisterCodeTextBox"
+                Grid.Column="1"
+                Text="{Binding CashRegisterCode, RelativeSource={RelativeSource AncestorType={x:Type local:CashOpeningDialog}}, Mode=OneWay}"
+                IsReadOnly="True"
+                MaxLength="{x:Static helpers:FieldConstraints.CashSessionsCashRegisterCodeMaxLength}"
+                Style="{StaticResource AppFieldTextBoxStyle}"
+                Margin="12,0,0,0"
+                AutomationProperties.Name="Código de caja configurado" />
+        </Grid>
+        <StackPanel Grid.Row="5">
+            <Label
+                Content="Observación (opcional)"
+                Target="{Binding ElementName=NotesTextBox}"
+                Foreground="{StaticResource AppBlanco}"
+                Margin="0,0,0,4" />
             <TextBox
                 x:Name="NotesTextBox"
                 Height="64"
                 FontSize="16"
+                Style="{StaticResource AppFieldTextBoxStyle}"
                 TextWrapping="Wrap"
                 AcceptsReturn="True"
                 Margin="0,0,0,8"
@@ -63,23 +103,26 @@
                 FontSize="16"
                 TextWrapping="Wrap"
                 Margin="0,0,0,8" />
-            <StackPanel
-                Orientation="Horizontal"
-                HorizontalAlignment="Right">
+        </StackPanel>
+        <Grid Grid.Row="8" Style="{StaticResource AppDialogFooterStyle}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
                 <Button
-                    Width="180"
-                    Height="90"
-                    Margin="0,0,12,0"
+                    Grid.Column="0"
+                    Style="{StaticResource AppActionButtonSecondaryStyle}"
                     IsCancel="True"
                     Click="OnCancelClick"
-                    Content="CANCELAR" />
+                    Content="CANCELAR"
+                    AutomationProperties.Name="Cancelar apertura de caja" />
                 <Button
-                    Width="220"
-                    Height="90"
+                    Grid.Column="1"
+                    Style="{StaticResource AppActionButtonStyle}"
                     IsDefault="True"
                     Click="OnConfirmClick"
-                    Content="ABRIR CAJA" />
-            </StackPanel>
-        </StackPanel>
+                    Content="ABRIR CAJA"
+                    AutomationProperties.Name="Abrir caja" />
+        </Grid>
     </Grid>
 </Window>

@@ -12,10 +12,6 @@
     ResizeMode="NoResize">
     <Window.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary
-                    Source="/Resources/Styles/AppStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
             <!-- Botón de módulo principal -->
             <Style
                 x:Key="EstiloBotonModulo"
