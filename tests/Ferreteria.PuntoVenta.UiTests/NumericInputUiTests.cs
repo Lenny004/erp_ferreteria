@@ -57,6 +57,23 @@ public sealed class NumericInputUiTests
         });
     }
 
+    /// <summary>Comprueba que un pegado válido con espacios inserta únicamente el valor recortado.</summary>
+    [Fact]
+    public void IsEnabled_PasteTrimsOuterWhitespaceBeforeInsertion()
+    {
+        RunOnSta(() =>
+        {
+            var textBox = new TextBox();
+            NumericInput.SetIsEnabled(textBox, true);
+
+            var paste = RaisePaste(textBox, " 1,234.50 ");
+
+            Assert.True(paste.CommandCancelled);
+            Assert.Equal("1,234.50", textBox.Text);
+            Assert.Null(NumericInput.GetErrorMessage(textBox));
+        });
+    }
+
     private static TextCompositionEventArgs RaisePreviewTextInput(TextBox textBox, string text)
     {
         var composition = new TextComposition(InputManager.Current, textBox, text);

@@ -53,6 +53,17 @@ dotnet test tests/Ferreteria.PuntoVenta.Tests/Ferreteria.PuntoVenta.Tests.csproj
 
 `reverse` invierte los casos de cada clase y `random:<semilla>` aplica un barajado reproducible dentro de cada clase. xUnit 2 no reordena las clases dentro de una colección; por eso esta herramienta no sustituye el aislamiento de datos ni garantiza un orden global entre clases.
 
+## Facturación: teclado y documento
+
+`FacturacionView` conserva Consumidor final como cliente predeterminado. La búsqueda permite nombre, NIT, NRC o DUI y solo presenta clientes activos; desde el mismo flujo se puede crear un cliente con permiso `OperarCaja`.
+
+- `F2`: enfoca la búsqueda de producto y abre sus resultados.
+- `F9`: cobra la venta.
+- `Esc`: cierra primero la búsqueda o popup abierto; si no hay uno, solicita confirmación para cancelar la venta en curso.
+- `Supr`: quita la línea seleccionada después de confirmación.
+
+El selector de documento usa `01 Factura` por defecto y `03 Crédito fiscal` cuando el cajero lo elige. El servicio exige, además de un cliente activo, NIT y NRC para `03`; la venta se rechaza antes de crear la orden si falta cualquiera de esos datos. El criterio fiscal queda marcado en el código para verificación con contador.
+
 ## Riesgos y verificaciones externas
 
 La fecha de emisión DTE, el tratamiento fiscal de devoluciones, la nota de crédito, el costo de reingreso y el redondeo deben validarse con contador y Ministerio de Hacienda antes de producción. El hardware de impresión y el certificado TLS de PostgreSQL también requieren una prueba de despliegue.

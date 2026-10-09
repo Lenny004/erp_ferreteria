@@ -145,11 +145,12 @@ public static class NumericInput
         }
 
         var pastedText = e.SourceDataObject.GetData(DataFormats.Text) as string;
+        var normalizedPastedText = NumericInputTextRules.NormalizePastedText(pastedText);
         var result = NumericInputTextRules.Validate(
             textBox.Text,
             textBox.SelectionStart,
             textBox.SelectionLength,
-            pastedText,
+            normalizedPastedText,
             GetPrecision(textBox),
             GetScale(textBox),
             GetAllowNegative(textBox),
@@ -158,7 +159,17 @@ public static class NumericInput
         if (!result.IsAllowed)
         {
             e.CancelCommand();
+            return;
         }
+
+        // Cancelamos el pegado nativo para evitar insertar los espacios externos junto al valor válido.
+        if (string.Equals(pastedText, normalizedPastedText, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        e.CancelCommand();
+        textBox.SelectedText = normalizedPastedText;
     }
 
     internal static void SetErrorMessage(DependencyObject element, string? message) =>

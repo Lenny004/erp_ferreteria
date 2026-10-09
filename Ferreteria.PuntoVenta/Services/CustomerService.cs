@@ -23,6 +23,7 @@ public sealed class CustomerService(
     public async Task<IReadOnlyList<Customer>> GetCustomersAsync(
         string? searchText,
         bool includeInactive = false,
+        int take = 50,
         CancellationToken cancellationToken = default)
     {
         await RequireCashOperationAsync(Guid.Empty, cancellationToken, allowMissingActingEmployee: true);
@@ -42,10 +43,12 @@ public sealed class CustomerService(
             query = query.Where(c =>
                 EF.Functions.ILike(c.Name, like) ||
                 (c.Nit != null && EF.Functions.ILike(c.Nit, like)) ||
-                (c.Dui != null && EF.Functions.ILike(c.Dui, like)));
+                (c.Dui != null && EF.Functions.ILike(c.Dui, like)) ||
+                (c.Nrc != null && EF.Functions.ILike(c.Nrc, like)));
         }
 
-        return await query.OrderBy(c => c.Name).Take(500).ToListAsync(cancellationToken);
+        take = Math.Clamp(take, 1, 100);
+        return await query.OrderBy(c => c.Name).Take(take).ToListAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -72,14 +75,26 @@ public sealed class CustomerService(
             throw new ValidationException($"Ya existe un cliente con el NIT '{nit}'.");
         }
 
+        var dui = Normalize(input.Dui);
+        if (dui is not null && await db.Customers.AnyAsync(c => c.Dui == dui, cancellationToken))
+        {
+            throw new ValidationException($"Ya existe un cliente con el DUI '{dui}'.");
+        }
+
+        var nrc = Normalize(input.Nrc);
+        if (nrc is not null && await db.Customers.AnyAsync(c => c.Nrc == nrc, cancellationToken))
+        {
+            throw new ValidationException($"Ya existe un cliente con el NRC '{nrc}'.");
+        }
+
         var customer = new Customer
         {
             Id = Guid.NewGuid(),
             CustomerType = input.CustomerType,
             Name = input.Name.Trim(),
-            Dui = Normalize(input.Dui),
+            Dui = dui,
             Nit = nit,
-            Nrc = Normalize(input.Nrc),
+            Nrc = nrc,
             Phone = Normalize(input.Phone),
             Email = Normalize(input.Email),
             Address = Normalize(input.Address),
@@ -171,8 +186,28 @@ public sealed class CustomerService(
             throw new ValidationException("El tipo de cliente debe ser CF o CCF.");
         if (input.CustomerType == "CCF" && string.IsNullOrWhiteSpace(input.Nit))
             throw new ValidationException("Un cliente de crédito fiscal (CCF) requiere NIT.");
+        if (input.CustomerType == "CCF" && string.IsNullOrWhiteSpace(input.Nrc))
+            throw new ValidationException("Un cliente de crédito fiscal (CCF) requiere NRC.");
         if (!string.IsNullOrWhiteSpace(input.Email) && !input.Email.Contains('@'))
             throw new ValidationException("El correo electrónico no es válido.");
+
+        ValidateLength(input.Name, 200, "nombre");
+        ValidateLength(input.Dui, 15, "DUI");
+        ValidateLength(input.Nit, 20, "NIT");
+        ValidateLength(input.Nrc, 20, "NRC");
+        ValidateLength(input.Phone, 20, "teléfono");
+        ValidateLength(input.Email, 100, "correo");
+        ValidateLength(input.Address, 300, "dirección");
+        ValidateLength(input.Municipality, 100, "municipio");
+        ValidateLength(input.Department, 50, "departamento");
+    }
+
+    private static void ValidateLength(string? value, int maxLength, string fieldName)
+    {
+        if (value is not null && value.Trim().Length > maxLength)
+        {
+            throw new ValidationException($"El campo {fieldName} no puede superar {maxLength} caracteres.");
+        }
     }
 
     private async Task<Guid> RequireCashOperationAsync(Guid actingEmployeeId, CancellationToken cancellationToken, bool allowMissingActingEmployee = false)

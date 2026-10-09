@@ -2,6 +2,7 @@ using Ferreteria.PuntoVenta.Data;
 using Ferreteria.PuntoVenta.Models;
 using Ferreteria.PuntoVenta.Services;
 using Ferreteria.PuntoVenta.Services.Domain;
+using Ferreteria.PuntoVenta.Services.Dte;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -86,6 +87,109 @@ public sealed class OrderCashSessionIntegrationTests
         {
             await CloseIfOpenAsync(session.Id, validCode, _fixture.CashierId);
         }
+    }
+
+    /// <summary>Persiste consumidor final sin cliente y conserva el cliente seleccionado cuando existe.</summary>
+    [Fact]
+    public async Task CreateCashSale_PersistsCustomerIdAsNullOrSelectedCustomer()
+    {
+        var cashRegisterCode = UniqueCashRegisterCode();
+        _fixture.SetCashRegisterCode(cashRegisterCode);
+
+        var anonymousProduct = await PrepareProductAsync();
+        var anonymousSession = await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 0m, null);
+        try
+        {
+            var anonymousRequest = BuildSaleRequest(anonymousProduct, _fixture.CashierId, anonymousSession.Id);
+            var anonymousResult = await _fixture.Orders.CreateCashSaleAsync(anonymousRequest);
+
+            await using var anonymousScope = _fixture.Services.CreateAsyncScope();
+            var anonymousDb = anonymousScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            var anonymousOrder = await anonymousDb.Orders.SingleAsync(order => order.Id == anonymousResult.OrderId);
+            Assert.Null(anonymousOrder.CustomerId);
+        }
+        finally
+        {
+            await CloseIfOpenAsync(anonymousSession.Id, cashRegisterCode, _fixture.CashierId);
+        }
+
+        var selectedProduct = await PrepareProductAsync();
+        Guid customerId;
+        await using (var customerScope = _fixture.Services.CreateAsyncScope())
+        {
+            var customerDb = customerScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            customerId = (await TestDataFactory.CreateCustomerAsync(customerDb, Guid.NewGuid().ToString("N"))).Id;
+        }
+
+        var selectedSession = await _fixture.CashSessions.OpenAsync(_fixture.CashierId, cashRegisterCode, 0m, null);
+        try
+        {
+            var selectedRequest = BuildSaleRequest(selectedProduct, _fixture.CashierId, selectedSession.Id)
+                with { CustomerId = customerId };
+            var selectedResult = await _fixture.Orders.CreateCashSaleAsync(selectedRequest);
+
+            await using var selectedScope = _fixture.Services.CreateAsyncScope();
+            var selectedDb = selectedScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            var selectedOrder = await selectedDb.Orders.SingleAsync(order => order.Id == selectedResult.OrderId);
+            Assert.Equal(customerId, selectedOrder.CustomerId);
+        }
+        finally
+        {
+            await CloseIfOpenAsync(selectedSession.Id, cashRegisterCode, _fixture.CashierId);
+        }
+    }
+
+    /// <summary>Rechaza un crédito fiscal sin cliente antes de crear la orden.</summary>
+    [Fact]
+    public async Task CreateCashSale_CreditFiscalWithoutCustomer_IsRejectedBeforeOrderCreation()
+    {
+        var product = await PrepareProductAsync();
+        var request = BuildSaleRequest(product, _fixture.CashierId, null) with
+        {
+            ClientRequestId = Guid.NewGuid(),
+            DocumentType = DteConstants.TiposDte.CreditoFiscal
+        };
+
+        await Assert.ThrowsAsync<InvalidOrderException>(() => _fixture.Orders.CreateCashSaleAsync(request));
+
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        Assert.False(await db.Orders.AnyAsync(order => order.ClientRequestId == request.ClientRequestId));
+    }
+
+    /// <summary>Rechaza un crédito fiscal si el cliente seleccionado no tiene NRC.</summary>
+    [Fact]
+    public async Task CreateCashSale_CreditFiscalCustomerWithoutNrc_IsRejectedBeforeOrderCreation()
+    {
+        var product = await PrepareProductAsync();
+        var customerId = Guid.NewGuid();
+        await using (var customerScope = _fixture.Services.CreateAsyncScope())
+        {
+            var customerDb = customerScope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+            customerDb.Customers.Add(new Customer
+            {
+                Id = customerId,
+                CustomerType = "CCF",
+                Name = $"Cliente CCF QA {Guid.NewGuid():N}",
+                Nit = $"0614-{Guid.NewGuid():N}"[..20],
+                Nrc = null,
+                IsActive = true
+            });
+            await customerDb.SaveChangesAsync();
+        }
+
+        var request = BuildSaleRequest(product, _fixture.CashierId, null) with
+        {
+            CustomerId = customerId,
+            ClientRequestId = Guid.NewGuid(),
+            DocumentType = DteConstants.TiposDte.CreditoFiscal
+        };
+
+        await Assert.ThrowsAsync<InvalidOrderException>(() => _fixture.Orders.CreateCashSaleAsync(request));
+
+        await using var scope = _fixture.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FerreteriaDbContext>();
+        Assert.False(await db.Orders.AnyAsync(order => order.ClientRequestId == request.ClientRequestId));
     }
 
     /// <summary>Exige sesión al facturar una orden de confección y la propaga a pagos y orden.</summary>

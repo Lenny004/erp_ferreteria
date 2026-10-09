@@ -1,6 +1,14 @@
 namespace Ferreteria.PuntoVenta.Services;
 
 /// <summary>Datos requeridos para registrar una venta de mostrador.</summary>
+/// <param name="EmployeeId">Empleado que registra la venta.</param>
+/// <param name="CashSessionId">Sesión de caja abierta asociada, si aplica.</param>
+/// <param name="CustomerId">Cliente seleccionado; nulo representa consumidor final.</param>
+/// <param name="ClientRequestId">Identificador idempotente del intento de venta.</param>
+/// <param name="Lines">Líneas de productos y cantidades.</param>
+/// <param name="Payments">Pagos que cubren el total de la venta.</param>
+/// <param name="Notes">Notas opcionales de la venta.</param>
+/// <param name="DocumentType">Tipo de DTE solicitado: 01 por defecto o 03 para crédito fiscal.</param>
 public sealed record CreateCashSaleRequest(
     Guid EmployeeId,
     Guid? CashSessionId,
@@ -8,7 +16,8 @@ public sealed record CreateCashSaleRequest(
     Guid? ClientRequestId,
     IReadOnlyList<CashSaleLineRequest> Lines,
     IReadOnlyList<CashSalePaymentRequest> Payments,
-    string? Notes);
+    string? Notes,
+    string? DocumentType = null);
 
 /// <summary>Línea de producto en una venta u orden de confección.</summary>
 public sealed record CashSaleLineRequest(Guid ProductId, decimal Quantity, string? Notes = null);
