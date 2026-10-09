@@ -8,6 +8,34 @@ namespace Ferreteria.PuntoVenta.Tests;
 /// </summary>
 public sealed class NumericInputTextRulesTests
 {
+    /// <summary>Recorta únicamente los espacios externos del texto pegado.</summary>
+    [Theory]
+    [InlineData(" 1,234.50 ", "1,234.50")]
+    [InlineData("\t25\r\n", "25")]
+    [InlineData(null, "")]
+    public void NormalizePastedText_TrimsOuterWhitespace(string? pastedText, string expected)
+    {
+        Assert.Equal(expected, NumericInputTextRules.NormalizePastedText(pastedText));
+    }
+
+    /// <summary>Valida el texto recortado del portapapeles como valor completo.</summary>
+    [Fact]
+    public void Validate_PasteWithOuterWhitespaceAcceptsTrimmedValue()
+    {
+        var result = NumericInputTextRules.Validate(
+            string.Empty,
+            0,
+            0,
+            " 1,234.50 ",
+            precision: 12,
+            scale: 2,
+            allowNegative: false,
+            allowIntermediate: false);
+
+        Assert.True(result.IsAllowed);
+        Assert.Null(result.ErrorMessage);
+    }
+
     /// <summary>Permite valores completos y prefijos que pueden completarse durante la escritura.</summary>
     [Theory]
     [InlineData("", 0, 0, "1", 12, 2, false)]

@@ -101,6 +101,7 @@ public sealed class OrderService : IOrderService
             return MapToCashSaleResult(existingOrder);
         }
 
+        await ValidateCashSaleCustomerAsync(dbContext, request, cancellationToken);
         await EnsureOpenCashSessionAsync(
             dbContext,
             request.CashSessionId,
@@ -764,6 +765,35 @@ public sealed class OrderService : IOrderService
         {
             throw new InvalidOrderException("La venta requiere al menos un pago.");
         }
+
+        SalesDocumentRules.ValidateDocumentType(request.DocumentType);
+    }
+
+    private static async Task ValidateCashSaleCustomerAsync(
+        FerreteriaDbContext dbContext,
+        CreateCashSaleRequest request,
+        CancellationToken cancellationToken)
+    {
+        Customer? customer = null;
+        if (request.CustomerId is Guid customerId)
+        {
+            customer = await dbContext.Customers
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == customerId, cancellationToken);
+
+            if (customer is null)
+            {
+                throw new InvalidOrderException("El cliente seleccionado no existe.");
+            }
+
+            if (!customer.IsActive)
+            {
+                throw new InvalidOrderException("El cliente seleccionado no está activo.");
+            }
+        }
+
+        // A verificar con contador: una venta 03 solo puede emitirse con NIT y NRC vigentes.
+        SalesDocumentRules.ValidateCustomerForDocument(request.DocumentType, customer);
     }
 
     private static void ValidateConfectionOrderRequest(CreateConfectionOrderRequest request)

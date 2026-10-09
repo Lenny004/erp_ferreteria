@@ -4,10 +4,14 @@ namespace Ferreteria.PuntoVenta.Services.Domain;
 /// <param name="Lines">Producto y cantidad de cada línea.</param>
 /// <param name="PaymentMethod">Método de pago normalizado.</param>
 /// <param name="PaymentAmount">Monto total del pago.</param>
+/// <param name="CustomerId">Cliente seleccionado, si existe.</param>
+/// <param name="DocumentType">Tipo de documento seleccionado.</param>
 public sealed record SaleAttemptInput(
     IReadOnlyList<SaleAttemptLine> Lines,
     string PaymentMethod,
-    decimal PaymentAmount);
+    decimal PaymentAmount,
+    Guid? CustomerId = null,
+    string? DocumentType = null);
 
 /// <summary>Línea mínima usada para detectar cambios del carrito.</summary>
 /// <param name="ProductId">Identificador del producto.</param>
@@ -56,11 +60,14 @@ public sealed class SaleAttemptTracker
                 .OrderBy(line => line.ProductId)
                 .ThenBy(line => line.Quantity)
                 .ToArray(),
-            PaymentMethod = input.PaymentMethod.Trim().ToUpperInvariant()
+            PaymentMethod = input.PaymentMethod.Trim().ToUpperInvariant(),
+            DocumentType = input.DocumentType?.Trim()
         };
 
     private static bool InputsMatch(SaleAttemptInput left, SaleAttemptInput right) =>
         string.Equals(left.PaymentMethod, right.PaymentMethod, StringComparison.Ordinal)
         && left.PaymentAmount == right.PaymentAmount
+        && left.CustomerId == right.CustomerId
+        && string.Equals(left.DocumentType, right.DocumentType, StringComparison.Ordinal)
         && left.Lines.SequenceEqual(right.Lines);
 }

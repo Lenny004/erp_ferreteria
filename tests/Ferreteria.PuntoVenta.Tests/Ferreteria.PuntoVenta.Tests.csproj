@@ -82,6 +82,7 @@
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/OrderQueryFilters.cs" Link="Domain/OrderQueryFilters.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/PostgresTransientRetry.cs" Link="Domain/PostgresTransientRetry.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SaleAttemptTracker.cs" Link="Domain/SaleAttemptTracker.cs" />
+    <Compile Include="../../Ferreteria.PuntoVenta/Services/Domain/SalesDocumentRules.cs" Link="Domain/SalesDocumentRules.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/InventoryExceptions.cs" Link="Services/InventoryExceptions.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/IOrderService.cs" Link="Services/IOrderService.cs" />
     <Compile Include="../../Ferreteria.PuntoVenta/Services/OrderContracts.cs" Link="Services/OrderContracts.cs" />

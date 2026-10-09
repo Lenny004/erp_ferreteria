@@ -1,0 +1,180 @@
+<Window
+    x:Class="Ferreteria.PuntoVenta.Views.Caja.CustomerCreateDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:Ferreteria.PuntoVenta.Helpers"
+    Title="Crear cliente"
+    Style="{StaticResource AppDialogWindowStyle}"
+    Width="560"
+    Height="720"
+    WindowStartupLocation="CenterOwner"
+    ResizeMode="NoResize"
+    Loaded="OnLoaded">
+    <Grid
+        Margin="24"
+        FocusManager.FocusedElement="{Binding ElementName=NameTextBox}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock
+                Text="Crear cliente"
+                Foreground="{StaticResource AppBlanco}"
+                FontSize="{StaticResource AppFontSize_XL}"
+                FontWeight="Bold" />
+            <TextBlock
+                Margin="0,8,0,16"
+                Text="El cliente se guardará activo y quedará seleccionado en esta venta."
+                Foreground="{StaticResource AppBlanco}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+        <ScrollViewer
+            Grid.Row="1"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Label
+                    Content="Tipo de cliente"
+                    Target="{Binding ElementName=CustomerTypeCombo}"
+                    Style="{StaticResource RequiredLabelStyle}"
+                    helpers:FieldHelper.IsRequired="True" />
+                <ComboBox
+                    x:Name="CustomerTypeCombo"
+                    Style="{StaticResource AppFieldComboBoxStyle}"
+                    SelectedIndex="0"
+                    SelectionChanged="OnCustomerTypeChanged"
+                    TabIndex="0"
+                    AutomationProperties.Name="Tipo de cliente obligatorio">
+                    <ComboBoxItem Content="Consumidor final (CF)" Tag="CF" />
+                    <ComboBoxItem Content="Crédito fiscal (CCF)" Tag="CCF" />
+                </ComboBox>
+
+                <Label
+                    Content="Nombre o razón social"
+                    Target="{Binding ElementName=NameTextBox}"
+                    Style="{StaticResource RequiredLabelStyle}"
+                    helpers:FieldHelper.IsRequired="True"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="NameTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerNameMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="Nombre completo o razón social"
+                    TabIndex="1"
+                    AutomationProperties.Name="Nombre o razón social obligatorio" />
+
+                <Label
+                    x:Name="NitLabel"
+                    Content="NIT"
+                    Target="{Binding ElementName=NitTextBox}"
+                    Style="{StaticResource RequiredLabelStyle}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="NitTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerNitMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="NIT (requerido para CCF)"
+                    TabIndex="2"
+                    AutomationProperties.Name="NIT" />
+
+                <Label
+                    x:Name="NrcLabel"
+                    Content="NRC"
+                    Target="{Binding ElementName=NrcTextBox}"
+                    Style="{StaticResource RequiredLabelStyle}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="NrcTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerNrcMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="NRC (requerido para CCF)"
+                    TabIndex="3"
+                    AutomationProperties.Name="NRC" />
+
+                <Label
+                    Content="DUI (opcional)"
+                    Target="{Binding ElementName=DuiTextBox}"
+                    Foreground="{StaticResource AppBlanco}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="DuiTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerDuiMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="DUI"
+                    TabIndex="4"
+                    AutomationProperties.Name="DUI opcional" />
+
+                <Label
+                    Content="Teléfono (opcional)"
+                    Target="{Binding ElementName=PhoneTextBox}"
+                    Foreground="{StaticResource AppBlanco}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="PhoneTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerPhoneMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="Teléfono"
+                    TabIndex="5"
+                    AutomationProperties.Name="Teléfono opcional" />
+
+                <Label
+                    Content="Correo (opcional)"
+                    Target="{Binding ElementName=EmailTextBox}"
+                    Foreground="{StaticResource AppBlanco}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="EmailTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerEmailMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="correo@ejemplo.com"
+                    TabIndex="6"
+                    AutomationProperties.Name="Correo opcional" />
+
+                <Label
+                    Content="Dirección fiscal (opcional)"
+                    Target="{Binding ElementName=AddressTextBox}"
+                    Foreground="{StaticResource AppBlanco}"
+                    Margin="0,12,0,0" />
+                <TextBox
+                    x:Name="AddressTextBox"
+                    MaxLength="{x:Static helpers:FieldConstraints.CustomerAddressMaxLength}"
+                    Style="{StaticResource AppFieldTextBoxStyle}"
+                    helpers:WatermarkService.Watermark="Dirección"
+                    TabIndex="7"
+                    AutomationProperties.Name="Dirección fiscal opcional" />
+
+                <TextBlock
+                    x:Name="ErrorText"
+                    Margin="0,12,0,0"
+                    Foreground="{StaticResource AppError}"
+                    TextWrapping="Wrap"
+                    AutomationProperties.LiveSetting="Assertive" />
+            </StackPanel>
+        </ScrollViewer>
+        <Grid
+            Grid.Row="2"
+            Style="{StaticResource AppDialogFooterStyle}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                Grid.Column="0"
+                Content="CANCELAR"
+                Style="{StaticResource AppActionButtonSecondaryStyle}"
+                IsCancel="True"
+                Click="OnCancelClick"
+                TabIndex="8"
+                AutomationProperties.Name="Cancelar creación de cliente" />
+            <Button
+                Grid.Column="1"
+                Content="CREAR CLIENTE"
+                Style="{StaticResource AppActionButtonStyle}"
+                IsDefault="True"
+                Click="OnConfirmClick"
+                TabIndex="9"
+                AutomationProperties.Name="Crear cliente" />
+        </Grid>
+    </Grid>
+</Window>

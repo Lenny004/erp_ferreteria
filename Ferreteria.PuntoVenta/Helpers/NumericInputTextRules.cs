@@ -27,6 +27,13 @@ public readonly record struct NumericInputTextRuleResult
 public static class NumericInputTextRules
 {
     /// <summary>
+    /// Recorta los espacios externos de un texto recibido desde el portapapeles.
+    /// </summary>
+    /// <param name="pastedText">Texto pegado, posiblemente nulo o con espacios externos.</param>
+    /// <returns>Texto listo para validarse e insertarse en el campo.</returns>
+    public static string NormalizePastedText(string? pastedText) => pastedText?.Trim() ?? string.Empty;
+
+    /// <summary>
     /// Evalúa una inserción o reemplazo de texto sin depender de controles WPF.
     /// </summary>
     /// <param name="currentText">Texto actual del control.</param>
@@ -59,7 +66,9 @@ public static class NumericInputTextRules
         }
 
         var current = currentText ?? string.Empty;
-        var insertion = insertedText ?? string.Empty;
+        var insertion = allowIntermediate
+            ? insertedText ?? string.Empty
+            : NormalizePastedText(insertedText);
         if (selectionStart < 0 || selectionLength < 0 || selectionStart > current.Length
             || selectionStart + selectionLength > current.Length)
         {

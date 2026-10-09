@@ -5,10 +5,11 @@ namespace Ferreteria.PuntoVenta.Services;
 /// <summary>CRUD de clientes (<see cref="Customer"/>) con validación y auditoría.</summary>
 public interface ICustomerService
 {
-    /// <summary>Lista clientes activos (o todos) filtrados por nombre, NIT o DUI.</summary>
+    /// <summary>Lista clientes activos (o todos) filtrados por nombre, NIT, NRC o DUI y limita el resultado.</summary>
     Task<IReadOnlyList<Customer>> GetCustomersAsync(
         string? searchText,
         bool includeInactive = false,
+        int take = 50,
         CancellationToken cancellationToken = default);
 
     /// <summary>Obtiene un cliente por Id, o null si no existe.</summary>

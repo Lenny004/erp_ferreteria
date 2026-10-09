@@ -78,6 +78,33 @@ public static class FieldConstraints
     /// <summary>Expone la longitud del código de caja para el enlazado XAML.</summary>
     public static int CashSessionsCashRegisterCodeMaxLength => CashSessions.CashRegisterCodeMaxLength;
 
+    /// <summary>Expone la longitud máxima del nombre de cliente para XAML.</summary>
+    public static int CustomerNameMaxLength => Customers.NameMaxLength;
+
+    /// <summary>Expone la longitud máxima del DUI de cliente para XAML.</summary>
+    public static int CustomerDuiMaxLength => Customers.DuiMaxLength;
+
+    /// <summary>Expone la longitud máxima del NIT de cliente para XAML.</summary>
+    public static int CustomerNitMaxLength => Customers.NitMaxLength;
+
+    /// <summary>Expone la longitud máxima del NRC de cliente para XAML.</summary>
+    public static int CustomerNrcMaxLength => Customers.NrcMaxLength;
+
+    /// <summary>Expone la longitud máxima del teléfono de cliente para XAML.</summary>
+    public static int CustomerPhoneMaxLength => Customers.PhoneMaxLength;
+
+    /// <summary>Expone la longitud máxima del correo de cliente para XAML.</summary>
+    public static int CustomerEmailMaxLength => Customers.EmailMaxLength;
+
+    /// <summary>Expone la longitud máxima de la dirección de cliente para XAML.</summary>
+    public static int CustomerAddressMaxLength => Customers.AddressMaxLength;
+
+    /// <summary>Expone la precisión de cantidad de venta para XAML.</summary>
+    public static int OrderDetailQuantityPrecision => OrderDetails.QuantityPrecision;
+
+    /// <summary>Expone la escala de cantidad de venta para XAML.</summary>
+    public static int OrderDetailQuantityScale => OrderDetails.QuantityScale;
+
     /// <summary>Restricciones del catálogo de productos.</summary>
     public static class Products
     {
@@ -252,6 +279,118 @@ public static class FieldConstraints
         /// <summary>Longitud máxima del departamento.</summary>
         [FieldConstraint("public", "Customers", "department", FieldConstraintKind.MaxLength, typeof(Customer), nameof(Customer.Department))]
         public const int DepartmentMaxLength = 50;
+    }
+
+    /// <summary>Restricciones de cabeceras de ventas.</summary>
+    public static class Orders
+    {
+        /// <summary>Precisión del subtotal.</summary>
+        [FieldConstraint("sales", "Orders", "subtotal", FieldConstraintKind.Precision, typeof(Order), nameof(Order.Subtotal))]
+        public const int SubtotalPrecision = 12;
+
+        /// <summary>Escala del subtotal.</summary>
+        [FieldConstraint("sales", "Orders", "subtotal", FieldConstraintKind.Scale, typeof(Order), nameof(Order.Subtotal))]
+        public const int SubtotalScale = 2;
+
+        /// <summary>Precisión del IVA.</summary>
+        [FieldConstraint("sales", "Orders", "TaxAmount", FieldConstraintKind.Precision, typeof(Order), nameof(Order.TaxAmount))]
+        public const int TaxAmountPrecision = 12;
+
+        /// <summary>Escala del IVA.</summary>
+        [FieldConstraint("sales", "Orders", "TaxAmount", FieldConstraintKind.Scale, typeof(Order), nameof(Order.TaxAmount))]
+        public const int TaxAmountScale = 2;
+
+        /// <summary>Precisión del descuento.</summary>
+        [FieldConstraint("sales", "Orders", "DiscountAmount", FieldConstraintKind.Precision, typeof(Order), nameof(Order.DiscountAmount))]
+        public const int DiscountAmountPrecision = 12;
+
+        /// <summary>Escala del descuento.</summary>
+        [FieldConstraint("sales", "Orders", "DiscountAmount", FieldConstraintKind.Scale, typeof(Order), nameof(Order.DiscountAmount))]
+        public const int DiscountAmountScale = 2;
+
+        /// <summary>Precisión del total.</summary>
+        [FieldConstraint("sales", "Orders", "total", FieldConstraintKind.Precision, typeof(Order), nameof(Order.Total))]
+        public const int TotalPrecision = 12;
+
+        /// <summary>Escala del total.</summary>
+        [FieldConstraint("sales", "Orders", "total", FieldConstraintKind.Scale, typeof(Order), nameof(Order.Total))]
+        public const int TotalScale = 2;
+    }
+
+    /// <summary>Restricciones de líneas de venta.</summary>
+    public static class OrderDetails
+    {
+        /// <summary>Precisión de la cantidad vendida.</summary>
+        [FieldConstraint("sales", "OrderDetails", "quantity", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.Quantity))]
+        public const int QuantityPrecision = 12;
+
+        /// <summary>Escala de la cantidad vendida.</summary>
+        [FieldConstraint("sales", "OrderDetails", "quantity", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.Quantity))]
+        public const int QuantityScale = 3;
+
+        /// <summary>Precisión de unidades por presentación.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitsPerPackage", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.UnitsPerPackage))]
+        public const int UnitsPerPackagePrecision = 12;
+
+        /// <summary>Escala de unidades por presentación.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitsPerPackage", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.UnitsPerPackage))]
+        public const int UnitsPerPackageScale = 3;
+
+        /// <summary>Precisión del precio unitario.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitPrice", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.UnitPrice))]
+        public const int UnitPricePrecision = 12;
+
+        /// <summary>Escala del precio unitario.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitPrice", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.UnitPrice))]
+        public const int UnitPriceScale = 2;
+
+        /// <summary>Precisión del costo unitario.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitCost", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.UnitCost))]
+        public const int UnitCostPrecision = 12;
+
+        /// <summary>Escala del costo unitario.</summary>
+        [FieldConstraint("sales", "OrderDetails", "UnitCost", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.UnitCost))]
+        public const int UnitCostScale = 4;
+
+        /// <summary>Precisión del descuento de línea.</summary>
+        [FieldConstraint("sales", "OrderDetails", "DiscountAmount", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.DiscountAmount))]
+        public const int DiscountAmountPrecision = 12;
+
+        /// <summary>Escala del descuento de línea.</summary>
+        [FieldConstraint("sales", "OrderDetails", "DiscountAmount", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.DiscountAmount))]
+        public const int DiscountAmountScale = 2;
+
+        /// <summary>Precisión del subtotal de línea.</summary>
+        [FieldConstraint("sales", "OrderDetails", "subtotal", FieldConstraintKind.Precision, typeof(OrderDetail), nameof(OrderDetail.Subtotal))]
+        public const int SubtotalPrecision = 12;
+
+        /// <summary>Escala del subtotal de línea.</summary>
+        [FieldConstraint("sales", "OrderDetails", "subtotal", FieldConstraintKind.Scale, typeof(OrderDetail), nameof(OrderDetail.Subtotal))]
+        public const int SubtotalScale = 2;
+
+        /// <summary>Longitud máxima de la nota de línea.</summary>
+        [FieldConstraint("sales", "OrderDetails", "notes", FieldConstraintKind.MaxLength, typeof(OrderDetail), nameof(OrderDetail.Notes))]
+        public const int NotesMaxLength = 300;
+    }
+
+    /// <summary>Restricciones de pagos de ventas.</summary>
+    public static class Payments
+    {
+        /// <summary>Longitud máxima del método de pago.</summary>
+        [FieldConstraint("sales", "Payments", "method", FieldConstraintKind.MaxLength, typeof(Payment), nameof(Payment.Method))]
+        public const int MethodMaxLength = 20;
+
+        /// <summary>Precisión del monto cobrado.</summary>
+        [FieldConstraint("sales", "Payments", "amount", FieldConstraintKind.Precision, typeof(Payment), nameof(Payment.Amount))]
+        public const int AmountPrecision = 12;
+
+        /// <summary>Escala del monto cobrado.</summary>
+        [FieldConstraint("sales", "Payments", "amount", FieldConstraintKind.Scale, typeof(Payment), nameof(Payment.Amount))]
+        public const int AmountScale = 2;
+
+        /// <summary>Longitud máxima de la referencia de pago.</summary>
+        [FieldConstraint("sales", "Payments", "reference", FieldConstraintKind.MaxLength, typeof(Payment), nameof(Payment.Reference))]
+        public const int ReferenceMaxLength = 100;
     }
 
     /// <summary>Restricciones de proveedores.</summary>
